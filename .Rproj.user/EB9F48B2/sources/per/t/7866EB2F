@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1529706709204.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3188452999",
+    "id" : "7866EB2F",
+    "lastKnownWriteTime" : 1529707585,
+    "last_content_update" : 1529707585169,
+    "path" : "~/Desktop/PROMIDAT-PREDICTIVO-SHINY/ui.R",
+    "project_path" : "ui.R",
+    "properties" : {
+        "cursorPosition" : "41,20",
+        "scrollLine" : "30"
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
