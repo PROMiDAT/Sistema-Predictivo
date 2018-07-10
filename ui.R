@@ -55,39 +55,30 @@ shinyUI(dashboardPage(
       
       #Carga de Datos
       tabItem(tabName = "cargar",
-              column(width = 4,
-                     box(
-                       title = "Carga de datos",
-                       width = 12,
-                       solidHeader = FALSE,
-                       collapsible = FALSE,
-                       collapsed = FALSE,
-                       checkboxInput('header', 'Encabezado (Header)', TRUE),
-                       checkboxInput('columname', 'Incluir nombre de filas', TRUE),
-                       radioButtons('sep', 'Seperador', c(Coma=',', 'Punto y Coma'=';', Tab='\t'), selected = 'Coma'),
-                       radioButtons('dec', 'Separador Decimal', c('Punto'='.', 'Coma'=","), selected = 'Punto'),
-                       fileInput('file1', 'Cargar Archivo',
-                                 accept = c('text/csv', 'text/comma-separated-values, text/plain', '.csv'), buttonLabel = "Subir",
-                                 placeholder = "")
-                     ),
-                     box(
-                       title = "Transformar datos",
-                       width = 12,
-                       solidHeader = FALSE,
-                       collapsible = FALSE,
-                       collapsed = FALSE,
-                       selectizeInput("trans.var", "Seleccionar variables", multiple = T, choices = c(""), options = list(maxItems = 3)),
-                       selectInput(inputId = "tipo.var", label = "Nuevo Tipo:", choices =  c("Numérico", "Categorico"))
-                     )
-              ),
-              column(width = 8,
-                     box(
-                       title = "Datos",
-                       status = "primary",
-                       width = 12,
-                       solidHeader = TRUE,
-                       collapsible = TRUE,
-                       withSpinner(DT::DTOutput('contents'), type = 7, color = "#CBB051")
+              column(width = 5,
+                     tabBox(title = NULL, width = 12,
+                            tabPanel(title = "Cargar", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
+                                     checkboxInput('header', 'Encabezado (Header)', TRUE),
+                                     checkboxInput('columname', 'Incluir nombre de filas', TRUE),
+                                     radioButtons('sep', 'Seperador', c(Coma=',', 'Punto y Coma'=';', Tab='\t'), selected = 'Coma'),
+                                     radioButtons('dec', 'Separador Decimal', c('Punto'='.', 'Coma'=","), selected = 'Punto'),
+                                     fileInput('file1', 'Cargar Archivo',
+                                               accept = c('text/csv', 'text/comma-separated-values, text/plain', '.csv'), buttonLabel = "Subir",
+                                               placeholder = ""),
+                                     actionButton("loadButton", "Cargar", width = "100%"),
+                                     hr(),
+                                     aceEditor("fieldCodeData", mode = "r", theme = "monokai", value = "", height = "15vh", readOnly = T)
+                            ),
+                            tabPanel(title = "Transformar", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
+                                     DT::dataTableOutput('transData'),
+                                     actionButton("transButton", "Aplicar", width = "100%"),
+                                     hr(),
+                                     aceEditor("fieldCodeTrans", mode = "r", theme = "monokai", value = "", height = "10vh",  readOnly = T)
+                            )
+                     )),
+              column(width = 7,
+                     box(title = "Datos", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
+                         withSpinner(DT::DTOutput('contents'), type = 7, color = "#CBB051")
                      ))
       ),
       
