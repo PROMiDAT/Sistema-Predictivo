@@ -1,0 +1,32 @@
+export(init_shiny_predictivo)
+
+import(shiny)
+import(shinydashboard)
+import(shinyAce)
+import(shinycssloaders)
+import(shinyWidgets)
+
+importFrom(colourpicker,colourInput,colourPicker,colourWidget,updateColourInput)
+importFrom(shinyjs,addClass,addCssClass,alert,click,
+           delay,disable,disabled,enable,extendShinyjs,
+           hidden,hide,hideElement,html,info,inlineCSS,
+           logjs,onclick,onevent,removeClass,removeCssClass,
+           reset,runcodeServer,runcodeUI,runjs,show,showElement,
+           showLog,toggle,toggleClass,toggleCssClass,toggleElement,toggleState,useShinyjs)
+
+import(knitr)
+importFrom(DT,`%>%`,addRow,clearSearch,coerceValue,datatable,dataTableAjax,dataTableProxy,
+           DTOutput,formatCurrency,formatDate,formatPercentage,formatRound,formatSignif,formatString,formatStyle,
+           JS,reloadData,renderDT,replaceData,saveWidget,selectCells,selectColumns,selectPage,selectRows,
+           styleColorBar,styleEqual,styleInterval,tableFooter,tableHeader,updateCaption,updateSearch)
+
+import(promises)
+import(ggplot2)
+import(FactoMineR)
+import(factoextra)
+import(reshape)
+import(corrplot)
+import(dendextend)
+import(scatterplot3d)
+import(stringr)
+import(rstudioapi)
