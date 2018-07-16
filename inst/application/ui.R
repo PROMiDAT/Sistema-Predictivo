@@ -4,7 +4,11 @@ library(shinyAce)
 library(shinydashboard)
 library(shinycssloaders)
 library(shinyWidgets)
+library(colourpicker)
+library(shinyjs)
+library(knitr)
 library(DT)
+library(future)
 library(promises)
 library(ggplot2)
 library(FactoMineR)
@@ -14,320 +18,278 @@ library(corrplot)
 library(dendextend)
 library(scatterplot3d)
 library(stringr)
-library(shinyjs)
+library(caret)
 
 
-#######################################################################################
-######################### Header de la pagina
-#######################################################################################
+###########################################################################################################################
+#####  MENU
+###########################################################################################################################
 
-mi.encabezado.dashboard <- dashboardHeader(title = tags$a(href="http://promidat.com", 
-                                                      img(src="Logo2.png", 
-                                                          height=55, 
-                                                          width="100%", 
-                                                          style="padding-top:2px; padding-bottom:6px;")))
+menu.cargar <- menuItem("Datos", tabName = "cargar", icon = icon("dashboard"))
 
+menu.estadisticas <- menuItem("Estadísticas Básicas", tabName = "parte1", icon = icon("th"),
+                              menuSubItem("Resumen Numérico", tabName = "resumen", icon = icon("th")),
+                              menuSubItem("Test de Normalidad", tabName = "normalidad", icon = icon("th")),
+                              menuSubItem("Dispersión", tabName = "dispersion", icon = icon("th")),
+                              menuSubItem("Distribuciones", tabName = "distribucion", icon = icon("th")),
+                              menuSubItem("Correlación", tabName = "correlacion", icon = icon("th")))
 
-#######################################################################################
-######################### Menu de la pagina
-#######################################################################################
+menu.aprendizaje.supervisado <- menuItem("Aprendizaje Supervisado", tabName = "parte2", icon = icon("th"),
+                                         menuSubItem("K Vecinos Más Cercanos",tabName = "knn",icon = icon("bar-chart-o")),
+                                         menuSubItem("Método de Bayes",tabName = "bayes",icon = icon("bar-chart-o")),
+                                         menuSubItem("Soporte Vectorial",tabName = "svm",icon = icon("bar-chart-o")),
+                                         menuSubItem("Árboles de Decisión",tabName = "dt",icon = icon("bar-chart-o")),
+                                         menuSubItem("Bosques Aleatorios",tabName = "rf",icon = icon("bar-chart-o")),
+                                         menuSubItem("ADA - Boosting",tabName = "boosting",icon = icon("bar-chart-o")),
+                                         menuSubItem("Extreme Gradient Boosting",tabName = "xgboosting",icon = icon("bar-chart-o")),
+                                         menuSubItem("Redes Neuronales",tabName = "nnw",icon = icon("bar-chart-o")) )
 
-mi.menu.Sidebar <- dashboardSidebar(
-  sidebarMenu(id = "principal", 
+menu.reporte <- menuItem("Generar Reporte", tabName = "reporte", icon = icon("save-file",lib = "glyphicon"))
+
+mi.menu <- sidebarMenu(id = "principal",
               tags$div(style="padding-top:10px;"),
-              menuItem("Cargar Datos", tabName = "cargar", icon = icon("dashboard")),
-              menuItem("Resumen Numérico", tabName = "resumen", icon = icon("th")),
-              menuItem("Matriz de confusión", tabName = "mc", icon = icon("th")),
-              menuItem("KNN", tabName = "knn", icon = icon("th")),
-              menuItem("Arboles", tabName = "arboles", icon = icon("th")),
-              menuItem("Bosques", tabName = "bosques", icon = icon("th")),
-              menuItem("Potenciación", tabName = "potenciacion", icon = icon("th")),
-              menuItem("SVM", tabName = "svm", icon = icon("th")),
-              menuItem("Generar Reporte", tabName = "reporte", icon = icon("th")),
-              hr() ))
+              menu.cargar,
+              menu.estadisticas,
+              menu.aprendizaje.supervisado,
+              menu.reporte)
 
-#######################################################################################
-######################### Documentos importados
-#######################################################################################
+###########################################################################################################################
+#####  HEAD HTML
+###########################################################################################################################
 
-documents.import <- tags$head(
+mi.head <- tags$head(
   tags$link(rel = "stylesheet", type = "text/css", href = "style_promidat.css"),
+  tags$link(rel="shortcut icon", href="http://www.promidat.org/theme/image.php/formal_white/theme/1438713216/favicon"),
   useShinyjs()
 )
 
-#######################################################################################
-######################### Cuerpo de la pagina Cargar Datos
-#######################################################################################
+###########################################################################################################################
+##### PAGINA DE CARGA Y  TRANSFORMACION DE DATOS
+###########################################################################################################################
 
-# Panel con las opciones para cargar datos
-panel.cargar.datos <- tabPanel(title = "Cargar", width = 10, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
+panel.cargar.datos <- tabPanel(title = "Cargar", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
                                checkboxInput('header', 'Encabezado (Header)', TRUE),
-                               checkboxInput('columname', 'Incluir nombre de filas', TRUE),
+                               checkboxInput('rowname', 'Incluir nombre de filas', TRUE),
                                radioButtons('sep', 'Seperador', c(Coma=',', 'Punto y Coma'=';', Tab='\t'), selected = 'Coma'),
                                radioButtons('dec', 'Separador Decimal', c('Punto'='.', 'Coma'=","), selected = 'Punto'),
-                               fileInput('file1', 'Cargar Archivo', accept = c('text/csv','text/comma-separated-values, text/plain', '.csv'), 
-                                         buttonLabel = "Subir", placeholder = "",width = "100%"),
+                               fileInput('file1', label = 'Cargar Archivo', placeholder = "", buttonLabel = "Subir", width = "100%",
+                                         accept = c('text/csv', 'text/comma-separated-values, text/plain', '.csv')),
                                actionButton("loadButton", "Cargar", width = "100%"),
                                hr(),
                                aceEditor("fieldCodeData", mode = "r", theme = "monokai", value = "", height = "15vh", readOnly = T))
 
+panel.tansformar.datos <- tabPanel(title = "Transformar", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
+                                   DT::dataTableOutput('transData'),
+                                   actionButton("transButton", "Aplicar", width = "100%"),
+                                   hr(),
+                                   aceEditor("fieldCodeTrans", mode = "r", theme = "monokai", value = "", height = "10vh",  readOnly = T))
 
-panel.transformar.datos <- tabPanel(title = "Transformar", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
-                                    DT::dataTableOutput('transData'),
-                                    actionButton("transButton", "Aplicar", width = "100%"),
-                                    hr(),
-                                    aceEditor("fieldCodeTrans", mode = "r", theme = "monokai", value = "", height = "10vh",  readOnly = T))
+panel.segmentar.datos <- tabPanel(title = "Prueba y Aprendizaje", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
+                                  selectInput(inputId = "sel.predic.var", label = h4("Seleccionar Variable a Predecir:"), choices =  ""),
+                                  hr(),
+                                  sliderInput("segmentacionDatosA", "Datos de Aprendizaje:",width = "100%",
+                                              min = 5, max = 95, value = 70, step = 5),
+                                  sliderInput("segmentacionDatosT", "Datos de Prueba:", width = "100%",
+                                              min = 5, max = 95, value = 30, step = 5),
+                                  actionButton("segmentButton", "Segmentar", width = "100%"),
+                                  hr(),
+                                  aceEditor("fieldCodeSegment", mode = "r", theme = "monokai", value = "", height = "10vh",  readOnly = T))
+
+muestra.datos <- box(title = "Datos", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
+                     withSpinner(DT::DTOutput('contents'), type = 7, color = "#CBB051"))
 
 pagina.cargar.datos <- tabItem(tabName = "cargar",
-                               column(width = 5, tabBox(title = NULL, width = 10, #Panel con el panel de cargar datos y transformar datos
-                                                        panel.cargar.datos,
-                                                        panel.transformar.datos)),
-                               column(width = 7,                                  #Lugar donde se imprimen los datos
-                                      box(title = "Datos", status = "primary", width = 12, 
-                                          solidHeader = TRUE, collapsible = TRUE,
-                                          withSpinner(DT::DTOutput('contents'), type = 7, color = "#CBB051"))) 
-                               )
+                               column(width = 5, tabBox(title = NULL, width = 12, panel.cargar.datos, panel.tansformar.datos, panel.segmentar.datos)),
+                               column(width = 7, muestra.datos))
 
-#######################################################################################
-######################### Cuerpo de la pagina de Resumen Numerico
-#######################################################################################
+###########################################################################################################################
+##### PAGINA DE RESUMEN NUMERICO
+###########################################################################################################################
 
-resumen.numerico <- tabItem(tabName = "resumen",
-        column(width = 7,
-               box(title = "Resumen Numérico", status = "primary",
-                   width = 12, solidHeader = TRUE, collapsible = TRUE, 
-                   DT::dataTableOutput("resumen.completo"), hr(),
-                   aceEditor("fieldCodeResum", mode = "r", theme = "monokai", value = "", height = "8vh", autoComplete = "enabled")
-               )
-        ),
-        column(width = 5,
-               box(title = "Resumen Numérico por Variable", status = "primary", 
-                   width = 12, solidHeader = TRUE, collapsible = TRUE,
-                   selectInput(inputId = "sel.resumen", label = h4("Seleccionar Variable:"), choices =  ""),
-                   fluidRow(uiOutput("resumen"))
-               )
-        )
-)
+cuadro.resumen.completo <- box(title = "Resumen Numérico", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
+                               DT::dataTableOutput("resumen.completo"), hr(),
+                               aceEditor("fieldCodeResum", mode = "r", theme = "monokai", value = "", height = "8vh", autoComplete = "enabled"))
 
-#######################################################################################
-######################### Cuerpo de la pagina
-#######################################################################################
+cuadro.resumen.variable <- box(title = "Resumen Numérico por Variable", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
+                               selectInput(inputId = "sel.resumen", label = h4("Seleccionar Variable:"), choices =  ""),
+                               fluidRow(uiOutput("resumen")))
 
-mi.cuerpo.dashboard <- dashboardBody( documents.import, 
-                                      tabItems( pagina.cargar.datos , #Carga de Datos y Transformar Datos
-                                                resumen.numerico, #Resumen Numérico
-    
-    
-    #Dispersión
-    tabItem(tabName = "dispersion",
-            column(width = 4, 
-                   dropdownButton(h4("Opciones"),
-                                  selectizeInput("select.var", "Seleccionar variables", 
-                                                 multiple = T, choices = c(""), options = list(maxItems = 3)),
-                                  circle = F, status = "danger", icon = icon("gear"), width = "100%",
-                                  tooltip = tooltipOptions(title = "Clic para ver opciones")
-                   )),
-            plotOutput('plot.disp', height = "82vh"),
-            aceEditor("fieldCodeDisp", mode = "r", theme = "monokai", value = "", height = "8vh", autoComplete = "enabled")
-    ),
-    
-    #Correlaciones
-    tabItem(tabName = "correlacion",
-            fluidRow(
-              column(width = 4, 
-                     dropdownButton(
-                       h4("Opciones"),
-                       selectInput(inputId = "cor.metodo", label = "Seleccionar Método", 
-                                   choices =  c("circle", "square", "ellipse", "number", "shade", "color", "pie")),
-                       circle = F, status = "danger", icon = icon("gear"), width = "100%",
-                       tooltip = tooltipOptions(title = "Clic para ver opciones")
-                     )),
-              column(width = 8, 
-                     dropdownButton(
-                       h4("Opciones"),
-                       aceEditor("fieldModelCor", mode = "r", theme = "monokai", value = "", height = "4vh", autoComplete = "enabled"),
-                       aceEditor("fieldCodeCor", mode = "r", theme = "monokai", value = "", height = "6vh", autoComplete = "enabled"),
-                       circle = F, status = "danger", icon = icon("code"), width = "100%",
-                       tooltip = tooltipOptions(title = "Clic para ver el código")
-                     ))),
-            
-            #withSpinner(plotOutput('plot.cor', height = "84vh"), type = 7, color = "#CBB051"), 
-            plotOutput('plot.cor', height = "84vh")
-            #fluidRow(
-            #  column(width = 4, 
-            #         aceEditor("fieldModelCor", mode = "r", theme = "monokai", value = "", height = "6vh", autoComplete = "enabled")),
-            #  column(width = 8, 
-            #           aceEditor("fieldCodeCor", mode = "r", theme = "monokai", value = "", height = "6vh", autoComplete = "enabled")))
-            
-    ),
-    
-    #PCA
-    tabItem(tabName = "acp",
-            column(width = 12,
-                   aceEditor("fieldCodePCAModelo", mode = "r", theme = "monokai", value = "", height = "3vh", readOnly = T, autoComplete = "enabled"),
-                   tabBox(id = "tabPCA", title = dropdownButton(h4("Opciones"),
-                                                                sliderInput("ind.cos", "Coseno de los Individuos: ", min = 0, max = 100, value = 0),
-                                                                sliderInput("var.cos", "Coseno de las Variables: ", min = 0, max = 100, value = 0),
-                                                                circle = F, status = "danger", icon = icon("gear"), width = "100%", right = T,
-                                                                tooltip = tooltipOptions(title = "Clic para ver opciones")), width = NULL,
-                          tabPanel(title = 'Individuos', value = "individuos", plotOutput('plot.ind', height = "76vh"),
-                                   aceEditor("fieldCodeInd", mode = "r", theme = "monokai", value = "", height = "3vh", autoComplete = "enabled")),
-                          tabPanel(title = 'Variables', value = "variables", plotOutput('plot.var', height = "76vh"),
-                                   aceEditor("fieldCodeVar", mode = "r", theme = "monokai", value = "", height = "3vh", autoComplete = "enabled")),
-                          tabPanel(title = 'Sobreposición', value = "sobreposicion", plotOutput('plot.biplot', height = "76vh"),
-                                   aceEditor("fieldCodeBi", mode = "r", theme = "monokai", value = "", height = "3vh", autoComplete = "enabled"))
-                   )
-            )
-    ),
-    
-    #Distribuciones
-    tabItem(tabName = "distribucion",
-            column(width = 12,
-                   tabBox(id = "tabDyA", 
-                          title = dropdownButton(h4("Opciones"),
-                                                 conditionalPanel(
-                                                   condition = "input.tabDyA == 'numericas'",
-                                                   selectInput(inputId = "sel.distribucion.num", label = "Seleccionar Variable", choices =  "", selectize = T)
-                                                 ),
-                                                 conditionalPanel(
-                                                   condition = "input.tabDyA == 'categoricas'",
-                                                   selectInput(inputId = "sel.distribucion.cat", label = "Seleccionar Variable", choices =  "", selectize = T)
-                                                 ), circle = F, status = "danger", icon = icon("gear"), width = "100%", right = T,
-                                                 tooltip = tooltipOptions(title = "Clic para ver opciones")),
-                          width = 12,
-                          tabPanel(title = 'Numéricas', value = "numericas", 
-                                   plotOutput('plot.num', height = "71vh"),
-                                   fluidRow(
-                                     column(width = 6,
-                                            aceEditor("fieldCodeNum", mode = "r", theme = "monokai", value = "", height = "11vh", autoComplete = "enabled")),
-                                     column(width = 6, 
-                                            aceEditor("fieldFuncNum", mode = "r", theme = "monokai", value = "", height = "11vh", autoComplete = "enabled")))
-                          ),
-                          tabPanel(title = 'Categoricas', value = "categoricas", 
-                                   plotOutput('plot.cat', height = "71vh"),
-                                   fluidRow(
-                                     column(width = 6,
-                                            aceEditor("fieldCodeCat", mode = "r", theme = "monokai", value = "", height = "11vh", autoComplete = "enabled")),
-                                     column(width = 6, 
-                                            aceEditor("fieldFuncCat", mode = "r", theme = "monokai", value = "", height = "11vh", autoComplete = "enabled")))
-                          )
-                   )
-            )
-    ),
-    
-    #Agrupaciones
-    tabItem(tabName = "agrupacion",
-            column(width = 12,
-                   #aceEditor("fieldCodeModelo", mode = "r", theme = "monokai", value = "", height = "3vh", readOnly = T, autoComplete = "enabled"),
-                   tabBox(id = "tabjerar", title = dropdownButton(h4("Opciones"),
-                                                                  selectInput(inputId = "cant.cluster", label = "Cantidad de Clusters:", choices =  c(2:10)),
-                                                                  conditionalPanel(
-                                                                    condition = "input.tabjerar == 'Horizontal'",
-                                                                    selectInput(inputId = "sel.cluster", label = "Seleccionar Cluster:", choices =  "")
-                                                                  ),
-                                                                  conditionalPanel(
-                                                                    condition = "input.tabjerar == 'Vertical'",
-                                                                    selectInput(inputId = "sel.verticales", label = "Seleccionar Variable:", choices =  "")),
-                                                                  conditionalPanel(
-                                                                    condition = "input.tabjerar == 'Barras'",
-                                                                    selectInput(inputId = "sel.cat.var", label = "Seleccionar Variable:", choices =  "")
-                                                                  ), circle = F, status = "danger", icon = icon("gear"), width = "100%", right = T,
-                                                                  tooltip = tooltipOptions(title = "Clic para ver opciones")), width = 12,
-                          tabPanel(title = 'Diagrama', plotOutput('plot.diag', height = "71vh"), 
-                                   aceEditor("fieldCodeDiag", mode = "r", theme = "monokai", value = "", height = "11vh", autoComplete = "enabled")),
-                          tabPanel(title = 'Mapa', plotOutput('plot.mapa', height = "71vh"),
-                                   aceEditor("fieldCodeMapa", mode = "r", theme = "monokai", value = "", height = "11vh", autoComplete = "enabled")),
-                          tabPanel(title = 'Horizontal', 
-                                   plotOutput('plot.horiz', height = "71vh"),
-                                   fluidRow(column(width = 4,
-                                                   aceEditor("fieldCodeHoriz", mode = "r", theme = "monokai", value = "", height = "11vh", autoComplete = "enabled")),
-                                            column(width = 4,
-                                                   aceEditor("fieldFuncHoriz", mode = "r", theme = "monokai", value = "", height = "11vh", autoComplete = "enabled")),
-                                            column(width = 4,
-                                                   aceEditor("fieldCodeCentr", mode = "r", theme = "monokai", value = "", height = "11vh", autoComplete = "enabled")))),
-                          tabPanel(title = 'Vertical', 
-                                   plotOutput('plot.vert', height = "71vh"),
-                                   fluidRow(column(width = 4,
-                                                   aceEditor("fieldCodeVert", mode = "r", theme = "monokai", value = "", height = "11vh", autoComplete = "enabled")),
-                                            column(width = 4,
-                                                   aceEditor("fieldFuncVert", mode = "r", theme = "monokai", value = "", height = "11vh", autoComplete = "enabled")),
-                                            column(width = 4,
-                                                   aceEditor("fieldCodeCentr2", mode = "r", theme = "monokai", value = "", height = "11vh", autoComplete = "enabled")))),
-                          tabPanel(title = 'Radar', plotOutput('plot.radar', height = "71vh"),
-                                   fluidRow(column(width = 4,
-                                                   aceEditor("fieldCodeRadar", mode = "r", theme = "monokai", value = "", height = "11vh", autoComplete = "enabled")),
-                                            column(width = 4,
-                                                   aceEditor("fieldFuncRadar", mode = "r", theme = "monokai", value = "", height = "11vh", autoComplete = "enabled")),
-                                            column(width = 4,
-                                                   aceEditor("fieldCodeCentr3", mode = "r", theme = "monokai", value = "", height = "11vh", autoComplete = "enabled")))
-                          ),
-                          tabPanel(title = 'Barras', plotOutput('plot.bar.cat', height = "71vh"),
-                                   fluidRow(column(width = 12,
-                                                   aceEditor("fieldCodeBarras", mode = "r", theme = "monokai", value = "", height = "6vh", autoComplete = "enabled")))
-                          )
-                   )
-            )
-    ),
-    
-    tabItem(tabName = "kmedias",
-            column(width = 12,
-                   aceEditor("fieldCodeKModelo", mode = "r", theme = "monokai", value = "", height = "3vh", readOnly = T, autoComplete = "enabled"),
-                   tabBox(id = "tabkmedias", title = dropdownButton(h4("Opciones"),
-                                                                    selectInput(inputId = "cant.kmeans.cluster", label = "Cantidad de Clusters:", choices =  c(2:10)),
-                                                                    conditionalPanel(
-                                                                      condition = "input.tabkmedias== 'Horizontal'",
-                                                                      selectInput(inputId = "sel.kmeans.cluster", label = "Seleccionar Cluster:", choices =  "")
-                                                                    ),
-                                                                    conditionalPanel(
-                                                                      condition = "input.tabkmedias == 'Vertical'",
-                                                                      selectInput(inputId = "sel.kmeans.verticales", label = "Seleccionar Variable:", choices =  "")
-                                                                    ),
-                                                                    conditionalPanel(
-                                                                      condition = "input.tabkmedias == 'Barras'",
-                                                                      selectInput(inputId = "sel.kcat.var", label = "Seleccionar Variable:", choices =  "")
-                                                                    ),circle = F, status = "danger", icon = icon("gear"), width = "100%", right = T,
-                                                                    tooltip = tooltipOptions(title = "Clic para ver opciones")), width = 12,
-                          tabPanel(title = 'Inercia', fluidRow(uiOutput('resumen.kmedias'))),
-                          tabPanel(title = 'Codo Jambu', plotOutput('plot.jambu', height = "70vh"), 
-                                   fluidRow(column(width = 6, 
-                                                   aceEditor("fieldCodeJambu", mode = "r", theme = "monokai", value = "", height = "7vh", autoComplete = "enabled")),
-                                            column(width = 6,
-                                                   aceEditor("fieldFuncJambu", mode = "r", theme = "monokai", value = "", height = "7vh", autoComplete = "enabled")))
-                          ),
-                          tabPanel(title = 'Mapa', plotOutput('plot.kmapa', height = "71vh"),
-                                   aceEditor("fieldCodeKmapa", mode = "r", theme = "monokai", value = "", height = "6vh", autoComplete = "enabled")),
-                          tabPanel(title = 'Horizontal', plotOutput('plot.khoriz', height = "71vh"),
-                                   fluidRow(column(width = 6, 
-                                                   aceEditor("fieldCodeKhoriz", mode = "r", theme = "monokai", value = "", height = "6vh", autoComplete = "enabled")),
-                                            column(width = 6,
-                                                   aceEditor("fieldFuncKhoriz", mode = "r", theme = "monokai", value = "", height = "6vh", autoComplete = "enabled")))
-                          ),
-                          tabPanel(title = 'Vertical', plotOutput('plot.kvert', height = "71vh"),
-                                   fluidRow(column(width = 6, 
-                                                   aceEditor("fieldCodeKvert", mode = "r", theme = "monokai", value = "", height = "6vh", autoComplete = "enabled")),
-                                            column(width = 6,
-                                                   aceEditor("fieldFuncKvert", mode = "r", theme = "monokai", value = "", height = "6vh", autoComplete = "enabled")))
-                          ),
-                          tabPanel(title = 'Radar', plotOutput('plot.kradar', height = "71vh"),
-                                   fluidRow(column(width = 6, 
-                                                   aceEditor("fieldCodeKradar", mode = "r", theme = "monokai", value = "", height = "6vh", autoComplete = "enabled")),
-                                            column(width = 6,
-                                                   aceEditor("fieldFuncKradar", mode = "r", theme = "monokai", value = "", height = "6vh", autoComplete = "enabled")))
-                          ),
-                          tabPanel(title = 'Barras', plotOutput('plot.kcat', height = "71vh"),
-                                   fluidRow(column(width = 12,
-                                                   aceEditor("fieldCodeKbarras", mode = "r", theme = "monokai", value = "", height = "6vh", autoComplete = "enabled")))
-                          )
-                   )
-            )
-    )
-    
-  ) #tabItems
-) #dashboardBody
+pagina.resumen.numerico <- tabItem(tabName = "resumen",
+                                   column(width = 7, cuadro.resumen.completo ),
+                                   column(width = 5, cuadro.resumen.variable ))
 
-# Define UI for application that draws a histogram
-shinyUI(dashboardPage( 
-  mi.encabezado.dashboard ,
-  mi.menu.Sidebar,
-  mi.cuerpo.dashboard
-)) #UI
+
+###########################################################################################################################
+##### PAGINA DEL TEST DE NORMALIDAD
+###########################################################################################################################
+
+boton.colores <- dropdownButton(h4("Opciones"),
+                                      colourpicker::colourInput("col.normal", "Seleccionar Color:",
+                                                                value = "#00FF22AA", allowTransparent = T),
+                                      circle = F, status = "danger", icon = icon("gear"), width = "100%",
+                                      tooltip = tooltipOptions(title = "Clic para ver opciones"), right = T)
+
+opciones.normalidad <- fluidRow(column(width = 9, selectInput(inputId = "sel.normal", label = NULL, choices =  "")),
+                                column(width = 3, boton.colores))
+
+panel.grafico.normalidad <- tabPanel(title = "Test de Normalidad", value = "tabNormal",
+                                     plotOutput('plot.normal', height = "72vh"))
+
+codigo.normalidad <- aceEditor("fieldCodeNormal", mode = "r", theme = "monokai", value = "",
+                               height = "9vh", autoComplete = "enabled")
+
+pagina.test.normalidad <- tabItem(tabName = "normalidad",
+                                  column(width = 12,
+                                         tabBox(id = "BoxNormal", width = NULL,
+                                                title = opciones.normalidad,
+                                                panel.grafico.normalidad)),
+                                  codigo.normalidad)
+
+###########################################################################################################################
+##### PAGINA DE DISPERSION
+###########################################################################################################################
+
+# opciones.dispersion <- dropdownButton(h4("Opciones"), circle = F, status = "danger", icon = icon("gear"), width = "100%",
+#                                       tooltip = tooltipOptions(title = "Clic para ver opciones"))
+
+codigo.dispersion <- aceEditor("fieldCodeDisp", mode = "r", theme = "monokai", value = "", height = "8vh", autoComplete = "enabled")
+
+opciones.dispersion <- fluidRow(column(width = 9, tags$div(class="select-var-ind",
+                                                            selectizeInput("select.var", NULL, multiple = T, choices = c(""),
+                                                                           options = list(maxItems = 3, placeholder = "Seleccione la(s) variable(s)")))),
+                                 column(width = 3,dropdownButton(h4("Opciones"),
+                                                                 colourpicker::colourInput("col.disp", "Seleccionar Color:",
+                                                                                           value = "#FF0000AA", allowTransparent = T),
+                                                                 circle = F, status = "danger", icon = icon("gear"), width = "100%",
+                                                                 tooltip = tooltipOptions(title = "Clic para ver opciones"), right = T)))
+
+
+grafico.dispersion <- tabPanel(title = "Dispersión", value = "tabDisp", plotOutput('plot.disp', height = "72vh"))
+
+pagina.dispersion<- tabItem(tabName = "dispersion",
+                            column(width = 12, tabBox(id = "BoxDisp", width = NULL,
+                                                      title = opciones.dispersion,
+                                                      grafico.dispersion)),
+                            codigo.dispersion )
+
+###########################################################################################################################
+##### PAGINA DE CORRELACIONES
+###########################################################################################################################
+
+opciones.correlaciones <- dropdownButton(h4("Opciones"),
+                                         selectInput(inputId = "cor.metodo", label = "Seleccionar Método",
+                                                     choices =  c("circle", "square", "ellipse", "number", "shade", "color", "pie")),
+                                         selectInput(inputId = "cor.tipo", label = "Seleccionar Tipo", choices =  c("lower", "upper", "full")),
+                                         circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
+                                         tooltip = tooltipOptions(title = "Clic para ver opciones"))
+
+tab.correlacion <- tabPanel(title = 'Correlación', value = "correlacion",
+                            plotOutput('plot.cor', height = "76vh"),
+                            fluidRow(column(width = 4, aceEditor("fieldModelCor", mode = "r", theme = "monokai", value = "",
+                                                                 height = "6vh", autoComplete = "enabled")),
+                                     column(width = 8, aceEditor("fieldCodeCor", mode = "r", theme = "monokai", value = "",
+                                                                 height = "6vh", autoComplete = "enabled"))))
+
+tab.codigo.correlaciones <- tabPanel(title = 'Salida Código', value = "cor.salida", verbatimTextOutput("txtcor"))
+
+pagina.correlaciones <- tabItem(tabName = "correlacion",
+                                column(width = 12, tabBox(id = "tabCor", width = NULL,
+                                                          title = opciones.correlaciones,
+                                                          tab.correlacion,
+                                                          tab.codigo.correlaciones)))
+
+###########################################################################################################################
+##### PAGINA DE DISTRIBUCIONES
+###########################################################################################################################
+
+boton.codigo.distribuciones <- dropdownButton(h4("Código"),
+                                              h5("Grafico de la Distribución (Numéricas)"),
+                                              aceEditor("fieldFuncNum", mode = "r", theme = "monokai", value = "", height = "20vh", autoComplete = "enabled"),
+                                              h5("Grafico de la Distribución (Categóricas)"),
+                                              aceEditor("fieldFuncCat", mode = "r", theme = "monokai", value = "", height = "20vh", autoComplete = "enabled"),
+                                              circle = F, status = "danger", icon = icon("code"), width = "400px", right = T,
+                                              tooltip = tooltipOptions(title = "Clic para ver el código"))
+
+boton.opciones.distribuciones <- dropdownButton(h4("Opciones"), colourpicker::colourInput("col.dist", "Seleccionar Color:", value = "#0D00FFAA", allowTransparent = T),
+                                                circle = F, status = "danger", icon = icon("gear"), width = "100%", right = T,
+                                                tooltip = tooltipOptions(title = "Clic para ver opciones"))
+
+selector.variables.distribucion <- column(width = 7,tags$div(class = "select-var-ind",
+                                                             conditionalPanel( condition = "input.tabDyA == 'numericas'",
+                                                                               selectInput(inputId = "sel.distribucion.num", label = NULL, choices =  "")),
+                                                             conditionalPanel( condition = "input.tabDyA == 'categoricas'",
+                                                                               selectInput(inputId = "sel.distribucion.cat", label = NULL, choices =  "") )))
+
+resultados.distribucion.numericas <- tabPanel(title = 'Numéricas', value = "numericas",
+                                              plotOutput('plot.num', height = "65vh"),
+                                              fluidRow(column(width = 6, aceEditor("fieldCodeNum", mode = "r", theme = "monokai",
+                                                                                   value = "", height = "15vh", autoComplete = "enabled")),
+                                                       column(width = 6, DT::dataTableOutput("mostrar.atipicos"))) )
+
+
+resultados.distribucion.categoricas <- tabPanel(title = 'Categóricas', value = "categoricas", plotOutput('plot.cat', height = "76vh"),
+                                                aceEditor("fieldCodeCat", mode = "r", theme = "monokai", value = "", height = "6vh", autoComplete = "enabled"))
+
+pagina.distribuciones <- tabItem(tabName = "distribucion",
+                                 column(width = 12,
+                                        tabBox(id = "tabDyA",
+                                               title = fluidRow(
+                                                 selector.variables.distribucion,
+                                                 column(width = 2, boton.codigo.distribuciones),
+                                                 column(width = 2, boton.opciones.distribuciones)), width = 12,
+                                               resultados.distribucion.numericas,
+                                               resultados.distribucion.categoricas )) )
+
+
+###########################################################################################################################
+##### PAGINA DE KNN
+###########################################################################################################################
+
+panel.codigo.knn <- tabPanel(title = "Salida del Código",
+                             verbatimTextOutput("txtknn"),
+                             aceEditor("fieldCodeKnn", mode = "r", theme = "monokai",
+                                       value = "", height = "10vh", readOnly = T, autoComplete = "enabled"))
+
+panel.matriz.confucion.knn <- tabPanel(title = "Matriz de Confusión")
+
+panel.indices.generales <- tabPanel(title = "Índices Generales")
+
+pagina.knn <- tabItem(tabName = "knn",column(width = 12,
+                                             tabBox(width = 12, panel.codigo.knn,
+                                                    panel.matriz.confucion.knn,
+                                                    panel.indices.generales)))
+
+
+###########################################################################################################################
+##### PAGINA DE REPORTE
+###########################################################################################################################
+
+
+panel.reporte.codigo <- column(width = 5,
+                               tabBox(width = 12, id = "tabReporte",
+                                      tabPanel(title = "Reporte", width = 12),
+                                      tabPanel(title = "Código", width = 12, aceEditor("fieldCodeReport", mode="markdown", value=''))),
+                               downloadButton("descargar", "Descargar", style = "position: relative; left: 40%") )
+
+vista.previa.reporte <- column(width = 7,
+                               box(title = "Vista Previa", width = 12, height = "90vh", status = "primary", solidHeader = TRUE, collapsible = TRUE,
+                                   div(style = 'overflow-x: scroll; overflow-y: scroll; height: 80vh;', htmlOutput("knitDoc"))) )
+
+pagina.generar.reporte <- tabItem(tabName = "reporte", panel.reporte.codigo , vista.previa.reporte )
+
+###########################################################################################################################
+##### PAGINA COMPLETA
+###########################################################################################################################
+
+shinyUI(dashboardPage(title="PROMiDAT",
+                      dashboardHeader(title = tags$a(href="http://promidat.com",
+                                                     img(src="Logo2.png", height=55, width="100%", style="padding-top:2px; padding-bottom:6px;"))),
+                      dashboardSidebar(mi.menu),
+                      dashboardBody(mi.head, tabItems( pagina.cargar.datos,
+                                                       pagina.resumen.numerico,
+                                                       pagina.test.normalidad,
+                                                       pagina.dispersion,
+                                                       pagina.correlaciones,
+                                                       pagina.distribuciones,
+                                                       pagina.generar.reporte,
+                                                       pagina.knn))) )
