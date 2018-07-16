@@ -146,7 +146,7 @@ modelo.cor <- function(data = "datos"){
 #Calcula el modelo de knn
 particion.code <- function(data = "datos", p = "0.5", variable = NULL){
   return(paste0("particion <- createDataPartition(datos$",variable,", p = ",p/100,", list = FALSE)\n
-  datos.prueba <<- datos[-particion,]\ndatos.aprendizaje <<- datos[particion,]"))
+datos.prueba <<- datos[-particion,]\ndatos.aprendizaje <<- datos[particion,]"))
 }
 
 correlaciones <- function(metodo = 'circle', tipo = "lower"){

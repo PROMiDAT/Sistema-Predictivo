@@ -30,7 +30,7 @@ shinyServer(function(input, output, session) {
       isolate(eval(parse(text = codigo)))
     },
     error = function(e) {
-      print(paste0("ERROR EN CARGAR: ", e))
+      showNotification("Error al cargar los datos, intente nuevamente", duration = 15, type = "error")
       datos <<- NULL
       datos.originales <<- NULL
       return(NULL)
@@ -220,9 +220,13 @@ shinyServer(function(input, output, session) {
   })
 
   observeEvent(input$segmentButton,{
-    codigo <- particion.code("datos", input$segmentacionDatosA ,input$sel.predic.var)
-    updateAceEditor(session, "fieldCodeSegment", value = codigo)
-    isolate(eval(parse(text = codigo)))
+    if(input$sel.predic.var != ""){
+      codigo <- particion.code("datos", input$segmentacionDatosA ,input$sel.predic.var)
+      updateAceEditor(session, "fieldCodeSegment", value = codigo)
+      isolate(eval(parse(text = codigo)))
+    }else{
+      showNotification("TIENE QUE SELECCIONAR UNA VARIABLE A PREDECIR", duration = 20, type = "error")
+    }
   })
 
   observe({
