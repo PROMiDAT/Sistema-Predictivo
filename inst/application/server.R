@@ -304,6 +304,7 @@ shinyServer(function(input, output, session) {
   })
 
   observe({
+    options(encoding = "utf8")
     updateAceEditor(session, "fieldCodeResum", value = cod.resum())
 
     updateAceEditor(session, "fieldFuncNum", value = func.dya.num)

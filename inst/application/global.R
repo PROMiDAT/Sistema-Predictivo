@@ -48,7 +48,6 @@ datos.disyuntivos <- function(data, vars){
 
 #Genera el codigo para cargar datos
 code.carga <- function(nombre.filas = T, ruta = NULL, separador = ";", sep.decimal = ",", encabezado = T){
-  browser()
   if(!is.null(ruta)){
     ruta <-  gsub("\\", "/", ruta, fixed=TRUE)
   }
