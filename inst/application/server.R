@@ -21,7 +21,6 @@ shinyServer(function(input, output, session) {
 
   #Cunado es precionado el boton de cargar datos
   observeEvent(input$loadButton, {
-    browser()
     codigo <- code.carga(nombre.filas = input$rowname, ruta = input$file1$datapath,
                          separador = input$sep, sep.decimal = input$dec, encabezado = input$header)
 
@@ -32,7 +31,6 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) {
       showNotification("Error al cargar los datos, intente nuevamente", duration = 15, type = "error")
-      print(e)
       datos <<- NULL
       datos.originales <<- NULL
       return(NULL)
