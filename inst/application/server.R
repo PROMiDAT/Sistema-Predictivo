@@ -36,15 +36,17 @@ shinyServer(function(input, output, session) {
       return(NULL)
     })
 
-    updateSelectizeInput(session, "sel.normal", choices = colnames(var.numericas(datos)))
-    updateSelectizeInput(session, "select.var", choices = colnames(var.numericas(datos)))
-    updateSelectInput(session, "sel.distribucion.num", choices = colnames(var.numericas(datos)))
-    updateSelectInput(session, "sel.distribucion.cat", choices = colnames(var.categoricas(datos)))
-    updateSelectInput(session, "sel.resumen", choices = colnames(datos))
-    updateSelectInput(session, "sel.predic.var", choices = colnames(var.categoricas(datos)))
+    updateSelectizeInput(session, "sel.normal", choices = colnames.empty(var.numericas(datos)))
+    updateSelectizeInput(session, "select.var", choices = colnames.empty(var.numericas(datos)))
+    updateSelectInput(session, "sel.distribucion.num", choices = colnames.empty(var.numericas(datos)))
+    updateSelectInput(session, "sel.distribucion.cat", choices = colnames.empty(var.categoricas(datos)))
+    updateSelectInput(session, "sel.resumen", choices = colnames.empty(datos))
+    updateSelectInput(session, "sel.predic.var", choices = colnames.empty(var.categoricas(datos)))
 
     datos.prueba <<- NULL
     datos.aprendizaje <<- NULL
+    variable.predecir <<- NULL
+    #modelo.knn <<- NULL
 
     updateAceEditor(session, "fieldModelCor", value = modelo.cor())
 
@@ -55,6 +57,10 @@ shinyServer(function(input, output, session) {
     error = function(e) {
       return(datos <- NULL)
     })
+
+    # ##Carga el codigo de los modelos
+    # updateAceEditor(session, "fieldCodeKnn", value = kkn.modelo())
+
 
   })
 
@@ -84,14 +90,16 @@ shinyServer(function(input, output, session) {
 
     updateAceEditor(session, "fieldCodeTrans", value = code.res)
 
-    updateSelectizeInput(session, "sel.normal", choices = colnames(var.numericas(datos)))
-    updateSelectizeInput(session, "select.var", choices = colnames(var.numericas(datos)))
-    updateSelectInput(session, "sel.distribucion.num", choices = colnames(var.numericas(datos)))
-    updateSelectInput(session, "sel.distribucion.cat", choices = colnames(var.categoricas(datos)))
-    updateSelectInput(session, "sel.resumen", choices = colnames(datos))
-    updateSelectInput(session, "sel.predic.var", choices = colnames(var.categoricas(datos)))
+    updateSelectizeInput(session, "sel.normal", choices = colnames.empty(var.numericas(datos)))
+    updateSelectizeInput(session, "select.var", choices = colnames.empty(var.numericas(datos)))
+    updateSelectInput(session, "sel.distribucion.num", choices = colnames.empty(var.numericas(datos)))
+    updateSelectInput(session, "sel.distribucion.cat", choices = colnames.empty(var.categoricas(datos)))
+    updateSelectInput(session, "sel.resumen", choices = colnames.empty(datos))
+    updateSelectInput(session, "sel.predic.var", choices = colnames.empty(var.categoricas(datos)))
     datos.prueba <<- NULL
     datos.aprendizaje <<- NULL
+    variable.predecir <<- NULL
+    #modelo.knn <<- NULL
 
     updateAceEditor(session, "fieldModelCor", value = modelo.cor())
     tryCatch({
@@ -100,6 +108,18 @@ shinyServer(function(input, output, session) {
     }, error = function(e) {
       return(datos <- NULL)
     })
+  })
+
+  observeEvent(input$segmentButton,{
+    if(input$sel.predic.var != ""){
+      codigo <- particion.code("datos", input$segmentacionDatosA ,input$sel.predic.var)
+      updateAceEditor(session, "fieldCodeSegment", value = codigo)
+      isolate(eval(parse(text = codigo)))
+      nombres <- colnames.empty(datos)
+      updateSelectizeInput(session, "select.var.knn", choices = nombres[-which(nombres == variable.predecir)])
+    }else{
+      showNotification("Tiene que seleccionar una variable a predecir", duration = 15, type = "error")
+    }
   })
 
   #Crea la tabla de datos que se muestra en la pagina de datos
@@ -111,17 +131,47 @@ shinyServer(function(input, output, session) {
       tableHeader(nombre.columnas),
       tableFooter(tipo.columnas)
     ))
-    return(DT::datatable(datos, selection = 'none', editable = TRUE, extensions = 'Buttons', container = sketch,
+    return(DT::datatable(datos, selection = 'none', editable = TRUE, container = sketch,extensions = c('Responsive','Buttons'),
                          options = list(dom = 'Bfrtip', buttons = list(list(extend = 'csv', filename = "datos", text = 'Descargar')))))
   })
 
+  #Crea la tabla de datos de aprendizaje que se muestra en la pagina de datos
+  mostrarDataAprendizaje <- eventReactive(c(input$loadButton, input$transButton, input$segmentButton), {
+    nombre.columnas <- c("ID", colnames(datos.aprendizaje))
+    tipo.columnas <- c("", sapply(colnames(datos.aprendizaje),
+                                  function(i) ifelse(class(datos.aprendizaje[,i]) %in% c("numeric", "integer"), "Numérico", "Categórico")))
+    sketch <- htmltools::withTags(table(
+      tableHeader(nombre.columnas),
+      tableFooter(tipo.columnas)
+    ))
+    return(DT::datatable(datos.aprendizaje, selection = 'none', editable = TRUE, container = sketch,extensions = c('Responsive','Buttons'),
+                         options = list(dom = 'Bfrtip',pageLength = 5, buttons = list(list(extend = 'csv', filename = "datos.aprendizaje", text = 'Descargar')))))
+  })
+
+  #Crea la tabla de datos de prueba que se muestra en la pagina de datos
+  mostrarDataPrueba <- eventReactive(c(input$loadButton, input$transButton, input$segmentButton), {
+    nombre.columnas <- c("ID", colnames(datos.prueba))
+    tipo.columnas <- c("", sapply(colnames(datos.prueba),
+                                  function(i) ifelse(class(datos.prueba[,i]) %in% c("numeric", "integer"), "Numérico", "Categórico")))
+    sketch <- htmltools::withTags(table(
+      tableHeader(nombre.columnas),
+      tableFooter(tipo.columnas)
+    ))
+    return(DT::datatable(datos.prueba, selection = 'none', editable = TRUE, container = sketch,extensions = c('Responsive','Buttons'),
+                         options = list(dom = 'Bfrtip',pageLength = 5, buttons = list(list(extend = 'csv', filename = "datos.prueba", text = 'Descargar')))))
+  })
+
   #Crea los select box del panel de trasnformar datos
-  update.trans <- reactive({
-    inFile <- c(input$loadButton)
-    n <- ncol(datos)
-    res <-  data.frame(Variables = colnames(datos), Tipo = c(1:n), Activa = c(1:n))
+  update.trans <- eventReactive(c(input$loadButton),{
+    if(!is.null(datos) && ncol(datos) > 0){
+      n <- ncol(datos)
+      res <-  data.frame(Variables = colnames(datos), Tipo = c(1:n), Activa = c(1:n))
+    }else{
+      res <-  as.data.frame(NULL)
+      showNotification("Tiene que cargar los datos", duration = 15, type = "error")
+    }
     res$Tipo <- sapply(colnames(datos), function(i) paste0('<select id="sel', i, '"> <option value="categorico">Categórico</option>
-                                                           <option value="numerico" ', ifelse(class(datos[, i]) %in% c("numeric","integer"), ' selected="selected"', ''),
+                                                             <option value="numerico" ', ifelse(class(datos[, i]) %in% c("numeric","integer"), ' selected="selected"', ''),
                                                            '>Numérico</option> <option value="disyuntivo">Disyuntivo</option> </select>'))
     res$Activa <- sapply(colnames(datos), function(i) paste0('<input type="checkbox" id="box', i, '" checked/>'))
     return(res)
@@ -219,13 +269,33 @@ shinyServer(function(input, output, session) {
 
   })
 
-  observeEvent(input$segmentButton,{
-    if(input$sel.predic.var != ""){
-      codigo <- particion.code("datos", input$segmentacionDatosA ,input$sel.predic.var)
-      updateAceEditor(session, "fieldCodeSegment", value = codigo)
-      isolate(eval(parse(text = codigo)))
-    }else{
-      showNotification("TIENE QUE SELECCIONAR UNA VARIABLE A PREDECIR", duration = 20, type = "error")
+  observeEvent(input$runKnn,{
+    if(is.null(variable.predecir))
+      showNotification("Tiene que seleccionar una variable a predecir",duration = 15, type = "error")
+    if(is.null(datos))
+      showNotification("Tiene que ingresar datos",duration = 15, type = "error")
+    if(is.null(datos.aprendizaje))
+      showNotification("Tiene que crear los datos de aprendizaje y de prueba",duration = 15, type = "error")
+    if(!is.null(datos) & !is.null(variable.predecir) & !is.null(datos.aprendizaje)){
+      codigo.knn <- kkn.modelo(variable.pr = variable.predecir,
+                           predictoras = input$select.var.knn,
+                           scale = input$switch.scale.knn,
+                           kmax = input$kmax.knn, kernel = input$kernel.knn)
+      codigo.knn.pred <- kkn.prediccion()
+      tryCatch({
+        isolate(eval(parse(text = codigo.knn)))
+        isolate(eval(parse(text = codigo.knn.pred)))
+
+        output$txtknn <- renderPrint(print(modelo.knn))
+        output$txtknnPrediccion <- renderPrint(print(prediccion.knn))
+      },
+      error = function(e) {
+        modelo.knn <<- NULL
+        showNotification("Error al ejecutar el modelo, intente nuevamente",duration = 15,type = "error")
+      })
+
+      updateAceEditor(session, "fieldCodeKnn", value = codigo.knn)
+      updateAceEditor(session, "fieldCodeKnnPred", value = codigo.knn.pred)
     }
   })
 
@@ -254,7 +324,13 @@ shinyServer(function(input, output, session) {
   ###########################################################################################################################
 
   #Cambia la tabla de datos
-  output$contents <- DT::renderDT(mostrarData())
+  output$contents <- DT::renderDT(mostrarData(),server = FALSE)
+
+  #Cambia la tabla de datos
+  output$contentsAprend <- DT::renderDT(mostrarDataAprendizaje(),server = FALSE)
+
+  #Cambia la tabla de datos
+  output$contentsPrueba <- DT::renderDT(mostrarDataPrueba(),server = FALSE)
 
   #Cambia la tabla de con las opciones del panel de transformar
   output$transData <- DT::renderDataTable(update.trans(), escape = FALSE, selection = 'none', server = FALSE,

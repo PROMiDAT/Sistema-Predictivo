@@ -9,6 +9,14 @@ gg_color_hue <- function(n) {
   hcl(h = hues, l = 65, c = 100)[1:n]
 }
 
+
+colnames.empty <- function(res){
+  res <- colnames(res)
+  if(is.null(res))
+    return("")
+  return(res)
+}
+
 #Obtiene solo las variables numericas
 var.numericas <- function(data){
   if(is.null(data)) return(NULL)
@@ -143,10 +151,24 @@ modelo.cor <- function(data = "datos"){
   return(paste0("correlacion <<- cor(var.numericas(", data, "))"))
 }
 
-#Calcula el modelo de knn
+#Crea el código de la particion en testing y learning data
 particion.code <- function(data = "datos", p = "0.5", variable = NULL){
+  variable.predecir <<- variable
   return(paste0("particion <- createDataPartition(datos$",variable,", p = ",p/100,", list = FALSE)\n
 datos.prueba <<- datos[-particion,]\ndatos.aprendizaje <<- datos[particion,]"))
+}
+
+#Crea el modelo KNN
+kkn.modelo <- function(variable.pr = NULL, predictoras = ".", scale = TRUE,kmax = 7, kernel = "optimal"){
+  if(all(predictoras == ""))
+    predictoras <- "."
+  predictoras <- paste0(predictoras, collapse = "+")
+  codigo <- paste0("modelo.knn <<- train.kknn(",variable.pr,"~",predictoras,", data = datos.aprendizaje,scale =",scale,", kmax=",kmax,", kernel = '",kernel,"')")
+  return(codigo)
+}
+
+kkn.prediccion <- function() {
+  return(paste0("prediccion.knn <<- predict(modelo.knn, datos.prueba)"))
 }
 
 correlaciones <- function(metodo = 'circle', tipo = "lower"){
@@ -265,6 +287,8 @@ correlacion <<- NULL
 
 datos.prueba <<- NULL
 datos.aprendizaje <<- NULL
+variable.predecir <<- NULL
+prediccion.knn <<- NULL
 # def.colores <<- gg_color_hue(10)
 
 cod.disp <- default.disp()
@@ -278,8 +302,8 @@ func.dya.cat <- default.func.cat()
 
 # ---
 
-# knn.modelo <<- NULL
-#
+modelo.knn <<- NULL
+
 # cod.mod.knn <- knn.modelo()
 
 

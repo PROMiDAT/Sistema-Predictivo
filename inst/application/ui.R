@@ -19,6 +19,7 @@ library(dendextend)
 library(scatterplot3d)
 library(stringr)
 library(caret)
+library(kknn)
 
 
 ###########################################################################################################################
@@ -80,16 +81,17 @@ panel.cargar.datos <- tabPanel(title = "Cargar", width = 12, solidHeader = FALSE
 
 panel.tansformar.datos <- tabPanel(title = "Transformar", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
                                    DT::dataTableOutput('transData'),
+                                   hr(),
                                    actionButton("transButton", "Aplicar", width = "100%"),
                                    hr(),
                                    aceEditor("fieldCodeTrans", mode = "r", theme = "monokai", value = "", height = "10vh",  readOnly = T))
 
 panel.segmentar.datos <- tabPanel(title = "Prueba y Aprendizaje", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
-                                  selectInput(inputId = "sel.predic.var", label = h4("Seleccionar Variable a Predecir:"), choices =  ""),
+                                  selectInput(inputId = "sel.predic.var", label = h4("Seleccionar Variable a Predecir:"), choices =  "", width = "100%"),
                                   hr(),
-                                  sliderInput("segmentacionDatosA", "Datos de Aprendizaje:",width = "100%",
+                                  sliderInput("segmentacionDatosA", "Proporción Aprendizaje:",width = "100%",
                                               min = 5, max = 95, value = 70, step = 5),
-                                  sliderInput("segmentacionDatosT", "Datos de Prueba:", width = "100%",
+                                  sliderInput("segmentacionDatosT", "Proporción Prueba:", width = "100%",
                                               min = 5, max = 95, value = 30, step = 5),
                                   actionButton("segmentButton", "Segmentar", width = "100%"),
                                   hr(),
@@ -98,9 +100,19 @@ panel.segmentar.datos <- tabPanel(title = "Prueba y Aprendizaje", width = 12, so
 muestra.datos <- box(title = "Datos", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
                      withSpinner(DT::DTOutput('contents'), type = 7, color = "#CBB051"))
 
+muestra.datos.aprend <- box(title = "Datos de Aprendizaje", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
+                            withSpinner(DT::DTOutput('contentsAprend'), type = 7, color = "#CBB051"))
+
+muestra.datos.prueba <- box(title = "Datos de Prueba", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
+                            withSpinner(DT::DTOutput('contentsPrueba'), type = 7, color = "#CBB051"))
+
 pagina.cargar.datos <- tabItem(tabName = "cargar",
-                               column(width = 5, tabBox(title = NULL, width = 12, panel.cargar.datos, panel.tansformar.datos, panel.segmentar.datos)),
-                               column(width = 7, muestra.datos))
+                               fluidRow(column(width = 5, tabBox(id ="tabs", title = NULL, width = 12, panel.cargar.datos, panel.tansformar.datos, panel.segmentar.datos)),
+                               column(width = 7, muestra.datos)),
+                               conditionalPanel(
+                                 condition = "input.tabs == 'Prueba y Aprendizaje'",
+                                 fluidRow(column(width = 6, muestra.datos.aprend ),
+                                          column(width = 6, muestra.datos.prueba ))) )
 
 ###########################################################################################################################
 ##### PAGINA DE RESUMEN NUMERICO
@@ -226,7 +238,6 @@ resultados.distribucion.numericas <- tabPanel(title = 'Numéricas', value = "num
                                                                                    value = "", height = "15vh", autoComplete = "enabled")),
                                                        column(width = 6, DT::dataTableOutput("mostrar.atipicos"))) )
 
-
 resultados.distribucion.categoricas <- tabPanel(title = 'Categóricas', value = "categoricas", plotOutput('plot.cat', height = "76vh"),
                                                 aceEditor("fieldCodeCat", mode = "r", theme = "monokai", value = "", height = "6vh", autoComplete = "enabled"))
 
@@ -245,19 +256,45 @@ pagina.distribuciones <- tabItem(tabName = "distribucion",
 ##### PAGINA DE KNN
 ###########################################################################################################################
 
-panel.codigo.knn <- tabPanel(title = "Salida del Código",
+panel.generar.knn <- tabPanel(title = "Generación del Modelo",
                              verbatimTextOutput("txtknn"),
                              aceEditor("fieldCodeKnn", mode = "r", theme = "monokai",
                                        value = "", height = "10vh", readOnly = T, autoComplete = "enabled"))
+
+panel.prediccion.knn <- tabPanel(title = "Predicción del Modelo",
+                                 verbatimTextOutput("txtknnPrediccion"),
+                                 aceEditor("fieldCodeKnnPred", mode = "r", theme = "monokai",
+                                           value = "", height = "10vh", readOnly = T, autoComplete = "enabled"))
 
 panel.matriz.confucion.knn <- tabPanel(title = "Matriz de Confusión")
 
 panel.indices.generales <- tabPanel(title = "Índices Generales")
 
-pagina.knn <- tabItem(tabName = "knn",column(width = 12,
-                                             tabBox(width = 12, panel.codigo.knn,
-                                                    panel.matriz.confucion.knn,
-                                                    panel.indices.generales)))
+selector.variables.knn <- column(width = 10,tags$div(class="select-var-ind",
+                                                    selectizeInput("select.var.knn", NULL, multiple = T, choices = c(""),
+                                                                   options = list(maxItems = Inf, placeholder = "Seleccione la(s) variable(s) predictoras"))))
+
+opciones.knn <- dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
+                               tooltip = tooltipOptions(title = "Clic para ver opciones"),
+                               switchInput(inputId = "switch.scale.knn", onStatus = "success", offStatus = "danger", value = T,
+                                           label = "Centrar y Reducir", onLabel = "SI", offLabel = "NO", labelWidth = "100%"),
+                               sliderInput("kmax.knn", "K Máximo: ", min = 1, max = 100, value = 7),
+                               selectInput(inputId = "kernel.knn", label = "Seleccionar un Kernel",selected = 1,
+                                           choices =  c("optimal", "rectangular", "triangular", "epanechnikov", "biweight", "triweight", "cos","inv","gaussian","optimal")),
+                               selectizeInput("select.var.knn", NULL, multiple = T, choices = c(""),
+                                              options = list(maxItems = Inf, placeholder = "Seleccione la(s) variable(s) predictoras")))
+
+
+titulo.knn <- fluidRow(column(width = 4,opciones.knn),
+                       column(width = 8,actionButton("runKnn", "Ejecutar", width = "100%" )))
+
+pagina.knn <- tabItem(tabName = "knn",
+                      column(width = 12,
+                             tabBox(width = 12, title = titulo.knn,
+                                    panel.generar.knn,
+                                    panel.prediccion.knn,
+                                    panel.matriz.confucion.knn,
+                                    panel.indices.generales)))
 
 
 ###########################################################################################################################
