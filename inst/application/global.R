@@ -171,6 +171,10 @@ kkn.prediccion <- function() {
   return(paste0("prediccion.knn <<- predict(modelo.knn, datos.prueba)"))
 }
 
+knn.MC <- function(variable.p){
+  return(paste0("knn.MC <- table(datos.prueba$",variable.p,", prediccion.knn)"))
+}
+
 correlaciones <- function(metodo = 'circle', tipo = "lower"){
   return(paste0("corrplot(correlacion, method='", metodo,"', shade.col=NA, tl.col='black',
                 tl.srt=20, addCoef.col='black', order='AOE', type = '", tipo, "')"))

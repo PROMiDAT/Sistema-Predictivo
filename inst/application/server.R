@@ -21,6 +21,7 @@ shinyServer(function(input, output, session) {
 
   #Cunado es precionado el boton de cargar datos
   observeEvent(input$loadButton, {
+    browser()
     codigo <- code.carga(nombre.filas = input$rowname, ruta = input$file1$datapath,
                          separador = input$sep, sep.decimal = input$dec, encabezado = input$header)
 
@@ -31,6 +32,7 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) {
       showNotification("Error al cargar los datos, intente nuevamente", duration = 15, type = "error")
+      print(e)
       datos <<- NULL
       datos.originales <<- NULL
       return(NULL)
@@ -282,12 +284,15 @@ shinyServer(function(input, output, session) {
                            scale = input$switch.scale.knn,
                            kmax = input$kmax.knn, kernel = input$kernel.knn)
       codigo.knn.pred <- kkn.prediccion()
+      codigo.knn.mc <- knn.MC(variable.predecir)
       tryCatch({
         isolate(eval(parse(text = codigo.knn)))
         isolate(eval(parse(text = codigo.knn.pred)))
+        isolate(eval(parse(text = codigo.knn.mc)))
 
         output$txtknn <- renderPrint(print(modelo.knn))
         output$txtknnPrediccion <- renderPrint(print(prediccion.knn))
+        output$txtknnMC <- renderPrint(print(knn.MC)) #plot
       },
       error = function(e) {
         modelo.knn <<- NULL
@@ -296,6 +301,7 @@ shinyServer(function(input, output, session) {
 
       updateAceEditor(session, "fieldCodeKnn", value = codigo.knn)
       updateAceEditor(session, "fieldCodeKnnPred", value = codigo.knn.pred)
+      updateAceEditor(session, "fieldCodeKnnMC", value = codigo.knn.mc)
     }
   })
 

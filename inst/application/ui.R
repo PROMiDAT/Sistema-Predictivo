@@ -266,7 +266,10 @@ panel.prediccion.knn <- tabPanel(title = "Predicción del Modelo",
                                  aceEditor("fieldCodeKnnPred", mode = "r", theme = "monokai",
                                            value = "", height = "10vh", readOnly = T, autoComplete = "enabled"))
 
-panel.matriz.confucion.knn <- tabPanel(title = "Matriz de Confusión")
+panel.matriz.confucion.knn <- tabPanel(title = "Matriz de Confusión",
+                                       verbatimTextOutput("txtknnMC"),
+                                       aceEditor("fieldCodeKnnMC", mode = "r", theme = "monokai",
+                                                 value = "", height = "10vh", readOnly = T, autoComplete = "enabled"))
 
 panel.indices.generales <- tabPanel(title = "Índices Generales")
 
