@@ -6,8 +6,11 @@ shinyServer(function(input, output, session) {
   ###########################################################################################################################
 
   source('global.R', local = T)
-  options(shiny.maxRequestSize=200*1024^2)
-  options(DT.options = list(aLengthMenu = c(10, 30, 50), iDisplayLength = 10, scrollX = TRUE))
+  Sys.setenv("LANGUAGE" = "ES")
+  options(shiny.maxRequestSize=200*1024^2,
+          DT.options = list(aLengthMenu = c(10, 30, 50),
+                            iDisplayLength = 10, scrollX = TRUE),
+          encoding = "utf8")
 
 
   ###########################################################################################################################
@@ -57,10 +60,6 @@ shinyServer(function(input, output, session) {
     error = function(e) {
       return(datos <- NULL)
     })
-
-    # ##Carga el codigo de los modelos
-    # updateAceEditor(session, "fieldCodeKnn", value = kkn.modelo())
-
 
   })
 
@@ -229,6 +228,7 @@ shinyServer(function(input, output, session) {
     return(isolate(eval(parse(text = cod.dya.cat))))
   })
 
+
   #Cuando cambia la variable del grafico de distribucion numerica
   observeEvent(c(input$sel.distribucion.num, input$col.dist), {
     cod.dya.num <<- def.code.num(data = "datos", variable = paste0("'", input$sel.distribucion.num, "'"),
@@ -270,55 +270,97 @@ shinyServer(function(input, output, session) {
   })
 
   observeEvent(input$runKnn,{
+    #Validaciones
     if(is.null(variable.predecir))
       showNotification("Tiene que seleccionar una variable a predecir",duration = 15, type = "error")
     if(is.null(datos))
       showNotification("Tiene que ingresar datos",duration = 15, type = "error")
     if(is.null(datos.aprendizaje))
       showNotification("Tiene que crear los datos de aprendizaje y de prueba",duration = 15, type = "error")
-    if(!is.null(datos) & !is.null(variable.predecir) & !is.null(datos.aprendizaje)){
-      codigo.knn <- kkn.modelo(variable.pr = variable.predecir,
-                           predictoras = input$select.var.knn,
-                           scale = input$switch.scale.knn,
-                           kmax = input$kmax.knn, kernel = input$kernel.knn)
-      codigo.knn.pred <- kkn.prediccion()
-      codigo.knn.mc <- knn.MC(variable.predecir)
-      tryCatch({
-        isolate(eval(parse(text = codigo.knn)))
-        isolate(eval(parse(text = codigo.knn.pred)))
-        isolate(eval(parse(text = codigo.knn.mc)))
 
-        output$txtknn <- renderPrint(print(modelo.knn))
-        output$txtknnPrediccion <- renderPrint(print(prediccion.knn))
-        output$txtknnMC <- renderPrint(print(knn.MC)) #plot
-      },
-      error = function(e) {
-        modelo.knn <<- NULL
-        showNotification("Error al ejecutar el modelo, intente nuevamente",duration = 15,type = "error")
-      })
+    if(!is.null(datos) & !is.null(variable.predecir) & !is.null(datos.aprendizaje)){ #Si se tiene los datos entonces :
+
+      #Se genera el codigo del modelo
+      codigo.knn <- kkn.modelo(variable.pr = variable.predecir,predictoras = input$select.var.knn,
+                               scale = input$switch.scale.knn,
+                               kmax = input$kmax.knn, kernel = input$kernel.knn)
 
       updateAceEditor(session, "fieldCodeKnn", value = codigo.knn)
-      updateAceEditor(session, "fieldCodeKnnPred", value = codigo.knn.pred)
-      updateAceEditor(session, "fieldCodeKnnMC", value = codigo.knn.mc)
+    }
+  })
+
+  observeEvent(c(input$runKnn,input$fieldCodeKnn),{
+    if(input$fieldCodeKnn != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeKnn)))
+        output$txtknn <- renderPrint(print(modelo.knn))
+
+        #Se genera el codigo de la prediccion
+        codigo.knn.pred <- kkn.prediccion()
+        updateAceEditor(session, "fieldCodeKnnPred", value = codigo.knn.pred)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        modelo.knn <<- NULL
+        MC.knn <<- NULL
+        prediccion.knn <<- NULL
+        showNotification("Error al ejecutar el modelo, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  observeEvent(c(input$runKnn,input$fieldCodeKnn,input$fieldCodeKnnPred),{
+    if(input$fieldCodeKnnPred != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeKnnPred)))
+
+        #Cambia la tabla con la prediccion de knn
+        output$knnPrediTable <- DT::renderDataTable(obj.knn.predic())
+
+        # Se genera el codigo de la matriz
+        codigo.knn.mc <- knn.MC(variable.predecir)
+        updateAceEditor(session, "fieldCodeKnnMC", value = codigo.knn.mc)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        MC.knn <<- NULL
+        prediccion.knn <<- NULL
+
+        #Cambia la tabla con la prediccion de knn
+        output$knnPrediTable <- DT::renderDataTable(obj.knn.predic())
+
+        showNotification("Error al ejecutar la prediccion, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  observeEvent(c(input$runKnn,input$fieldCodeKnn,input$fieldCodeKnnPred,input$fieldCodeKnnMC),{
+    if(input$fieldCodeKnnMC != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeKnnMC)))
+        output$txtknnMC <- renderPrint(print(MC.knn))
+
+        isolate(eval(parse(text = plot.MC.code())))
+        output$plot.knn.mc <- renderPlot(isolate(eval(parse(text = "plot.MC(MC.knn)" ))))
+
+        output$knnPrecGlob <- renderGauge({ gauge(round(100 * (sum(diag(MC.knn))/ sum(MC.knn)),2), min = 0, max = 100, symbol = '%', label = "Precisión Global", gaugeSectors(
+          success = c(70, 100), warning = c(50, 69), danger = c(0, 49) ) ) })
+        output$knnErrorGlob <- renderGauge({ gauge(round(100 - (100 * (sum(diag(MC.knn))/ sum(MC.knn))),2), min = 0, max = 100, symbol = '%',label = "Error Global", gaugeSectors(
+          success = c(0, 30), warning = c(31, 45), danger = c(46, 100))) })
+
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        MC.knn <<- NULL
+        output$plot.knn.mc <- renderPlot(isolate(eval(parse(text = "NULL" ))))
+        showNotification("Error al ejecutar la matriz, intente nuevamente",duration = 15,type = "error")
+      })
     }
   })
 
   observe({
-    options(encoding = "mac")
+    #Sys.setlocale("LC_ALL","en_US.UTF-8")
     updateAceEditor(session, "fieldCodeResum", value = cod.resum())
 
     updateAceEditor(session, "fieldFuncNum", value = func.dya.num)
     updateAceEditor(session, "fieldFuncCat", value = func.dya.cat)
-
-    #updateAceEditor(session, "fieldCodeCentr", value = func.centros)
-    # updateAceEditor(session, "fieldFuncHoriz", value = func.horiz)
-    # updateAceEditor(session, "fieldFuncVert", value = func.vert)
-    # updateAceEditor(session, "fieldFuncRadar", value = func.radar)
-    #
-    # updateAceEditor(session, "fieldFuncJambu", value = def.func.jambu())
-    # updateAceEditor(session, "fieldFuncKhoriz", value = func.khoriz)
-    # updateAceEditor(session, "fieldFuncKvert", value = func.kvert)
-    # updateAceEditor(session, "fieldFuncKradar", value = func.kradar)
 
     updateAceEditor(session, "fieldCodeReport", value = def.reporte())
   })
@@ -379,7 +421,7 @@ shinyServer(function(input, output, session) {
   output$plot.num <- renderPlot(obj.dya.num())
 
   #Hace el grafico de distribuciones categoricas
-  output$plot.cat = renderPlot(obj.dya.cat())
+  output$plot.cat <- renderPlot(obj.dya.cat())
 
   #Muestra el documento del reporte
   output$knitDoc <- renderUI({
@@ -409,6 +451,21 @@ shinyServer(function(input, output, session) {
       zip(file, files)
     }
   )
+
+  obj.knn.predic <- function() {
+    real <- as.character(datos.prueba[,variable.predecir])
+    predi <- as.character(prediccion.knn)
+    df <- cbind(real,predi,ifelse(real == predi,
+                                  rep("<span style='color:green'><b>ACIERTO</b></span>",length(real)),
+                                  rep("<span style='color:red'><b>FALLO</b></span>",length(real))))
+    colnames(df) <- c( "Datos Reales", "Predicción", " ")
+    sketch <- htmltools::withTags(table(
+      tableHeader(c("Datos Reales", "Predicción", " "))
+    ))
+    return(DT::datatable(df, selection = 'none', editable = FALSE,escape = FALSE, container = sketch,
+                         extensions = c('Responsive'),
+                         options = list(dom = 'frtip',pageLength = 15) ))
+  }
 
 
 }) ## FIN SERVER

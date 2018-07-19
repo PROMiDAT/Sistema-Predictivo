@@ -9,7 +9,7 @@ gg_color_hue <- function(n) {
   hcl(h = hues, l = 65, c = 100)[1:n]
 }
 
-
+#Obtiene los nombres de columnas o regresa un string vacio
 colnames.empty <- function(res){
   res <- colnames(res)
   if(is.null(res))
@@ -58,6 +58,13 @@ code.carga <- function(nombre.filas = T, ruta = NULL, separador = ";", sep.decim
     return(paste0("datos.originales <<- read.table('", ruta, "', header=", encabezado, ", sep='", separador, "', dec = '", sep.decimal,
                   "') \ndatos <<- datos.originales"))
   }
+}
+
+#Crea el código de la particion en testing y learning data
+particion.code <- function(data = "datos", p = "0.5", variable = NULL){
+  variable.predecir <<- variable
+  return(paste0("particion <- createDataPartition(datos$",variable,", p = ",p/100,", list = FALSE)\n
+                datos.prueba <<- datos[-particion,]\ndatos.aprendizaje <<- datos[particion,]"))
 }
 
 #Genera el codigo para transformar datos
@@ -119,6 +126,18 @@ resumen.categorico <- function(data, variable){
   return(salida)
 }
 
+#Calcula la matriz de correlacion
+modelo.cor <- function(data = "datos"){
+  return(paste0("correlacion <<- cor(var.numericas(", data, "))"))
+}
+
+#Codigo de la generacion de correlaciones
+correlaciones <- function(metodo = 'circle', tipo = "lower"){
+  return(paste0("corrplot(correlacion, method='", metodo,"', shade.col=NA, tl.col='black',
+                tl.srt=20, addCoef.col='black', order='AOE', type = '", tipo, "')"))
+}
+
+#Codigo de la genracion de la curva normal (test de normalidad)
 default.normal <- function(data = "datos", vars = NULL, color = "#00FF22AA"){
   if(is.null(vars)){
     return(NULL)
@@ -132,6 +151,7 @@ legend('bottom', legend = 'Curva Normal', col = 'blue', lty=1, cex=1.5)"))
   }
 }
 
+#Codigo del grafico de dispersion
 default.disp <- function(data = "datos", vars = NULL, color = "#FF0000AA"){
   if(length(vars) < 2) {
     return(NULL)
@@ -144,23 +164,6 @@ default.disp <- function(data = "datos", vars = NULL, color = "#FF0000AA"){
   }
 }
 
-def.model <- function(data = "datos", cant = "as.numeric(input$cant.cluster)", dist.method = "euclidean", hc.method = "complete"){
-  return(paste0("hc.modelo <<- hclust(dist(var.numericas(", data, "), method = '", dist.method, "'), method = '", hc.method, "')
-                centros <<- calc.centros(var.numericas(", data, "), hc.modelo, ", cant, ")"))
-}
-
-#Calcula la matriz de correlacion
-modelo.cor <- function(data = "datos"){
-  return(paste0("correlacion <<- cor(var.numericas(", data, "))"))
-}
-
-#Crea el código de la particion en testing y learning data
-particion.code <- function(data = "datos", p = "0.5", variable = NULL){
-  variable.predecir <<- variable
-  return(paste0("particion <- createDataPartition(datos$",variable,", p = ",p/100,", list = FALSE)\n
-datos.prueba <<- datos[-particion,]\ndatos.aprendizaje <<- datos[particion,]"))
-}
-
 #Crea el modelo KNN
 kkn.modelo <- function(variable.pr = NULL, predictoras = ".", scale = TRUE,kmax = 7, kernel = "optimal"){
   if(all(predictoras == ""))
@@ -170,18 +173,33 @@ kkn.modelo <- function(variable.pr = NULL, predictoras = ".", scale = TRUE,kmax 
   return(codigo)
 }
 
+#Codigo de la prediccion de knn
 kkn.prediccion <- function() {
   return(paste0("prediccion.knn <<- predict(modelo.knn, datos.prueba)"))
 }
 
+#Codigo de la matriz de confucion de knn
 knn.MC <- function(variable.p){
-  return(paste0("knn.MC <- table(datos.prueba$",variable.p,", prediccion.knn)"))
+  return(paste0("MC.knn <<- table(datos.prueba$",variable.p,", prediccion.knn)"))
 }
 
-correlaciones <- function(metodo = 'circle', tipo = "lower"){
-  return(paste0("corrplot(correlacion, method='", metodo,"', shade.col=NA, tl.col='black',
-                tl.srt=20, addCoef.col='black', order='AOE', type = '", tipo, "')"))
+indices.general <- function(MC){
+  if(1 == dim(MC)[2]){
+    MC <- cbind(MC,0)
+  }
+  precision.global <- sum(diag(MC))/ sum(MC)
+  error.global <- 1 - precision.global
+  falsos.categoria <- 1 - presicion.categoria
+  acertividad.categoria <- diag(MC)/colSums(MC)
+
+  res <- list(matriz.confusion = MC,
+              precision.global = precision.global,
+              error.global = error.global,
+              falsos.categoria = falsos.categoria,
+              acertividad.categoria = acertividad.categoria)
+  return(res)
 }
+
 
 def.code.num <- function(data = "datos", variable = "input$sel.distribucion", color = 'input$col.dist'){
   return(paste0("distribucion.numerico(", data, "[, ", variable, "], ", variable, ", color = ", color,")"))
@@ -283,19 +301,75 @@ cod.resum <- function(data = "datos"){
   return(paste0("summary(", data, ")"))
 }
 
+plot.MC.code <- function(cm) {
+return("
+plot.MC <<- function(cm){
+  par(mar=c(2,2,2,2))
+       plot(c(1, 500), c(1, 500), type = 'n', xlab='', ylab='', xaxt='n', yaxt='n')
+       title('Matriz de Confusión', cex.main=2)
+
+       start <- 70
+       len <- 500 - start
+
+       n.class <- ncol(cm) + 3
+       names.class <- c(colnames(cm),'Precisión', 'Falsos','Acertividad')
+       prec.cat <- diag(cm)/rowSums(cm)
+       falsos.cat <- 1 - prec.cat
+       acertividad.cat <- diag(cm)/colSums(cm)
+
+       ancho <- len / n.class
+       alto  <- len / (n.class-3)
+       x2 <- (x1 <- start) + ancho
+       y2 <- (y1 <- len) - alto
+
+       text(310, 485, 'Predición', cex=1.3, font=2)
+       text(start-55, 250, 'Real', cex=1.3, srt=90, font=2)
+
+       for (i in 0:(n.class-4)) {
+       for (j in 0:(n.class-1)) {
+       x1.aux <- x1 + j*(ancho + 3)
+       y1.aux <- y1 - i*(alto + 5)
+       x2.aux <- x2 + j*(ancho + 3)
+       y2.aux <- y2 - i*(alto + 5)
+       if(j < (n.class-3)){
+       rect(x1.aux, y1.aux, x2.aux, y2.aux, col=ifelse(i==j,'#3f72af','#11999e'))
+       text(mean(c(x1.aux,x2.aux)) , mean(c(y1.aux,y2.aux)), cm[(i+1),(j+1)], cex=1.6, font=2, col='white')
+       }
+       if (j == (n.class-3)){
+       rect(x1.aux, y1.aux, x2.aux, y2.aux, col= '#e4f9f5' )
+       text(mean(c(x1.aux,x2.aux)) , mean(c(y1.aux,y2.aux)), paste0(round(prec.cat[i+1] * 100,2), '%'), cex=1.6, font=2, col='black')
+       }
+       if (j == (n.class-2)){
+       rect(x1.aux, y1.aux, x2.aux, y2.aux, col= '#e4f9f5' )
+       text(mean(c(x1.aux,x2.aux)) , mean(c(y1.aux,y2.aux)), paste0(round(falsos.cat[i+1] * 100,2), '%'), cex=1.6, font=2, col='black')
+       }
+       if (j == (n.class-1)){
+       rect(x1.aux, y1.aux, x2.aux, y2.aux, col= '#e4f9f5' )
+       text(mean(c(x1.aux,x2.aux)) , mean(c(y1.aux,y2.aux)), paste0(round(acertividad.cat[i+1] * 100,2), '%'), cex=1.6, font=2, col='black')
+       }
+       }
+       text( mean( c((x2 + i*(ancho + 3)) , (x1 + i*(ancho + 3)) )), y1 + 20, names.class[i+1], cex=1.2)
+       text( x1-20,mean(c((y1 - i*(alto + 5)) , (y2 - i*(alto + 5))  )), names.class[i+1], cex=1.2)
+       }
+       text( mean( c((x2 + (i+1)*(ancho + 3)) , (x1 + (i+1)*(ancho + 3)) )), y1 + 20, names.class[i+2], cex=1.2)
+       text( mean( c((x2 + (i+2)*(ancho + 3)) , (x1 + (i+2)*(ancho + 3)) )), y1 + 20, names.class[i+3], cex=1.2)
+       text( mean( c((x2 + (i+3)*(ancho + 3)) , (x1 + (i+3)*(ancho + 3)) )), y1 + 20, names.class[i+4], cex=1.2)
+}")
+}
+
 ###########################################################################################################################
 ##### VARIABLES GLOBALES
 ###########################################################################################################################
 
-
+# ------------------------------- DATOS
 datos <<- NULL  # Los datos cargados pueden estar transformados
 datos.originales <<- NULL # Los datos cargados originales
-correlacion <<- NULL
-
 datos.prueba <<- NULL
 datos.aprendizaje <<- NULL
 variable.predecir <<- NULL
-prediccion.knn <<- NULL
+
+
+correlacion <<- NULL
 # def.colores <<- gg_color_hue(10)
 
 cod.disp <- default.disp()
@@ -307,10 +381,12 @@ func.dya.num <- default.func.num()
 func.dya.cat <- default.func.cat()
 
 
-# ---
-
+# ------------------------------- KNN
 modelo.knn <<- NULL
+MC.knn <<- NULL
+prediccion.knn <<- NULL
 
+#cod.mc.knn <<- plot.MC.code()
 # cod.mod.knn <- knn.modelo()
 
 

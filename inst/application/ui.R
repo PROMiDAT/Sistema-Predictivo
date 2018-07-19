@@ -20,6 +20,7 @@ library(scatterplot3d)
 library(stringr)
 library(caret)
 library(kknn)
+library(flexdashboard)
 
 
 ###########################################################################################################################
@@ -259,19 +260,25 @@ pagina.distribuciones <- tabItem(tabName = "distribucion",
 panel.generar.knn <- tabPanel(title = "Generación del Modelo",
                              verbatimTextOutput("txtknn"),
                              aceEditor("fieldCodeKnn", mode = "r", theme = "monokai",
-                                       value = "", height = "10vh", readOnly = T, autoComplete = "enabled"))
+                                       value = "", height = "5vh", readOnly = F, autoComplete = "enabled"))
 
 panel.prediccion.knn <- tabPanel(title = "Predicción del Modelo",
-                                 verbatimTextOutput("txtknnPrediccion"),
+                                 DT::dataTableOutput("knnPrediTable"),
                                  aceEditor("fieldCodeKnnPred", mode = "r", theme = "monokai",
-                                           value = "", height = "10vh", readOnly = T, autoComplete = "enabled"))
+                                           value = "", height = "5vh", readOnly = F, autoComplete = "enabled"))
 
 panel.matriz.confucion.knn <- tabPanel(title = "Matriz de Confusión",
+                                       plotOutput('plot.knn.mc', height = "40vh"),
+                                       fluidRow(column(width = 6, gaugeOutput("knnPrecGlob", width = "100%")),
+                                                column(width = 6, gaugeOutput("knnErrorGlob", width = "100%"))),
                                        verbatimTextOutput("txtknnMC"),
                                        aceEditor("fieldCodeKnnMC", mode = "r", theme = "monokai",
-                                                 value = "", height = "10vh", readOnly = T, autoComplete = "enabled"))
+                                                 value = "", height = "4vh", readOnly = F, autoComplete = "enabled"))
 
-panel.indices.generales <- tabPanel(title = "Índices Generales")
+panel.indices.generales <- tabPanel(title = "Índices Generales",
+                                    verbatimTextOutput("txtknnIG"),
+                                    aceEditor("fieldCodeKnnIG", mode = "r", theme = "monokai",
+                                              value = "", height = "10vh", readOnly = T, autoComplete = "enabled"))
 
 selector.variables.knn <- column(width = 10,tags$div(class="select-var-ind",
                                                     selectizeInput("select.var.knn", NULL, multiple = T, choices = c(""),
@@ -284,7 +291,7 @@ opciones.knn <- dropdownButton(h4("Opciones"),circle = F, status = "danger", ico
                                sliderInput("kmax.knn", "K Máximo: ", min = 1, max = 100, value = 7),
                                selectInput(inputId = "kernel.knn", label = "Seleccionar un Kernel",selected = 1,
                                            choices =  c("optimal", "rectangular", "triangular", "epanechnikov", "biweight", "triweight", "cos","inv","gaussian","optimal")),
-                               selectizeInput("select.var.knn", NULL, multiple = T, choices = c(""),
+                               selectizeInput("select.var.knn",NULL,label = "Variables Predictoras:", multiple = T, choices = c(""),
                                               options = list(maxItems = Inf, placeholder = "Seleccione la(s) variable(s) predictoras")))
 
 
