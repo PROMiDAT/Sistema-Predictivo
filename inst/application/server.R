@@ -930,6 +930,9 @@ shinyServer(function(input, output, session) {
         isolate(eval(parse(text = input$fieldCodeDt)))
         output$txtDt <- renderPrint(print(modelo.dt))
 
+        #Acutaliza el codigo del grafico de clasificacion svm
+        updateAceEditor(session, "fieldCodeDtPlot", value = dt.plot())
+
         #Se genera el codigo de la prediccion
         codigo.dt.pred <- dt.prediccion()
         updateAceEditor(session, "fieldCodeDtPred", value = codigo.dt.pred)
@@ -940,6 +943,15 @@ shinyServer(function(input, output, session) {
         prediccion.dt <<- NULL
         showNotification("Error al ejecutar el modelo, intente nuevamente",duration = 15,type = "error")
       })
+    }
+  })
+
+  #cuando cambia el codigo del grafico del árbol
+  observeEvent(c(input$fieldCodeDtPlot),{
+    if(input$fieldCodeDtPlot != "" ){
+      output$plot.dt <- renderPlot(isolate(eval(parse(text = input$fieldCodeDtPlot ))))
+    }else{
+      output$plot.dt <- renderPlot(isolate(eval(parse(text = "NULL" ))))
     }
   })
 

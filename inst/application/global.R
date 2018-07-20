@@ -345,6 +345,11 @@ dt.MC <- function(variable.p){
   return(paste0("MC.dt <<- table(datos.prueba$",variable.p,", prediccion.dt)"))
 }
 
+#Codigo del grafico de svm
+dt.plot <- function(){
+  num <- length(levels(datos[,variable.predecir]))
+  return(paste0("prp(modelo.dt, extra=104, branch.type = 2, box.col = gg_color_hue(",num,")[modelo.dt$frame$yval])"))
+}
 
 # -------------------  RF ------------------------ #
 
