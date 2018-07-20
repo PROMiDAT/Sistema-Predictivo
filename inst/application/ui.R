@@ -24,6 +24,7 @@ library(kknn)
 library(flexdashboard)
 library(e1071)
 library(rpart)
+library(rpart.plot)
 library(randomForest)
 library(ada)
 
@@ -437,6 +438,12 @@ panel.generar.dt <- tabPanel(title = "Generación del Modelo",
                               aceEditor("fieldCodeDt", mode = "r", theme = "monokai",
                                         value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
+plot.dt <- tabPanel(title = "Gráfico Árbol",
+                     plotOutput('plot.dt', height = "55vh"),
+                     hr(),
+                     aceEditor("fieldCodeDtPlot", mode = "r", theme = "monokai",
+                               value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
+
 panel.prediccion.dt <- tabPanel(title = "Predicción del Modelo",
                                  DT::dataTableOutput("dtPrediTable"),
                                  hr(),
@@ -475,6 +482,7 @@ pagina.dt <- tabItem(tabName = "dt",
                       column(width = 12,
                              tabBox(width = 12, title = titulo.dt,
                                     panel.generar.dt,
+                                    plot.dt,
                                     panel.prediccion.dt,
                                     panel.matriz.confucion.dt,
                                     panel.indices.generales.dt)))
