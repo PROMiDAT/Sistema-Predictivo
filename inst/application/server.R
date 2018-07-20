@@ -136,6 +136,7 @@ shinyServer(function(input, output, session) {
       updateSelectizeInput(session, "select.var.knn", choices = nambres.sin.pred)
       updateSelectizeInput(session, "select.var.bayes", choices = nambres.sin.pred)
       updateSelectizeInput(session, "select.var.svm", choices = nambres.sin.pred)
+      updateSelectizeInput(session, "select.var.svm.plot", choices = nambres.sin.pred)
       updateSelectizeInput(session, "select.var.dt", choices = nambres.sin.pred)
       updateSelectizeInput(session, "select.var.rf", choices = nambres.sin.pred)
       updateSelectizeInput(session, "select.var.boosting", choices = nambres.sin.pred)
@@ -714,6 +715,9 @@ shinyServer(function(input, output, session) {
         isolate(eval(parse(text = input$fieldCodeSvm)))
         output$txtSvm <- renderPrint(print(modelo.svm))
 
+        #Acutaliza el codigo del grafico de clasificacion svm
+        updateAceEditor(session, "fieldCodeSvmPlot", value = svm.plot(NULL))
+
         #Se genera el codigo de la prediccion
         codigo.svm.pred <- svm.prediccion()
         updateAceEditor(session, "fieldCodeSvmPred", value = codigo.svm.pred)
@@ -749,6 +753,29 @@ shinyServer(function(input, output, session) {
 
         showNotification("Error al ejecutar la prediccion, intente nuevamente",duration = 15,type = "error")
       })
+    }
+  })
+
+  #Cuando se selecionan variables para el grafico de clasificacion svm
+  observeEvent(c(input$runSvm,input$select.var.svm.plot),{
+      if(length(input$select.var.svm.plot) == 2){
+        v <- colnames(datos)
+        v <- v[v != variable.predecir]
+        v <- v[!(v %in% input$select.var.svm.plot)]
+        if(length(v) == 0)
+          v <- input$select.var.svm.plot
+        updateAceEditor(session, "fieldCodeSvmPlot", value = svm.plot(input$select.var.svm.plot, v))
+      }else{
+        updateAceEditor(session, "fieldCodeSvmPlot", value = "")
+      }
+  })
+
+  #cuando cambia el codigo del grafico de clasificacion svm
+  observeEvent(c(input$fieldCodeSvmPlot),{
+    if(input$fieldCodeSvmPlot != "" ){
+      output$plot.svm <- renderPlot(isolate(eval(parse(text = input$fieldCodeSvmPlot ))))
+    }else{
+      output$plot.svm <- renderPlot(isolate(eval(parse(text = "NULL" ))))
     }
   })
 

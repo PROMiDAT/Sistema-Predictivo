@@ -312,6 +312,18 @@ svm.MC <- function(variable.p){
   return(paste0("MC.svm <<- table(datos.prueba$",variable.p,", prediccion.svm)"))
 }
 
+#Codigo del grafico de svm
+svm.plot <- function(variables, resto){
+  if(is.null(variables)) return("")
+  l <- c()
+  for(i in 1:length(resto)){
+    l <- c(l , paste0(resto[i],"=",i))
+  }
+  l <- paste0("list(",paste0(l,collapse = ","),")")
+  return(paste0("plot(modelo.svm, datos, ",variables[1],"~",variables[2],", slice = ",l,")"))
+}
+
+
 # -------------------  DT ------------------------ #
 
 #Crea el modelo DT

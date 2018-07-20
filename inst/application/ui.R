@@ -95,7 +95,7 @@ panel.tansformar.datos <- tabPanel(title = "Transformar", width = 12, solidHeade
                                    aceEditor("fieldCodeTrans", mode = "r", theme = "monokai", value = "", height = "10vh",  readOnly = T))
 
 panel.segmentar.datos <- tabPanel(title = "Prueba y Aprendizaje", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
-                                  numericInput("semilla", "Semilla Aleatoria:", 5, width = "100%"),
+                                  numericInput("semilla", "Semilla Aleatoria:", 5550, width = "100%"),
                                   selectInput(inputId = "sel.predic.var", label = h4("Seleccionar Variable a Predecir:"), choices =  "", width = "100%"),
                                   hr(),
                                   sliderInput("segmentacionDatosA", "Proporción Aprendizaje:",width = "100%",
@@ -374,6 +374,14 @@ panel.generar.svm <- tabPanel(title = "Generación del Modelo",
                               aceEditor("fieldCodeSvm", mode = "r", theme = "monokai",
                                         value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
+plot.svm <- tabPanel(title = "Gráfico Clasificación",
+                     plotOutput('plot.svm', height = "55vh"),
+                     hr(),
+                     selectizeInput("select.var.svm.plot",NULL,label = "Variables Predictoras:", multiple = T, choices = c(""),
+                                    options = list(maxItems = 2, placeholder = "Seleccione la(s) variable(s) predictoras"), width = "100%"),
+                     aceEditor("fieldCodeSvmPlot", mode = "r", theme = "monokai",
+                               value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
+
 panel.prediccion.svm <- tabPanel(title = "Predicción del Modelo",
                                  DT::dataTableOutput("svmPrediTable"),
                                  hr(),
@@ -415,6 +423,7 @@ pagina.svm <- tabItem(tabName = "svm",
                       column(width = 12,
                              tabBox(width = 12, title = titulo.svm,
                                     panel.generar.svm,
+                                    plot.svm,
                                     panel.prediccion.svm,
                                     panel.matriz.confucion.svm,
                                     panel.indices.generales.svm)))
