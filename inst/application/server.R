@@ -947,7 +947,7 @@ shinyServer(function(input, output, session) {
   })
 
   #cuando cambia el codigo del grafico del árbol
-  observeEvent(c(input$fieldCodeDtPlot),{
+  observeEvent(c(input$runDt,input$fieldCodeDtPlot),{
     if(input$fieldCodeDtPlot != "" ){
       output$plot.dt <- renderPlot(isolate(eval(parse(text = input$fieldCodeDtPlot ))))
     }else{
@@ -1564,6 +1564,7 @@ shinyServer(function(input, output, session) {
                          extensions = c('Responsive'),
                          options = list(dom = 'frtip',pageLength = 15) ))
   }
+
 
   # -------------------  Reporte ------------------------ #
 

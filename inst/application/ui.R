@@ -434,7 +434,7 @@ pagina.svm <- tabItem(tabName = "svm",
 ###########################################################################################################################
 
 panel.generar.dt <- tabPanel(title = "Generación del Modelo",
-                              verbatimTextOutput("txtDt"),
+                              withSpinner(verbatimTextOutput("txtDt")),
                               aceEditor("fieldCodeDt", mode = "r", theme = "monokai",
                                         value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
