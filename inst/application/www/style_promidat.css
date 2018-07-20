@@ -10,7 +10,7 @@
 .skin-blue .main-sidebar {
     background-color: #777777;
 }
-             
+
 .skin-blue .sidebar-menu>li.active>a, .skin-blue .sidebar-menu>li:hover>a {
     background-color: #CBB051;
 }
@@ -40,8 +40,8 @@
     left: 50%;
     top: 50%;
     z-index: -1;
-    margin-top: -33px;  
-    margin-left: -33px; 
+    margin-top: -33px;
+    margin-left: -33px;
 }
 
 #plot.recalculating {
@@ -79,7 +79,7 @@ input[type="radio"]:checked {
 }
 
 input[type="checkbox"] {
- -webkit-appearance:none;/* Hides the default checkbox style */ 
+ -webkit-appearance:none;/* Hides the default checkbox style */
  height:15px;
  width:15px;
  cursor:pointer;
@@ -120,4 +120,9 @@ input[type="checkbox"]:hover:before {
 .table-striped > tbody > tr:nth-of-type(2n+1){
     background-color: #CBB051;
     color: #777777;
+}
+
+.shiny-text-output{
+  overflow-y:scroll !important;
+  max-height: 400px !important;
 }

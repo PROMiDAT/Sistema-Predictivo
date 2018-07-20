@@ -22,12 +22,12 @@ shinyServer(function(input, output, session) {
     stopApp()
   })
 
+  # -------------------  Pagina Datos ------------------------ #
+
   #Cunado es precionado el boton de cargar datos
   observeEvent(input$loadButton, {
     codigo <- code.carga(nombre.filas = input$rowname, ruta = input$file1$datapath,
                          separador = input$sep, sep.decimal = input$dec, encabezado = input$header)
-
-    updateAceEditor(session, "fieldCodeData", value = codigo)
 
     tryCatch({
       isolate(eval(parse(text = codigo)))
@@ -38,6 +38,22 @@ shinyServer(function(input, output, session) {
       datos.originales <<- NULL
       return(NULL)
     })
+
+    if(any(is.na(datos))){
+      codigo.na <- code.NA(deleteNA = input$deleteNA)
+      tryCatch({
+        isolate(eval(parse(text = codigo.na)))
+      }, error = function(e) {
+        showNotification(paste0("Error al eliminar NAs: ", e), duration = 10, type = "error")
+        datos <<- NULL
+        datos.originales <<- NULL
+        return(NULL)
+      })
+    } else {
+      codigo.na <- ""
+    }
+
+    updateAceEditor(session, "fieldCodeData", value = paste0(codigo, "\n", codigo.na))
 
     updateSelectizeInput(session, "sel.normal", choices = colnames.empty(var.numericas(datos)))
     updateSelectizeInput(session, "select.var", choices = colnames.empty(var.numericas(datos)))
@@ -98,7 +114,6 @@ shinyServer(function(input, output, session) {
     datos.prueba <<- NULL
     datos.aprendizaje <<- NULL
     variable.predecir <<- NULL
-    #modelo.knn <<- NULL
 
     updateAceEditor(session, "fieldModelCor", value = modelo.cor())
     tryCatch({
@@ -109,16 +124,35 @@ shinyServer(function(input, output, session) {
     })
   })
 
+  #Segmenta los datos en aprendizaje y prueba
   observeEvent(input$segmentButton,{
     if(input$sel.predic.var != ""){
-      codigo <- particion.code("datos", input$segmentacionDatosA ,input$sel.predic.var)
+      codigo <- particion.code("datos", input$segmentacionDatosA ,input$sel.predic.var,input$semilla)
       updateAceEditor(session, "fieldCodeSegment", value = codigo)
       isolate(eval(parse(text = codigo)))
       nombres <- colnames.empty(datos)
-      updateSelectizeInput(session, "select.var.knn", choices = nombres[-which(nombres == variable.predecir)])
+
+      nambres.sin.pred <- nombres[-which(nombres == variable.predecir)]
+      updateSelectizeInput(session, "select.var.knn", choices = nambres.sin.pred)
+      updateSelectizeInput(session, "select.var.bayes", choices = nambres.sin.pred)
+      updateSelectizeInput(session, "select.var.svm", choices = nambres.sin.pred)
+      updateSelectizeInput(session, "select.var.dt", choices = nambres.sin.pred)
+      updateSelectizeInput(session, "select.var.rf", choices = nambres.sin.pred)
+      updateSelectizeInput(session, "select.var.boosting", choices = nambres.sin.pred)
     }else{
       showNotification("Tiene que seleccionar una variable a predecir", duration = 15, type = "error")
     }
+  })
+
+  #Cuando cambia la barra de proporcion de datos de prueba (Segmentar Datos)
+  observeEvent(input$segmentacionDatosA,{
+    updateSliderInput(session,"segmentacionDatosT",value = 100 - input$segmentacionDatosA)
+  })
+
+  #Cuando cambia la barra de proporcion de datos de aprendizaje (Segmentar Datos)
+  observeEvent(input$segmentacionDatosT,{
+    updateSliderInput(session,"segmentacionDatosA",value = 100 - input$segmentacionDatosT)
+
   })
 
   #Crea la tabla de datos que se muestra en la pagina de datos
@@ -176,6 +210,18 @@ shinyServer(function(input, output, session) {
     return(res)
   })
 
+  # Al inicio de la sesion
+  observe({
+    updateAceEditor(session, "fieldCodeResum", value = cod.resum())
+
+    updateAceEditor(session, "fieldFuncNum", value = func.dya.num)
+    updateAceEditor(session, "fieldFuncCat", value = func.dya.cat)
+
+    updateAceEditor(session, "fieldCodeReport", value = def.reporte())
+  })
+
+  # -------------------  Estadisticas Basicas ------------------------ #
+
   #Cuando es precionado el boton de cargar datos o de transformar datos
   #Se crea una tabla summary
   obj.resum <- eventReactive(c(input$loadButton, input$transButton), {
@@ -228,7 +274,6 @@ shinyServer(function(input, output, session) {
     return(isolate(eval(parse(text = cod.dya.cat))))
   })
 
-
   #Cuando cambia la variable del grafico de distribucion numerica
   observeEvent(c(input$sel.distribucion.num, input$col.dist), {
     cod.dya.num <<- def.code.num(data = "datos", variable = paste0("'", input$sel.distribucion.num, "'"),
@@ -260,15 +305,10 @@ shinyServer(function(input, output, session) {
     updateAceEditor(session, "fieldCodeCor", value = cod.cor)
   })
 
-  observeEvent(input$segmentacionDatosA,{
-    updateSliderInput(session,"segmentacionDatosT",value = 100 - input$segmentacionDatosA)
-  })
 
-  observeEvent(input$segmentacionDatosT,{
-    updateSliderInput(session,"segmentacionDatosA",value = 100 - input$segmentacionDatosT)
+  # -------------------  KNN ------------------------ #
 
-  })
-
+  #Cuando se genera el modelo knn
   observeEvent(input$runKnn,{
     #Validaciones
     if(is.null(variable.predecir))
@@ -289,6 +329,7 @@ shinyServer(function(input, output, session) {
     }
   })
 
+  #Cuando se cambia el codigo del modelo  knn
   observeEvent(c(input$runKnn,input$fieldCodeKnn),{
     if(input$fieldCodeKnn != ""){
       tryCatch({ #Se corren los codigo
@@ -308,13 +349,14 @@ shinyServer(function(input, output, session) {
     }
   })
 
+  #Cuando se cambia el codigo de la prediccion de knn
   observeEvent(c(input$runKnn,input$fieldCodeKnn,input$fieldCodeKnnPred),{
     if(input$fieldCodeKnnPred != ""){
       tryCatch({ #Se corren los codigo
         isolate(eval(parse(text = input$fieldCodeKnnPred)))
 
         #Cambia la tabla con la prediccion de knn
-        output$knnPrediTable <- DT::renderDataTable(obj.knn.predic())
+        output$knnPrediTable <- DT::renderDataTable(obj.predic(prediccion.knn))
 
         # Se genera el codigo de la matriz
         codigo.knn.mc <- knn.MC(variable.predecir)
@@ -325,13 +367,14 @@ shinyServer(function(input, output, session) {
         prediccion.knn <<- NULL
 
         #Cambia la tabla con la prediccion de knn
-        output$knnPrediTable <- DT::renderDataTable(obj.knn.predic())
+        output$knnPrediTable <- DT::renderDataTable(obj.predic(prediccion.knn))
 
         showNotification("Error al ejecutar la prediccion, intente nuevamente",duration = 15,type = "error")
       })
     }
   })
 
+  #Cuando se cambia el codigo de la matriz de confucion de knn
   observeEvent(c(input$runKnn,input$fieldCodeKnn,input$fieldCodeKnnPred,input$fieldCodeKnnMC),{
     if(input$fieldCodeKnnMC != ""){
       tryCatch({ #Se corren los codigo
@@ -341,42 +384,1083 @@ shinyServer(function(input, output, session) {
         isolate(eval(parse(text = plot.MC.code())))
         output$plot.knn.mc <- renderPlot(isolate(eval(parse(text = "plot.MC(MC.knn)" ))))
 
-        output$knnPrecGlob <- renderGauge({ gauge(round(100 * (sum(diag(MC.knn))/ sum(MC.knn)),2), min = 0, max = 100, symbol = '%', label = "Precisión Global", gaugeSectors(
-          success = c(70, 100), warning = c(50, 69), danger = c(0, 49) ) ) })
-        output$knnErrorGlob <- renderGauge({ gauge(round(100 - (100 * (sum(diag(MC.knn))/ sum(MC.knn))),2), min = 0, max = 100, symbol = '%',label = "Error Global", gaugeSectors(
-          success = c(0, 30), warning = c(31, 45), danger = c(46, 100))) })
-
+        # Se genera el codigo de la indices
+        codigo.indices <- cod.indices()
+        updateAceEditor(session, "fieldCodeKnnIG", value = codigo.indices)
       },
       error = function(e) { #Regresamos al estado inicial y mostramos un error
         MC.knn <<- NULL
+        indices.knn <<- rep(0,8)
         output$plot.knn.mc <- renderPlot(isolate(eval(parse(text = "NULL" ))))
         showNotification("Error al ejecutar la matriz, intente nuevamente",duration = 15,type = "error")
       })
     }
   })
 
-  observe({
-    #Sys.setlocale("LC_ALL","en_US.UTF-8")
-    updateAceEditor(session, "fieldCodeResum", value = cod.resum())
+  #Cuando se cambia el codigo de los indices de knn
+  observeEvent(c(input$runKnn,input$fieldCodeKnn,input$fieldCodeKnnPred,input$fieldCodeKnnMC,input$fieldCodeKnnIG),{
+    if(input$fieldCodeKnnIG != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeKnnIG)))
 
-    updateAceEditor(session, "fieldFuncNum", value = func.dya.num)
-    updateAceEditor(session, "fieldFuncCat", value = func.dya.cat)
+        indices.knn <<- indices.generales(MC.knn)
 
-    updateAceEditor(session, "fieldCodeReport", value = def.reporte())
+        if(ncol(MC.knn) > 2){
+          shinyjs::hide("knnPrecP")
+          shinyjs::hide("knnPrecN")
+          shinyjs::hide("knnFalP")
+          shinyjs::hide("knnFalN")
+          shinyjs::hide("knnAserP")
+          shinyjs::hide("knnAserN")
+        }else{
+          shinyjs::show("knnPrecP")
+          shinyjs::show("knnPrecN")
+          shinyjs::show("knnFalP")
+          shinyjs::show("knnFalN")
+          shinyjs::show("knnAserP")
+          shinyjs::show("knnAserN")
+        }
+
+        output$knnPrecGlob <- renderGauge({
+          gauge(round(indices.knn[[1]],2),
+                min = 0, max = 100, symbol = '%',
+                label = "Precisión Global",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$knnErrorGlob <- renderGauge({
+          gauge(round(indices.knn[[2]],2),
+                min = 0, max = 100, symbol = '%',
+                label = "Error Global",
+                gaugeSectors( success = c(0, 30), warning = c(31, 45), danger = c(46, 100)))
+        })
+
+        output$knnPrecP <- renderGauge({
+          gauge(round(indices.knn[[3]],2) ,
+                min = 0, max = 100, symbol = '%',
+                label = "Precisión Positiva",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$knnPrecN <- renderGauge({
+          gauge(round(indices.knn[[4]],2), min = 0, max = 100,
+                 symbol = '%',
+                 label = "Precisión Negativa",
+                 gaugeSectors(success = c(70, 100),
+                              warning = c(50, 69),
+                              danger = c(0, 49)))
+        })
+
+        output$knnFalP <- renderGauge({
+          gauge(round(indices.knn[[5]],2), min = 0, max = 100, symbol = '%',
+                 label = "Falsos Positivos",
+                 gaugeSectors( success = c(0, 30),
+                               warning = c(31, 45),
+                               danger = c(46, 100)))
+        })
+
+        output$knnFalN <- renderGauge({
+          gauge(round(indices.knn[[6]],2), min = 0, max = 100, symbol = '%',
+                 label = "Falsos Negativos",
+                 gaugeSectors( success = c(0, 30),
+                               warning = c(31, 45),
+                               danger = c(46, 100)))
+        })
+
+        output$knnAserP <- renderGauge({
+          gauge(round(indices.knn[[7]],2), min = 0, max = 100, symbol = '%',
+                 label = "Asertividad Positiva",
+                 gaugeSectors(success = c(70, 100),
+                              warning = c(50, 69),
+                              danger = c(0, 49)))
+        })
+
+        output$knnAserN <- renderGauge({
+          gauge(round(indices.knn[[8]],2), min = 0, max = 100, symbol = '%',
+                 label = "Asertividad Negativa",
+                 gaugeSectors(success = c(70, 100),
+                              warning = c(50, 69),
+                              danger = c(0, 49)))
+        })
+
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        indices.knn <<- rep(0,8)
+        showNotification("Error al ejecutar los indices, intente nuevamente",duration = 15,type = "error")
+      })
+    }
   })
 
+  # -------------------  Bayes ------------------------ #
+
+  #Cuando se genera el modelo bayes
+  observeEvent(input$runBayes,{
+    #Validaciones
+    if(is.null(variable.predecir))
+      showNotification("Tiene que seleccionar una variable a predecir",duration = 15, type = "error")
+    if(is.null(datos))
+      showNotification("Tiene que ingresar datos",duration = 15, type = "error")
+    if(is.null(datos.aprendizaje))
+      showNotification("Tiene que crear los datos de aprendizaje y de prueba",duration = 15, type = "error")
+
+    if(!is.null(datos) & !is.null(variable.predecir) & !is.null(datos.aprendizaje)){ #Si se tiene los datos entonces :
+
+      #Se genera el codigo del modelo
+      codigo.bayes <- bayes.modelo(variable.pr = variable.predecir,
+                                   predictoras = input$select.var.bayes)
+
+      updateAceEditor(session, "fieldCodeBayes", value = codigo.bayes)
+    }
+  })
+
+  #Cuando se cambia el codigo del modelo  bayes
+  observeEvent(c(input$runBayes,input$fieldCodeBayes),{
+    if(input$fieldCodeBayes != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeBayes)))
+        output$txtbayes <- renderPrint(print(modelo.bayes))
+
+        #Se genera el codigo de la prediccion
+        codigo.bayes.pred <- bayes.prediccion(variable.predecir)
+        updateAceEditor(session, "fieldCodeBayesPred", value = codigo.bayes.pred)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        modelo.bayes <<- NULL
+        MC.bayes <<- NULL
+        prediccion.bayes <<- NULL
+        showNotification("Error al ejecutar el modelo, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  #Cuando se cambia el codigo de la prediccion de bayes
+  observeEvent(c(input$runBayes,input$fieldCodeBayes,input$fieldCodeBayesPred),{
+    if(input$fieldCodeBayesPred != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeBayesPred)))
+
+        #Cambia la tabla con la prediccion de bayes
+        output$bayesPrediTable <- DT::renderDataTable(obj.predic(prediccion.bayes))
+
+        # Se genera el codigo de la matriz
+        codigo.bayes.mc <- bayes.MC(variable.predecir)
+        updateAceEditor(session, "fieldCodeBayesMC", value = codigo.bayes.mc)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        MC.bayes <<- NULL
+        prediccion.bayes <<- NULL
+
+        #Cambia la tabla con la prediccion de bayes
+        output$bayesPrediTable <- DT::renderDataTable(obj.predic(prediccion.bayes))
+
+        showNotification("Error al ejecutar la prediccion, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  #Cuando se cambia el codigo de la matriz de confucion de bayes
+  observeEvent(c(input$runBayes,input$fieldCodeBayes,input$fieldCodeBayesPred,input$fieldCodeBayesMC),{
+    if(input$fieldCodeBayesMC != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeBayesMC)))
+        output$txtBayesMC <- renderPrint(print(MC.bayes))
+
+        isolate(eval(parse(text = plot.MC.code())))
+        output$plot.bayes.mc <- renderPlot(isolate(eval(parse(text = "plot.MC(MC.bayes)" ))))
+
+        # Se genera el codigo de la indices
+        codigo.indices <- cod.indices()
+        updateAceEditor(session, "fieldCodeBayesIG", value = codigo.indices)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        MC.bayes <<- NULL
+        indices.bayes <<- rep(0,8)
+        output$plot.bayes.mc <- renderPlot(isolate(eval(parse(text = "NULL" ))))
+        showNotification("Error al ejecutar la matriz, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  #Cuando se cambia el codigo de los indices de bayes
+  observeEvent(c(input$runBayes,input$fieldCodeBayes,input$fieldCodeBayesPred,input$fieldCodeBayesMC,input$fieldCodeBayesIG),{
+    if(input$fieldCodeBayesIG != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeBayesIG)))
+
+        indices.bayes <<- indices.generales(MC.bayes)
+
+        if(ncol(MC.bayes) > 2){
+          shinyjs::hide("bayesPrecP")
+          shinyjs::hide("bayesPrecN")
+          shinyjs::hide("bayesFalP")
+          shinyjs::hide("bayesFalN")
+          shinyjs::hide("bayesAserP")
+          shinyjs::hide("bayesAserN")
+        }else{
+          shinyjs::show("bayesPrecP")
+          shinyjs::show("bayesPrecN")
+          shinyjs::show("bayesFalP")
+          shinyjs::show("bayesFalN")
+          shinyjs::show("bayesAserP")
+          shinyjs::show("bayesAserN")
+        }
+
+        output$bayesPrecGlob <- renderGauge({
+          gauge(round(indices.bayes[[1]],2),
+                min = 0, max = 100, symbol = '%',
+                label = "Precisión Global",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$bayesErrorGlob <- renderGauge({
+          gauge(round(indices.bayes[[2]],2),
+                min = 0, max = 100, symbol = '%',
+                label = "Error Global",
+                gaugeSectors( success = c(0, 30), warning = c(31, 45), danger = c(46, 100)))
+        })
+
+        output$bayesPrecP <- renderGauge({
+          gauge(round(indices.bayes[[3]],2) ,
+                min = 0, max = 100, symbol = '%',
+                label = "Precisión Positiva",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$bayesPrecN <- renderGauge({
+          gauge(round(indices.bayes[[4]],2), min = 0, max = 100,
+                symbol = '%',
+                label = "Precisión Negativa",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$bayesFalP <- renderGauge({
+          gauge(round(indices.bayes[[5]],2), min = 0, max = 100, symbol = '%',
+                label = "Falsos Positivos",
+                gaugeSectors( success = c(0, 30),
+                              warning = c(31, 45),
+                              danger = c(46, 100)))
+        })
+
+        output$bayesFalN <- renderGauge({
+          gauge(round(indices.bayes[[6]],2), min = 0, max = 100, symbol = '%',
+                label = "Falsos Negativos",
+                gaugeSectors( success = c(0, 30),
+                              warning = c(31, 45),
+                              danger = c(46, 100)))
+        })
+
+        output$bayesAserP <- renderGauge({
+          gauge(round(indices.bayes[[7]],2), min = 0, max = 100, symbol = '%',
+                label = "Asertividad Positiva",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$bayesAserN <- renderGauge({
+          gauge(round(indices.bayes[[8]],2), min = 0, max = 100, symbol = '%',
+                label = "Asertividad Negativa",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        indices.bayes <<- rep(0,8)
+        showNotification("Error al ejecutar los indices, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+
+  # -------------------  SVM ------------------------ #
+
+  #Cuando se genera el modelo svm
+  observeEvent(input$runSvm,{
+    #Validaciones
+    if(is.null(variable.predecir))
+      showNotification("Tiene que seleccionar una variable a predecir",duration = 15, type = "error")
+    if(is.null(datos))
+      showNotification("Tiene que ingresar datos",duration = 15, type = "error")
+    if(is.null(datos.aprendizaje))
+      showNotification("Tiene que crear los datos de aprendizaje y de prueba",duration = 15, type = "error")
+
+    if(!is.null(datos) & !is.null(variable.predecir) & !is.null(datos.aprendizaje)){ #Si se tiene los datos entonces :
+
+      #Se genera el codigo del modelo
+      codigo.svm <- svm.modelo(variable.pr = variable.predecir, predictoras = input$select.var.svm,
+                               scale = input$switch.scale.svm,
+                               kernel = input$kernel.svm)
+
+      updateAceEditor(session, "fieldCodeSvm", value = codigo.svm)
+    }
+  })
+
+  #Cuando se cambia el codigo del modelo svm
+  observeEvent(c(input$runSvm,input$fieldCodeSvm),{
+    if(input$fieldCodeSvm != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeSvm)))
+        output$txtSvm <- renderPrint(print(modelo.svm))
+
+        #Se genera el codigo de la prediccion
+        codigo.svm.pred <- svm.prediccion()
+        updateAceEditor(session, "fieldCodeSvmPred", value = codigo.svm.pred)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        modelo.svm <<- NULL
+        MC.svm <<- NULL
+        prediccion.svm <<- NULL
+        showNotification("Error al ejecutar el modelo, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  #Cuando se cambia el codigo de la prediccion de svm
+  observeEvent(c(input$runSvm,input$fieldCodeSvm,input$fieldCodeSvmPred),{
+    if(input$fieldCodeSvmPred != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeSvmPred)))
+
+        #Cambia la tabla con la prediccion de knn
+        output$svmPrediTable <- DT::renderDataTable(obj.predic(prediccion.svm))
+
+        # Se genera el codigo de la matriz
+        codigo.svm.mc <- svm.MC(variable.predecir)
+        updateAceEditor(session, "fieldCodeSvmMC", value = codigo.svm.mc)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        MC.svm <<- NULL
+        prediccion.svm <<- NULL
+
+        #Cambia la tabla con la prediccion de knn
+        output$svmPrediTable <- DT::renderDataTable(obj.predic(prediccion.svm))
+
+        showNotification("Error al ejecutar la prediccion, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  #Cuando se cambia el codigo de la matriz de confucion de knn
+  observeEvent(c(input$runSvm,input$fieldCodeSvm,input$fieldCodeSvmPred,input$fieldCodeSvmMC),{
+    if(input$fieldCodeSvmMC != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeSvmMC)))
+        output$txtSvmMC <- renderPrint(print(MC.svm))
+
+        isolate(eval(parse(text = plot.MC.code())))
+        output$plot.svm.mc <- renderPlot(isolate(eval(parse(text = "plot.MC(MC.svm)" ))))
+
+        # Se genera el codigo de la indices
+        codigo.indices <- cod.indices()
+        updateAceEditor(session, "fieldCodeSvmIG", value = codigo.indices)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        MC.svm <<- NULL
+        indices.svm <<- rep(0,8)
+        output$plot.svm.mc <- renderPlot(isolate(eval(parse(text = "NULL" ))))
+        showNotification("Error al ejecutar la matriz, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  #Cuando se cambia el codigo de los indices de knn
+  observeEvent(c(input$runSvm,input$fieldCodeSvm,input$fieldCodeSvmPred,input$fieldCodeSvmMC,input$fieldCodeSvmIG),{
+    if(input$fieldCodeSvmIG != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeSvmIG)))
+
+        indices.svm <<- indices.generales(MC.svm)
+
+        if(ncol(MC.svm) > 2){
+          shinyjs::hide("svmPrecP")
+          shinyjs::hide("svmPrecN")
+          shinyjs::hide("svmFalP")
+          shinyjs::hide("svmFalN")
+          shinyjs::hide("svmAserP")
+          shinyjs::hide("svmAserN")
+        }else{
+          shinyjs::show("svmPrecP")
+          shinyjs::show("svmPrecN")
+          shinyjs::show("svmFalP")
+          shinyjs::show("svmFalN")
+          shinyjs::show("svmAserP")
+          shinyjs::show("svmAserN")
+        }
+
+        output$svmPrecGlob <- renderGauge({
+          gauge(round(indices.svm[[1]],2),
+                min = 0, max = 100, symbol = '%',
+                label = "Precisión Global",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$svmErrorGlob <- renderGauge({
+          gauge(round(indices.svm[[2]],2),
+                min = 0, max = 100, symbol = '%',
+                label = "Error Global",
+                gaugeSectors( success = c(0, 30), warning = c(31, 45), danger = c(46, 100)))
+        })
+
+        output$svmPrecP <- renderGauge({
+          gauge(round(indices.svm[[3]],2) ,
+                min = 0, max = 100, symbol = '%',
+                label = "Precisión Positiva",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$svmPrecN <- renderGauge({
+          gauge(round(indices.svm[[4]],2), min = 0, max = 100,
+                symbol = '%',
+                label = "Precisión Negativa",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$svmFalP <- renderGauge({
+          gauge(round(indices.svm[[5]],2), min = 0, max = 100, symbol = '%',
+                label = "Falsos Positivos",
+                gaugeSectors( success = c(0, 30),
+                              warning = c(31, 45),
+                              danger = c(46, 100)))
+        })
+
+        output$svmFalN <- renderGauge({
+          gauge(round(indices.svm[[6]],2), min = 0, max = 100, symbol = '%',
+                label = "Falsos Negativos",
+                gaugeSectors( success = c(0, 30),
+                              warning = c(31, 45),
+                              danger = c(46, 100)))
+        })
+
+        output$svmAserP <- renderGauge({
+          gauge(round(indices.svm[[7]],2), min = 0, max = 100, symbol = '%',
+                label = "Asertividad Positiva",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$svmAserN <- renderGauge({
+          gauge(round(indices.svm[[8]],2), min = 0, max = 100, symbol = '%',
+                label = "Asertividad Negativa",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        indices.svm <<- rep(0,8)
+        showNotification("Error al ejecutar los indices, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  # -------------------  DT ------------------------ #
+
+  #Cuando se genera el modelo dt
+  observeEvent(input$runDt,{
+    #Validaciones
+    if(is.null(variable.predecir))
+      showNotification("Tiene que seleccionar una variable a predecir",duration = 15, type = "error")
+    if(is.null(datos))
+      showNotification("Tiene que ingresar datos",duration = 15, type = "error")
+    if(is.null(datos.aprendizaje))
+      showNotification("Tiene que crear los datos de aprendizaje y de prueba",duration = 15, type = "error")
+
+    if(!is.null(datos) & !is.null(variable.predecir) & !is.null(datos.aprendizaje)){ #Si se tiene los datos entonces :
+
+      #Se genera el codigo del modelo
+      codigo.dt <- dt.modelo( variable.pr = variable.predecir,
+                              predictoras = input$select.var.dt,
+                              minsplit = input$minsplit.dt)
+
+      updateAceEditor(session, "fieldCodeDt", value = codigo.dt)
+    }
+  })
+
+  #Cuando se cambia el codigo del modelo dt
+  observeEvent(c(input$runDt,input$fieldCodeDt),{
+    if(input$fieldCodeDt != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeDt)))
+        output$txtDt <- renderPrint(print(modelo.dt))
+
+        #Se genera el codigo de la prediccion
+        codigo.dt.pred <- dt.prediccion()
+        updateAceEditor(session, "fieldCodeDtPred", value = codigo.dt.pred)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        modelo.dt <<- NULL
+        MC.dt <<- NULL
+        prediccion.dt <<- NULL
+        showNotification("Error al ejecutar el modelo, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  #Cuando se cambia el codigo de la prediccion de dt
+  observeEvent(c(input$runDt,input$fieldCodeDt,input$fieldCodeDtPred),{
+    if(input$fieldCodeDtPred != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeDtPred)))
+
+        #Cambia la tabla con la prediccion de dt
+        output$dtPrediTable <- DT::renderDataTable(obj.predic(prediccion.dt))
+
+        # Se genera el codigo de la matriz
+        codigo.dt.mc <- dt.MC(variable.predecir)
+        updateAceEditor(session, "fieldCodeDtMC", value = codigo.dt.mc)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        MC.dt <<- NULL
+        prediccion.dt <<- NULL
+
+        #Cambia la tabla con la prediccion de knn
+        output$dtPrediTable <- DT::renderDataTable(obj.predic(prediccion.dt))
+
+        showNotification("Error al ejecutar la prediccion, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  #Cuando se cambia el codigo de la matriz de confucion de dt
+  observeEvent(c(input$runDt,input$fieldCodeDt,input$fieldCodeDtPred,input$fieldCodeDtMC),{
+    if(input$fieldCodeDtMC != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeDtMC)))
+        output$txtDtMC <- renderPrint(print(MC.dt))
+
+        isolate(eval(parse(text = plot.MC.code())))
+        output$plot.dt.mc <- renderPlot(isolate(eval(parse(text = "plot.MC(MC.dt)" ))))
+
+        # Se genera el codigo de la indices
+        codigo.indices <- cod.indices()
+        updateAceEditor(session, "fieldCodeDtIG", value = codigo.indices)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        MC.dt <<- NULL
+        indices.dt <<- rep(0,8)
+        output$plot.dt.mc <- renderPlot(isolate(eval(parse(text = "NULL" ))))
+        showNotification("Error al ejecutar la matriz, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  #Cuando se cambia el codigo de los indices de dt
+  observeEvent(c(input$runDt,input$fieldCodeDt,input$fieldCodeDtPred,input$fieldCodeDtMC,input$fieldCodeDtIG),{
+    if(input$fieldCodeDtIG != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeDtIG)))
+
+        indices.dt <<- indices.generales(MC.dt)
+
+        if(ncol(MC.dt) > 2){
+          shinyjs::hide("dtPrecP")
+          shinyjs::hide("dtPrecN")
+          shinyjs::hide("dtFalP")
+          shinyjs::hide("dtFalN")
+          shinyjs::hide("dtAserP")
+          shinyjs::hide("dtAserN")
+        }else{
+          shinyjs::show("dtPrecP")
+          shinyjs::show("dtPrecN")
+          shinyjs::show("dtFalP")
+          shinyjs::show("dtFalN")
+          shinyjs::show("dtAserP")
+          shinyjs::show("dtAserN")
+        }
+
+        output$dtPrecGlob <- renderGauge({
+          gauge(round(indices.dt[[1]],2),
+                min = 0, max = 100, symbol = '%',
+                label = "Precisión Global",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$dtErrorGlob <- renderGauge({
+          gauge(round(indices.dt[[2]],2),
+                min = 0, max = 100, symbol = '%',
+                label = "Error Global",
+                gaugeSectors( success = c(0, 30), warning = c(31, 45), danger = c(46, 100)))
+        })
+
+        output$dtPrecP <- renderGauge({
+          gauge(round(indices.dt[[3]],2) ,
+                min = 0, max = 100, symbol = '%',
+                label = "Precisión Positiva",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$dtPrecN <- renderGauge({
+          gauge(round(indices.dt[[4]],2), min = 0, max = 100,
+                symbol = '%',
+                label = "Precisión Negativa",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$dtFalP <- renderGauge({
+          gauge(round(indices.dt[[5]],2), min = 0, max = 100, symbol = '%',
+                label = "Falsos Positivos",
+                gaugeSectors( success = c(0, 30),
+                              warning = c(31, 45),
+                              danger = c(46, 100)))
+        })
+
+        output$dtFalN <- renderGauge({
+          gauge(round(indices.dt[[6]],2), min = 0, max = 100, symbol = '%',
+                label = "Falsos Negativos",
+                gaugeSectors( success = c(0, 30),
+                              warning = c(31, 45),
+                              danger = c(46, 100)))
+        })
+
+        output$dtAserP <- renderGauge({
+          gauge(round(indices.dt[[7]],2), min = 0, max = 100, symbol = '%',
+                label = "Asertividad Positiva",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$dtAserN <- renderGauge({
+          gauge(round(indices.dt[[8]],2), min = 0, max = 100, symbol = '%',
+                label = "Asertividad Negativa",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        indices.dt <<- rep(0,8)
+        showNotification("Error al ejecutar los indices, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  # -------------------  RF ------------------------ #
+
+  #Cuando se genera el modelo rf
+  observeEvent(input$runRf,{
+    #Validaciones
+    if(is.null(variable.predecir))
+      showNotification("Tiene que seleccionar una variable a predecir",duration = 15, type = "error")
+    if(is.null(datos))
+      showNotification("Tiene que ingresar datos",duration = 15, type = "error")
+    if(is.null(datos.aprendizaje))
+      showNotification("Tiene que crear los datos de aprendizaje y de prueba",duration = 15, type = "error")
+
+    if(!is.null(datos) & !is.null(variable.predecir) & !is.null(datos.aprendizaje)){ #Si se tiene los datos entonces :
+
+      #Se genera el codigo del modelo
+      codigo.rf <- rf.modelo( variable.pr = variable.predecir,
+                              predictoras = input$select.var.rf,
+                              ntree = input$ntree.rf)
+
+      updateAceEditor(session, "fieldCodeRf", value = codigo.rf)
+    }
+  })
+
+  #Cuando se cambia el codigo del modelo rf
+  observeEvent(c(input$runRf,input$fieldCodeRf),{
+    if(input$fieldCodeRf != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeRf)))
+        output$txtRf <- renderPrint(print(modelo.rf))
+
+        #Se genera el codigo de la prediccion
+        codigo.rf.pred <- rf.prediccion(variable.predecir)
+        updateAceEditor(session, "fieldCodeRfPred", value = codigo.rf.pred)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        modelo.rf <<- NULL
+        MC.rf <<- NULL
+        prediccion.rf <<- NULL
+        showNotification("Error al ejecutar el modelo, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  #Cuando se cambia el codigo de la prediccion de rf
+  observeEvent(c(input$runRf,input$fieldCodeRf,input$fieldCodeRfPred),{
+    if(input$fieldCodeRfPred != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeRfPred)))
+
+        #Cambia la tabla con la prediccion de rf
+        output$rfPrediTable <- DT::renderDataTable(obj.predic(prediccion.rf))
+
+        # Se genera el codigo de la matriz
+        codigo.rf.mc <- rf.MC(variable.predecir)
+        updateAceEditor(session, "fieldCodeRfMC", value = codigo.rf.mc)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        MC.rf <<- NULL
+        prediccion.rf <<- NULL
+
+        #Cambia la tabla con la prediccion de knn
+        output$rfPrediTable <- DT::renderDataTable(obj.predic(prediccion.rf))
+
+        showNotification("Error al ejecutar la prediccion, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  #Cuando se cambia el codigo de la matriz de confucion de rf
+  observeEvent(c(input$runRf,input$fieldCodeRf,input$fieldCodeRfPred,input$fieldCodeRfMC),{
+    if(input$fieldCodeRfMC != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeRfMC)))
+        output$txtRfMC <- renderPrint(print(MC.rf))
+
+        isolate(eval(parse(text = plot.MC.code())))
+        output$plot.rf.mc <- renderPlot(isolate(eval(parse(text = "plot.MC(MC.rf)" ))))
+
+        # Se genera el codigo de la indices
+        codigo.indices <- cod.indices()
+        updateAceEditor(session, "fieldCodeRfIG", value = codigo.indices)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        MC.rf <<- NULL
+        indices.rf <<- rep(0,8)
+        output$plot.rf.mc <- renderPlot(isolate(eval(parse(text = "NULL" ))))
+        showNotification("Error al ejecutar la matriz, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  #Cuando se cambia el codigo de los indices de rf
+  observeEvent(c(input$runRf,input$fieldCodeRf,input$fieldCodeRfPred,input$fieldCodeRfMC,input$fieldCodeRfIG),{
+    if(input$fieldCodeRfIG != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeRfIG)))
+
+        indices.rf <<- indices.generales(MC.rf)
+
+        if(ncol(MC.rf) > 2){
+          shinyjs::hide("rfPrecP")
+          shinyjs::hide("rfPrecN")
+          shinyjs::hide("rfFalP")
+          shinyjs::hide("rfFalN")
+          shinyjs::hide("rfAserP")
+          shinyjs::hide("rfAserN")
+        }else{
+          shinyjs::show("rfPrecP")
+          shinyjs::show("rfPrecN")
+          shinyjs::show("rfFalP")
+          shinyjs::show("rfFalN")
+          shinyjs::show("rfAserP")
+          shinyjs::show("rfAserN")
+        }
+
+        output$rfPrecGlob <- renderGauge({
+          gauge(round(indices.rf[[1]],2),
+                min = 0, max = 100, symbol = '%',
+                label = "Precisión Global",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$rfErrorGlob <- renderGauge({
+          gauge(round(indices.rf[[2]],2),
+                min = 0, max = 100, symbol = '%',
+                label = "Error Global",
+                gaugeSectors( success = c(0, 30), warning = c(31, 45), danger = c(46, 100)))
+        })
+
+        output$rfPrecP <- renderGauge({
+          gauge(round(indices.rf[[3]],2) ,
+                min = 0, max = 100, symbol = '%',
+                label = "Precisión Positiva",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$rfPrecN <- renderGauge({
+          gauge(round(indices.rf[[4]],2), min = 0, max = 100,
+                symbol = '%',
+                label = "Precisión Negativa",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$rfFalP <- renderGauge({
+          gauge(round(indices.rf[[5]],2), min = 0, max = 100, symbol = '%',
+                label = "Falsos Positivos",
+                gaugeSectors( success = c(0, 30),
+                              warning = c(31, 45),
+                              danger = c(46, 100)))
+        })
+
+        output$rfFalN <- renderGauge({
+          gauge(round(indices.rf[[6]],2), min = 0, max = 100, symbol = '%',
+                label = "Falsos Negativos",
+                gaugeSectors( success = c(0, 30),
+                              warning = c(31, 45),
+                              danger = c(46, 100)))
+        })
+
+        output$rfAserP <- renderGauge({
+          gauge(round(indices.rf[[7]],2), min = 0, max = 100, symbol = '%',
+                label = "Asertividad Positiva",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$rfAserN <- renderGauge({
+          gauge(round(indices.rf[[8]],2), min = 0, max = 100, symbol = '%',
+                label = "Asertividad Negativa",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        indices.rf <<- rep(0,8)
+        showNotification("Error al ejecutar los indices, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+
+  # -------------------  BOOSTING ------------------------ #
+
+  #Cuando se genera el modelo boosting
+  observeEvent(input$runBoosting,{
+    if(length(levels(datos[,variable.predecir])) == 2  ) {
+      #Validaciones
+      if(is.null(variable.predecir))
+        showNotification("Tiene que seleccionar una variable a predecir",duration = 15, type = "error")
+      if(is.null(datos))
+        showNotification("Tiene que ingresar datos",duration = 15, type = "error")
+      if(is.null(datos.aprendizaje))
+        showNotification("Tiene que crear los datos de aprendizaje y de prueba",duration = 15, type = "error")
+
+      if(!is.null(datos) & !is.null(variable.predecir) & !is.null(datos.aprendizaje)){ #Si se tiene los datos entonces :
+
+        #Se genera el codigo del modelo
+        codigo.boosting <- boosting.modelo(variable.pr = variable.predecir,
+                                           predictoras = input$select.var.boosting,
+                                           iter = input$iter.boosting,
+                                           nu = input$nu.boosting,
+                                           type = input$tipo.boosting)
+
+        updateAceEditor(session, "fieldCodeBoosting", value = codigo.boosting)
+      }
+    }else{
+      showModal(modalDialog(title = "ADA - BOOSTING","Este modelo solo se puede aplicar a variables binarias",
+                            footer = modalButton("Cerrar"), easyClose = T))
+    }
+  })
+
+  #Cuando se cambia el codigo del modelo  boosting
+  observeEvent(c(input$runBoosting,input$fieldCodeBoosting),{
+    if(input$fieldCodeBoosting != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeBoosting)))
+        output$txtBoosting <- renderPrint(print(modelo.boosting))
+
+        #Se genera el codigo de la prediccion
+        codigo.boosting.pred <- boosting.prediccion(variable.predecir)
+        updateAceEditor(session, "fieldCodeBoostingPred", value = codigo.boosting.pred)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        modelo.boosting <<- NULL
+        MC.boosting <<- NULL
+        prediccion.Boosting <<- NULL
+        showNotification("Error al ejecutar el modelo, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  #Cuando se cambia el codigo de la prediccion de boosting
+  observeEvent(c(input$runBoosting,input$fieldCodeBoosting,input$fieldCodeBoostingPred),{
+    if(input$fieldCodeBoostingPred != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeBoostingPred)))
+
+        #Cambia la tabla con la prediccion de boosting
+        output$boostingPrediTable <- DT::renderDataTable(obj.predic(prediccion.boosting))
+
+        # Se genera el codigo de la matriz
+        codigo.boosting.mc <- boosting.MC(variable.predecir)
+        updateAceEditor(session, "fieldCodeBoostingMC", value = codigo.boosting.mc)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        MC.boosting <<- NULL
+        prediccion.boosting <<- NULL
+
+        #Cambia la tabla con la prediccion de boosting
+        output$boostingPrediTable <- DT::renderDataTable(obj.predic(prediccion.boosting))
+
+        showNotification("Error al ejecutar la prediccion, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  #Cuando se cambia el codigo de la matriz de confucion de boosting
+  observeEvent(c(input$runBoosting,input$fieldCodeBoosting,input$fieldCodeBoostingPred,input$fieldCodeBoostingMC),{
+    if(input$fieldCodeBoostingMC != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeBoostingMC)))
+        output$txtBoostingMC <- renderPrint(print(MC.boosting))
+
+        isolate(eval(parse(text = plot.MC.code())))
+        output$plot.boosting.mc <- renderPlot(isolate(eval(parse(text = "plot.MC(MC.boosting)" ))))
+
+        # Se genera el codigo de la indices
+        codigo.indices <- cod.indices()
+        updateAceEditor(session, "fieldCodeBoostingIG", value = codigo.indices)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        MC.boosting <<- NULL
+        indices.boosting <<- rep(0,8)
+        output$plot.boosting.mc <- renderPlot(isolate(eval(parse(text = "NULL" ))))
+        showNotification("Error al ejecutar la matriz, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  #Cuando se cambia el codigo de los indices de boosting
+  observeEvent(c(input$runBoosting,input$fieldCodeBoosting,input$fieldCodeBoostingPred,input$fieldCodeBoostingMC,input$fieldCodeBoostingIG),{
+    if(input$fieldCodeBoostingIG != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeBoostingIG)))
+
+        indices.boosting <<- indices.generales(MC.boosting)
+
+        if(ncol(MC.boosting) > 2){
+          shinyjs::hide("boostingPrecP")
+          shinyjs::hide("boostingPrecN")
+          shinyjs::hide("boostingFalP")
+          shinyjs::hide("boostingFalN")
+          shinyjs::hide("boostingAserP")
+          shinyjs::hide("boostingAserN")
+        }else{
+          shinyjs::show("boostingPrecP")
+          shinyjs::show("boostingPrecN")
+          shinyjs::show("boostingFalP")
+          shinyjs::show("boostingFalN")
+          shinyjs::show("boostingAserP")
+          shinyjs::show("boostingAserN")
+        }
+
+        output$boostingPrecGlob <- renderGauge({
+          gauge(round(indices.boosting[[1]],2),
+                min = 0, max = 100, symbol = '%',
+                label = "Precisión Global",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$boostingErrorGlob <- renderGauge({
+          gauge(round(indices.boosting[[2]],2),
+                min = 0, max = 100, symbol = '%',
+                label = "Error Global",
+                gaugeSectors( success = c(0, 30), warning = c(31, 45), danger = c(46, 100)))
+        })
+
+        output$boostingPrecP <- renderGauge({
+          gauge(round(indices.boosting[[3]],2) ,
+                min = 0, max = 100, symbol = '%',
+                label = "Precisión Positiva",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$boostingPrecN <- renderGauge({
+          gauge(round(indices.boosting[[4]],2), min = 0, max = 100,
+                symbol = '%',
+                label = "Precisión Negativa",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$boostingFalP <- renderGauge({
+          gauge(round(indices.boosting[[5]],2), min = 0, max = 100, symbol = '%',
+                label = "Falsos Positivos",
+                gaugeSectors( success = c(0, 30),
+                              warning = c(31, 45),
+                              danger = c(46, 100)))
+        })
+
+        output$boostingFalN <- renderGauge({
+          gauge(round(indices.boosting[[6]],2), min = 0, max = 100, symbol = '%',
+                label = "Falsos Negativos",
+                gaugeSectors( success = c(0, 30),
+                              warning = c(31, 45),
+                              danger = c(46, 100)))
+        })
+
+        output$boostingAserP <- renderGauge({
+          gauge(round(indices.boosting[[7]],2), min = 0, max = 100, symbol = '%',
+                label = "Asertividad Positiva",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$boostingAserN <- renderGauge({
+          gauge(round(indices.boosting[[8]],2), min = 0, max = 100, symbol = '%',
+                label = "Asertividad Negativa",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        indices.boosting <<- rep(0,8)
+        showNotification("Error al ejecutar los indices, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
 
   ###########################################################################################################################
   ##### Funcionalidades
   ###########################################################################################################################
 
+  # -------------------  Pagina Datos ------------------------ #
+
   #Cambia la tabla de datos
   output$contents <- DT::renderDT(mostrarData(),server = FALSE)
 
-  #Cambia la tabla de datos
+  #Cambia la tabla de datos de aprendizaje
   output$contentsAprend <- DT::renderDT(mostrarDataAprendizaje(),server = FALSE)
 
-  #Cambia la tabla de datos
+  #Cambia la tabla de datos de prueba
   output$contentsPrueba <- DT::renderDT(mostrarDataPrueba(),server = FALSE)
 
   #Cambia la tabla de con las opciones del panel de transformar
@@ -388,6 +1472,8 @@ shinyServer(function(input, output, session) {
                                                        $this.addClass('shiny-input-checkbox');});
                                                        Shiny.unbindAll(table.table().node());
                                                        Shiny.bindAll(table.table().node());"))
+
+  # -------------------  Estadisticas Basicas ------------------------ #
 
   #Cambia la tabla con el summary en la pagina de resumen
   output$resumen.completo <- DT::renderDataTable(obj.resum(), options = list(dom = 'ft', scrollX = TRUE), rownames = F)
@@ -423,6 +1509,25 @@ shinyServer(function(input, output, session) {
   #Hace el grafico de distribuciones categoricas
   output$plot.cat <- renderPlot(obj.dya.cat())
 
+  # -------------------  Modelos Predictivos ------------------------ #
+
+  obj.predic <- function(predic.var = NULL ) {
+    real <- as.character(datos.prueba[,variable.predecir])
+    predi <- as.character(predic.var)
+    df <- cbind(real,predi,ifelse(real == predi,
+                                  rep("<span style='color:green'><b>ACIERTO</b></span>",length(real)),
+                                  rep("<span style='color:red'><b>FALLO</b></span>",length(real))))
+    colnames(df) <- c( "Datos Reales", "Predicción", " ")
+    sketch <- htmltools::withTags(table(
+      tableHeader(c("Datos Reales", "Predicción", " "))
+    ))
+    return(DT::datatable(df, selection = 'none', editable = FALSE,escape = FALSE, container = sketch,
+                         extensions = c('Responsive'),
+                         options = list(dom = 'frtip',pageLength = 15) ))
+  }
+
+  # -------------------  Reporte ------------------------ #
+
   #Muestra el documento del reporte
   output$knitDoc <- renderUI({
     c(input$fieldCodeReport)
@@ -451,21 +1556,6 @@ shinyServer(function(input, output, session) {
       zip(file, files)
     }
   )
-
-  obj.knn.predic <- function() {
-    real <- as.character(datos.prueba[,variable.predecir])
-    predi <- as.character(prediccion.knn)
-    df <- cbind(real,predi,ifelse(real == predi,
-                                  rep("<span style='color:green'><b>ACIERTO</b></span>",length(real)),
-                                  rep("<span style='color:red'><b>FALLO</b></span>",length(real))))
-    colnames(df) <- c( "Datos Reales", "Predicción", " ")
-    sketch <- htmltools::withTags(table(
-      tableHeader(c("Datos Reales", "Predicción", " "))
-    ))
-    return(DT::datatable(df, selection = 'none', editable = FALSE,escape = FALSE, container = sketch,
-                         extensions = c('Responsive'),
-                         options = list(dom = 'frtip',pageLength = 15) ))
-  }
 
 
 }) ## FIN SERVER

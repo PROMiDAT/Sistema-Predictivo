@@ -8,6 +8,6 @@ Description: Hace cosas bonitas
 License: GPL (>=2)
 Encoding: UTF-8
 LazyData: true
-Imports: shiny, shinyAce, shinydashboard, shinycssloaders, shinyWidgets, colourpicker, shinyjs, knitr, DT, promises, ggplot2, FactoMineR, rstudioapi, factoextra, reshape,corrplot, caret, dendextend,scatterplot3d,stringr,future, rmarkdown, kknn
+Imports: shiny, shinyAce, shinydashboard, shinycssloaders, shinyWidgets, rpart, ada, modeest, colourpicker,flexdashboard, shinyjs, knitr, DT, randomForest, promises, ggplot2, FactoMineR, e1071, rstudioapi, factoextra, reshape,corrplot, caret, dendextend,scatterplot3d,stringr,future, rmarkdown, kknn
 URL: http://www.promidat.com
 RoxygenNote: 6.0.1

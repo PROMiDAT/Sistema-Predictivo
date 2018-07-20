@@ -3,6 +3,7 @@
 ##### FUNCIONES GLOBALES
 ###########################################################################################################################
 
+
 #Colores de ggplot2
 gg_color_hue <- function(n) {
   hues <- seq(15, 375, length = n + 1)
@@ -30,6 +31,36 @@ var.categoricas <- function(data){
   res <- base::subset(data, select = !sapply(data, class) %in% c('numeric', 'integer'))
   return(res)
 }
+
+#Codigo del calculo de los indices
+cod.indices <- function(){
+  return('indices.generales <- function(MC) {
+  if (1 == dim(MC)[2]) {
+    MC <- cbind(MC, 0)
+  }
+
+  precision.global <- (sum(diag(MC)) / sum(MC)) * 100
+  error.global <- (1 - (sum(diag(MC)) / sum(MC))) * 100
+  precision.positiva <- ifelse(ncol(MC) == 2, MC[2, 2] / sum(MC[2, ]) , 0) * 100
+  precision.negativa <- ifelse(ncol(MC) == 2, MC[1, 1] / sum(MC[1, ]) , 0) * 100
+  falsos.positivos   <- ifelse(ncol(MC) == 2, MC[1, 2] / sum(MC[1, ]) , 0) * 100
+  falsos.negativos   <- ifelse(ncol(MC) == 2, MC[2, 1] / sum(MC[2, ]) , 0) * 100
+  asertividad.positiva <- ifelse(ncol(MC) == 2,  MC[2, 2] / sum(MC[, 2]) , 0) * 100
+  asertividad.negativa <- ifelse(ncol(MC) == 2, MC[1, 1] / sum(MC[, 1]) , 0) * 100
+
+  res <- list( precision.global = precision.global,
+               error.global = error.global,
+               precision.positiva = precision.positiva,
+               precision.negativa = precision.negativa,
+               falsos.positivos = falsos.positivos,
+               falsos.negativos = falsos.negativos,
+               asertividad.positiva = asertividad.positiva,
+               asertividad.negativa = asertividad.negativa)
+  return(res)
+}')
+}
+
+# -------------------  Pagina Datos ------------------------ #
 
 #Transforma las variables a disyuntivas
 datos.disyuntivos <- function(data, vars){
@@ -60,11 +91,24 @@ code.carga <- function(nombre.filas = T, ruta = NULL, separador = ";", sep.decim
   }
 }
 
+#Eliminar NAs
+code.NA <- function(deleteNA = T) {
+  res <- ifelse(deleteNA, "datos <<- na.omit(datos)",
+                paste0("for (variable in colnames(datos)) {\n",
+                       "  if(any(is.na(datos[, variable]))){\n",
+                       "    ifelse(class(datos[, variable]) %in% c('numeric', 'integer'),\n",
+                       "           datos[, variable][is.na(datos[, variable])] <<- mean(datos[, variable], na.rm = T),\n",
+                       "           datos[, variable][is.na(datos[, variable])] <<- modeest::mfv(datos[, variable], na.rm = T))",
+                       "\n   }\n}"))
+  return(res)
+}
+
 #Crea el código de la particion en testing y learning data
-particion.code <- function(data = "datos", p = "0.5", variable = NULL){
+particion.code <- function(data = "datos", p = "0.5", variable = NULL, semilla = 5){
   variable.predecir <<- variable
-  return(paste0("particion <- createDataPartition(datos$",variable,", p = ",p/100,", list = FALSE)\n
-                datos.prueba <<- datos[-particion,]\ndatos.aprendizaje <<- datos[particion,]"))
+  semilla <- ifelse(!is.numeric(semilla), 5, semilla)
+  return(paste0("set.seed(",semilla,")\nparticion <- createDataPartition(datos$",variable,", p = ",p/100,", list = FALSE)\n
+datos.prueba <<- datos[-particion,]\ndatos.aprendizaje <<- datos[particion,]"))
 }
 
 #Genera el codigo para transformar datos
@@ -83,6 +127,13 @@ code.trans <- function(variable, nuevo.tipo){
 #Desactiva las variables seleccionadas de los datos
 code.desactivar <- function(variables){
   return(paste0("datos <<- subset(datos, select = -c(", paste(variables, collapse = ","), "))"))
+}
+
+# -------------------  Estadisticas Basicas ------------------------ #
+
+#Resumen Completo
+cod.resum <- function(data = "datos"){
+  return(paste0("summary(", data, ")"))
 }
 
 #Genera el resumen numerico de una variable
@@ -164,43 +215,6 @@ default.disp <- function(data = "datos", vars = NULL, color = "#FF0000AA"){
   }
 }
 
-#Crea el modelo KNN
-kkn.modelo <- function(variable.pr = NULL, predictoras = ".", scale = TRUE,kmax = 7, kernel = "optimal"){
-  if(all(predictoras == ""))
-    predictoras <- "."
-  predictoras <- paste0(predictoras, collapse = "+")
-  codigo <- paste0("modelo.knn <<- train.kknn(",variable.pr,"~",predictoras,", data = datos.aprendizaje,scale =",scale,", kmax=",kmax,", kernel = '",kernel,"')")
-  return(codigo)
-}
-
-#Codigo de la prediccion de knn
-kkn.prediccion <- function() {
-  return(paste0("prediccion.knn <<- predict(modelo.knn, datos.prueba)"))
-}
-
-#Codigo de la matriz de confucion de knn
-knn.MC <- function(variable.p){
-  return(paste0("MC.knn <<- table(datos.prueba$",variable.p,", prediccion.knn)"))
-}
-
-indices.general <- function(MC){
-  if(1 == dim(MC)[2]){
-    MC <- cbind(MC,0)
-  }
-  precision.global <- sum(diag(MC))/ sum(MC)
-  error.global <- 1 - precision.global
-  falsos.categoria <- 1 - presicion.categoria
-  acertividad.categoria <- diag(MC)/colSums(MC)
-
-  res <- list(matriz.confusion = MC,
-              precision.global = precision.global,
-              error.global = error.global,
-              falsos.categoria = falsos.categoria,
-              acertividad.categoria = acertividad.categoria)
-  return(res)
-}
-
-
 def.code.num <- function(data = "datos", variable = "input$sel.distribucion", color = 'input$col.dist'){
   return(paste0("distribucion.numerico(", data, "[, ", variable, "], ", variable, ", color = ", color,")"))
 }
@@ -234,6 +248,138 @@ default.func.cat <- function(){
                 labs(title = 'Distribución', y = 'Cantidad de casos', x = 'Categorias')
 }"))
 }
+
+# -------------------  KNN ------------------------ #
+
+#Crea el modelo KNN
+kkn.modelo <- function(variable.pr = NULL, predictoras = ".", scale = TRUE,kmax = 7, kernel = "optimal"){
+  if(all(predictoras == ""))
+    predictoras <- "."
+  predictoras <- paste0(predictoras, collapse = "+")
+  codigo <- paste0("modelo.knn <<- train.kknn(",variable.pr,"~",predictoras,", data = datos.aprendizaje,scale =",scale,", kmax=",kmax,", kernel = '",kernel,"')")
+  return(codigo)
+}
+
+#Codigo de la prediccion de knn
+kkn.prediccion <- function() {
+  return(paste0("prediccion.knn <<- predict(modelo.knn, datos.prueba)"))
+}
+
+#Codigo de la matriz de confucion de knn
+knn.MC <- function(variable.p){
+  return(paste0("MC.knn <<- table(datos.prueba$",variable.p,", prediccion.knn)"))
+}
+
+# -------------------  Bayes ------------------------ #
+
+#Crea el modelo bayes
+bayes.modelo <- function(variable.pr = NULL, predictoras = "."){
+  if(all(predictoras == ""))
+    predictoras <- "."
+  predictoras <- paste0(predictoras, collapse = "+")
+  codigo <- paste0("modelo.bayes <<- naiveBayes(",variable.pr,"~",predictoras,", data = datos.aprendizaje)")
+  return(codigo)
+}
+
+#Codigo de la prediccion de bayes
+bayes.prediccion <- function(variable.pr = NULL) {
+  return(paste0("prediccion.bayes <<- predict(modelo.bayes, datos.prueba[,-which(colnames(datos.prueba) == '",variable.pr,"')])"))
+}
+
+#Codigo de la matriz de confucion de bayes
+bayes.MC <- function(variable.p){
+  return(paste0("MC.bayes <<- table(datos.prueba$",variable.p,", prediccion.bayes)"))
+}
+
+# -------------------  SVM ------------------------ #
+
+#Crea el modelo SVM
+svm.modelo <- function(variable.pr = NULL, predictoras = ".", scale = TRUE, kernel = "linear"){
+  if(all(predictoras == ""))
+    predictoras <- "."
+  predictoras <- paste0(predictoras, collapse = "+")
+  codigo <- paste0("modelo.svm <<- svm(",variable.pr,"~",predictoras,", data = datos.aprendizaje, scale =",scale,", kernel = '",kernel,"')")
+  return(codigo)
+}
+
+#Codigo de la prediccion de svm
+svm.prediccion <- function() {
+  return(paste0("prediccion.svm <<- predict(modelo.svm, datos.prueba)"))
+}
+
+#Codigo de la matriz de confucion de svm
+svm.MC <- function(variable.p){
+  return(paste0("MC.svm <<- table(datos.prueba$",variable.p,", prediccion.svm)"))
+}
+
+# -------------------  DT ------------------------ #
+
+#Crea el modelo DT
+dt.modelo <- function(variable.pr = NULL, predictoras = ".", minsplit =  20){
+  if(all(predictoras == ""))
+    predictoras <- "."
+  predictoras <- paste0(predictoras, collapse = "+")
+  codigo <- paste0("modelo.dt <<- rpart(",variable.pr,"~",predictoras,", data = datos.aprendizaje, control = rpart.control(minsplit = ",minsplit,"))")
+  return(codigo)
+}
+
+#Codigo de la prediccion de DT
+dt.prediccion <- function() {
+  return(paste0("prediccion.dt <<- predict(modelo.dt, datos.prueba, type='class')"))
+}
+
+#Codigo de la matriz de confucion de dt
+dt.MC <- function(variable.p){
+  return(paste0("MC.dt <<- table(datos.prueba$",variable.p,", prediccion.dt)"))
+}
+
+
+# -------------------  RF ------------------------ #
+
+#Crea el modelo RF
+rf.modelo <- function(variable.pr = NULL, predictoras = ".", ntree = 500){
+  if(all(predictoras == ""))
+    predictoras <- "."
+  predictoras <- paste0(predictoras, collapse = "+")
+  ntree <- ifelse(!is.numeric(ntree), 500, ntree)
+  codigo <- paste0("modelo.rf <<- randomForest(",variable.pr,"~",predictoras,", data = datos.aprendizaje,importance = TRUE, ntree =",ntree,")")
+  return(codigo)
+}
+
+#Codigo de la prediccion de rf
+rf.prediccion <- function(variable.pr = NULL) {
+  return(paste0("prediccion.rf <<- predict(modelo.rf,datos.prueba[,-which(colnames(datos.prueba) == '",variable.pr,"')])"))
+}
+
+#Codigo de la matriz de confucion de rf
+rf.MC <- function(variable.p){
+  return(paste0("MC.rf <<- table(datos.prueba$",variable.p,", prediccion.rf)"))
+}
+
+# -------------------  BOOSTING ------------------------ #
+
+#Crea el modelo BOOSTING
+boosting.modelo <- function(variable.pr = NULL, predictoras = ".", iter = 50, nu = 1, type = "discrete"){
+  if(all(predictoras == ""))
+    predictoras <- "."
+  predictoras <- paste0(predictoras, collapse = "+")
+  iter <- ifelse(!is.numeric(iter), 50, iter)
+  nu <- ifelse(!is.numeric(nu), 1, nu)
+  codigo <- paste0("modelo.boosting <<- ada(",variable.pr,"~",predictoras,", data = datos.aprendizaje, iter = ",iter,", nu = ",nu,", type = '",type,"')")
+  return(codigo)
+}
+
+#Codigo de la prediccion de boosting
+boosting.prediccion <- function(variable.pr = NULL) {
+  return(paste0("prediccion.boosting <<- predict(modelo.boosting, datos.prueba[,-which(colnames(datos.prueba) == '",variable.pr,"')])"))
+}
+
+#Codigo de la matriz de confucion de boosting
+boosting.MC <- function(variable.p){
+  return(paste0("MC.boosting <<- table(datos.prueba$",variable.p,", prediccion.boosting)"))
+}
+
+# -------------------  Reporte ------------------------ #
 
 def.reporte <- function(){
   return(paste0("---
@@ -297,10 +443,6 @@ def.reporte <- function(){
                 ```"))
 }
 
-cod.resum <- function(data = "datos"){
-  return(paste0("summary(", data, ")"))
-}
-
 plot.MC.code <- function(cm) {
 return("
 plot.MC <<- function(cm){
@@ -311,41 +453,36 @@ plot.MC <<- function(cm){
        start <- 70
        len <- 500 - start
 
-       n.class <- ncol(cm) + 3
-       names.class <- c(colnames(cm),'Precisión', 'Falsos','Acertividad')
+       n.class <- ncol(cm) + 2
+       names.class <- c(colnames(cm),'Precisión', 'Error')
        prec.cat <- diag(cm)/rowSums(cm)
-       falsos.cat <- 1 - prec.cat
-       acertividad.cat <- diag(cm)/colSums(cm)
+       error.cat <- 1 - prec.cat
 
        ancho <- len / n.class
-       alto  <- len / (n.class-3)
+       alto  <- len / (n.class-2)
        x2 <- (x1 <- start) + ancho
        y2 <- (y1 <- len) - alto
 
        text(310, 485, 'Predición', cex=1.3, font=2)
        text(start-55, 250, 'Real', cex=1.3, srt=90, font=2)
 
-       for (i in 0:(n.class-4)) {
+       for (i in 0:(n.class-3)) {
        for (j in 0:(n.class-1)) {
        x1.aux <- x1 + j*(ancho + 3)
        y1.aux <- y1 - i*(alto + 5)
        x2.aux <- x2 + j*(ancho + 3)
        y2.aux <- y2 - i*(alto + 5)
-       if(j < (n.class-3)){
+       if(j < (n.class-2)){
        rect(x1.aux, y1.aux, x2.aux, y2.aux, col=ifelse(i==j,'#3f72af','#11999e'))
        text(mean(c(x1.aux,x2.aux)) , mean(c(y1.aux,y2.aux)), cm[(i+1),(j+1)], cex=1.6, font=2, col='white')
        }
-       if (j == (n.class-3)){
+       if (j == (n.class-2)){
        rect(x1.aux, y1.aux, x2.aux, y2.aux, col= '#e4f9f5' )
        text(mean(c(x1.aux,x2.aux)) , mean(c(y1.aux,y2.aux)), paste0(round(prec.cat[i+1] * 100,2), '%'), cex=1.6, font=2, col='black')
        }
-       if (j == (n.class-2)){
-       rect(x1.aux, y1.aux, x2.aux, y2.aux, col= '#e4f9f5' )
-       text(mean(c(x1.aux,x2.aux)) , mean(c(y1.aux,y2.aux)), paste0(round(falsos.cat[i+1] * 100,2), '%'), cex=1.6, font=2, col='black')
-       }
        if (j == (n.class-1)){
        rect(x1.aux, y1.aux, x2.aux, y2.aux, col= '#e4f9f5' )
-       text(mean(c(x1.aux,x2.aux)) , mean(c(y1.aux,y2.aux)), paste0(round(acertividad.cat[i+1] * 100,2), '%'), cex=1.6, font=2, col='black')
+       text(mean(c(x1.aux,x2.aux)) , mean(c(y1.aux,y2.aux)), paste0(round(error.cat[i+1] * 100,2), '%'), cex=1.6, font=2, col='black')
        }
        }
        text( mean( c((x2 + i*(ancho + 3)) , (x1 + i*(ancho + 3)) )), y1 + 20, names.class[i+1], cex=1.2)
@@ -361,16 +498,18 @@ plot.MC <<- function(cm){
 ##### VARIABLES GLOBALES
 ###########################################################################################################################
 
-# ------------------------------- DATOS
+# -------------------  Datos ------------------------ #
+
 datos <<- NULL  # Los datos cargados pueden estar transformados
 datos.originales <<- NULL # Los datos cargados originales
 datos.prueba <<- NULL
 datos.aprendizaje <<- NULL
 variable.predecir <<- NULL
 
+# -------------------  Estadisticas Basicas ------------------------ #
+
 
 correlacion <<- NULL
-# def.colores <<- gg_color_hue(10)
 
 cod.disp <- default.disp()
 cod.cor <- correlaciones()
@@ -380,14 +519,47 @@ cod.dya.num <- def.code.num()
 func.dya.num <- default.func.num()
 func.dya.cat <- default.func.cat()
 
+# -------------------  KNN ------------------------ #
 
-# ------------------------------- KNN
 modelo.knn <<- NULL
 MC.knn <<- NULL
 prediccion.knn <<- NULL
+indices.knn <<- rep(0,8)
 
-#cod.mc.knn <<- plot.MC.code()
-# cod.mod.knn <- knn.modelo()
+# -------------------  Bayes ------------------------ #
+
+modelo.bayes <<- NULL
+MC.bayes <<- NULL
+prediccion.bayes <<- NULL
+indices.bayes <<- rep(0,8)
+
+# -------------------  SVM ------------------------ #
+
+modelo.svm <<- NULL
+MC.svm <<- NULL
+prediccion.svm <<- NULL
+indices.svm <<- rep(0,8)
+
+# -------------------  DT ------------------------ #
+
+modelo.dt <<- NULL
+MC.dt <<- NULL
+prediccion.dt <<- NULL
+indices.dt <<- rep(0,8)
+
+# -------------------  RF ------------------------ #
+
+modelo.rf <<- NULL
+MC.rf <<- NULL
+prediccion.rf <<- NULL
+indices.rf <<- rep(0,8)
+
+# -------------------  BOOSTING ------------------------ #
+
+modelo.boosting <<- NULL
+MC.boosting <<- NULL
+prediccion.boosting <<- NULL
+indices.boosting <<- rep(0,8)
 
 
 
