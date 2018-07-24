@@ -1766,7 +1766,7 @@ shinyServer(function(input, output, session) {
         output$nnPrediTable <- DT::renderDataTable(obj.predic(prediccion.nn))
 
         # Se genera el codigo de la matriz
-        codigo.nn.mc <- nn.MC(variable.predecir)
+        codigo.nn.mc <- nn.MC()
         updateAceEditor(session, "fieldCodeNnMC", value = codigo.nn.mc)
       },
       error = function(e) { #Regresamos al estado inicial y mostramos un error
