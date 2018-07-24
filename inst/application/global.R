@@ -104,9 +104,10 @@ code.NA <- function(deleteNA = T) {
 }
 
 #Crea el código de la particion en testing y learning data
-particion.code <- function(data = "datos", p = "0.5", variable = NULL, semilla = 5){
+particion.code <- function(data = "datos", p = "0.5", variable = NULL, semilla = 5, perm.semilla = FALSE){
   variable.predecir <<- variable
-  semilla <- ifelse(!is.numeric(semilla), 5, semilla)
+  semilla <- ifelse(is.numeric(semilla), semilla, 5)
+  semilla <- ifelse(perm.semilla, semilla, "NULL")
   return(paste0("set.seed(",semilla,")\nparticion <- createDataPartition(datos$",variable,", p = ",p/100,", list = FALSE)\n
 datos.prueba <<- datos[-particion,]\ndatos.aprendizaje <<- datos[particion,]"))
 }
@@ -345,7 +346,7 @@ dt.MC <- function(variable.p){
   return(paste0("MC.dt <<- table(datos.prueba$",variable.p,", prediccion.dt)"))
 }
 
-#Codigo del grafico de svm
+#Codigo del grafico de dt
 dt.plot <- function(){
   num <- length(levels(datos[,variable.predecir]))
   return(paste0("prp(modelo.dt, extra=104, branch.type = 2, box.col = gg_color_hue(",num,")[modelo.dt$frame$yval])"))
@@ -373,6 +374,11 @@ rf.MC <- function(variable.p){
   return(paste0("MC.rf <<- table(datos.prueba$",variable.p,", prediccion.rf)"))
 }
 
+#Codigo del grafico de rf
+rf.plot <- function(){
+  return(paste0("varImpPlot(modelo.rf)"))
+}
+
 # -------------------  BOOSTING ------------------------ #
 
 #Crea el modelo BOOSTING
@@ -394,6 +400,103 @@ boosting.prediccion <- function(variable.pr = NULL) {
 #Codigo de la matriz de confucion de boosting
 boosting.MC <- function(variable.p){
   return(paste0("MC.boosting <<- table(datos.prueba$",variable.p,", prediccion.boosting)"))
+}
+
+#Codigo del grafico de boosting
+boosting.plot <- function(){
+  return(paste0("plot(modelo.boosting,TRUE,TRUE)"))
+}
+
+#Codigo del grafico de boosting
+boosting.plot.import <- function(){
+  return(paste0("varplot(modelo.boosting)"))
+}
+
+# -------------------  XGBOOSTING ------------------------ #
+
+#Crea el modelo XGBOOSTING
+xg.modelo <- function(){
+  variables <- unique(datos[,variable.predecir])
+  num.var.pre <- which(colnames(datos.aprendizaje) == variable.predecir)
+  if(length(variables) == 2){
+    codigo <- paste0("aprendizaje.xg <<- datos.aprendizaje
+prueba.xg <<- datos.prueba
+aprendizaje.xg$",variable.predecir," <<- as.numeric(ifelse(aprendizaje.xg$",variable.predecir," == '",variables[1],"', '1', '0'))
+prueba.xg$",variable.predecir," <<- as.numeric(ifelse(prueba.xg$",variable.predecir," == '",variables[1],"', '1', '0'))
+aprendizaje.xg[] <<- lapply(aprendizaje.xg, as.numeric)
+prueba.xg[] <<- lapply(prueba.xg, as.numeric)\n
+aprendizaje.xg <<- xgb.DMatrix(data = data.matrix(aprendizaje.xg[,-",num.var.pre,"]),label = data.matrix(aprendizaje.xg$",variable.predecir,"))
+prueba.xg <<- xgb.DMatrix(data = data.matrix(prueba.xg[,-",num.var.pre,"]),label = data.matrix(prueba.xg$",variable.predecir,"))\n
+parametros <- list(booster = 'gbtree', objective = 'binary:logistic', eta = 0.3,
+                   gamma = 0, max_depth = 6, min_child_weight = 1,
+                   subsample = 1, colsample_bytree = 1)\n
+modelo.xg <<- xgb.train(params = parametros, data = aprendizaje.xg, nrounds = 79,
+                    watchlist = list(train = aprendizaje.xg, test = prueba.xg),
+              print_every_n = 10, early_stop_round = 10, maximize = F ,
+              eval_metric = 'error')")
+  }else{
+    codigo <- paste0("aprendizaje.xg <<- datos.aprendizaje
+prueba.xg <<- datos.prueba
+aprendizaje.xg$",variable.predecir," <<- as.numeric(aprendizaje.xg$",variable.predecir,") - 1
+prueba.xg$",variable.predecir," <<- as.numeric(prueba.xg$",variable.predecir,") - 1
+aprendizaje.xg[] <<- lapply(aprendizaje.xg, as.numeric)
+prueba.xg[] <<- lapply(prueba.xg, as.numeric)\n
+aprendizaje.xg <<- xgb.DMatrix(data = data.matrix(aprendizaje.xg[,-",num.var.pre,"]),label = data.matrix(aprendizaje.xg$",variable.predecir,"))
+prueba.xg <<- xgb.DMatrix(data = data.matrix(prueba.xg[,-",num.var.pre,"]),label = data.matrix(prueba.xg$",variable.predecir,"))\n
+parametros <- list(booster = 'gbtree', objective = 'multi:softprob', eta = 0.3,
+gamma = 0, max_depth = 6, min_child_weight = 1,
+subsample = 1, colsample_bytree = 1, num_class = ",length(variables),")\n
+modelo.xg <<- xgb.train(params = parametros, data = aprendizaje.xg, nrounds = 79,
+watchlist = list(train = aprendizaje.xg, test = prueba.xg),
+print_every_n = 10, early_stop_round = 10, maximize = F ,
+eval_metric = 'mlogloss')")
+  }
+  return(codigo)
+}
+
+#Codigo de la prediccion de xgboosting
+xg.prediccion <- function() {
+  variables <- unique(datos[,variable.predecir])
+  if(length(variables) == 2){
+    cod <- "prediccion.xg <<- predict(modelo.xg, prueba.xg)\nprediccion.xg <<- ifelse (prediccion.xg > 0.5, 1, 2)\n"
+  }else{
+    cod <- paste0("prediccion.xg <<- predict(modelo.xg, prueba.xg)\nprediccion.xg <<- max.col(matrix(prediccion.xg, ncol=",length(variables),", byrow=TRUE)) \n")
+  }
+  return(paste0(cod,"variables <- unique(datos.prueba$",variable.predecir,")
+prediccion.xg <<- unlist(lapply(prediccion.xg, function(x)variables[x]))"))
+}
+
+#Codigo de la matriz de confucion de xgboosting
+xg.MC <- function(){
+  return(paste0("MC.xg <<- table(prediccion.xg, datos.prueba$",variable.predecir,")"))
+}
+
+#Codigo del grafico de xgboosting
+xgboosting.plot.import <- function(){
+  return(paste0("variables.importantes <- xgb.importance(feature_names = colnames(aprendizaje.xg), model = modelo.xg)
+xgb.plot.importance(importance_matrix = variables.importantes)"))
+}
+
+
+# -------------------  NN ------------------------ #
+
+#Crea el modelo NN
+nn.modelo <- function(variable.pr = NULL, predictoras = ".", size = 4, rang = 0.1, decay = 5e-4, maxit = 200, trace=FALSE){
+  if(all(predictoras == ""))
+    predictoras <- "."
+  predictoras <- paste0(predictoras, collapse = "+")
+  codigo <- paste0("modelo.nn <<- nnet(",variable.pr,"~",predictoras,", data = datos.aprendizaje, size = ",size,", rang = ",rang,",decay =",decay,", maxit = ",maxit,", trace= ",trace,")")
+  return(codigo)
+}
+
+#Codigo de la prediccion de NN
+nn.prediccion <- function() {
+  return(paste0("prediccion.nn <<- predict(modelo.nn,  datos.prueba[,-which(colnames(datos.prueba) == '",variable.predecir,"')] , type = 'class')"))
+}
+
+#Codigo de la matriz de confucion de NN
+nn.MC <- function(){
+  return(paste0("MC.nn <<- table(datos.prueba$",variable.predecir,", prediccion.nn)"))
 }
 
 # -------------------  Reporte ------------------------ #
@@ -464,7 +567,7 @@ plot.MC.code <- function(cm) {
 return("
 plot.MC <<- function(cm){
   par(mar=c(2,2,2,2))
-       plot(c(1, 500), c(1, 500), type = 'n', xlab='', ylab='', xaxt='n', yaxt='n')
+       plot(c(1, 600), c(-100, 500), type = 'n', xlab='', ylab='', xaxt='n', yaxt='n')
        title('Matriz de Confusión', cex.main=2)
 
        start <- 70
@@ -578,5 +681,19 @@ MC.boosting <<- NULL
 prediccion.boosting <<- NULL
 indices.boosting <<- rep(0,8)
 
+# -------------------  XGBOOSTING ------------------------ #
 
+aprendizaje.xg <<- NULL
+prueba.xg <<- NULL
 
+modelo.xg <<- NULL
+MC.xg <<- NULL
+prediccion.xg <<- NULL
+indices.xg <<- rep(0,8)
+
+# -------------------  NN ------------------------ #
+
+modelo.nn <<- NULL
+MC.nn <<- NULL
+prediccion.nn <<- NULL
+indices.nn <<- rep(0,8)

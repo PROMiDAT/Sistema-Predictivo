@@ -65,7 +65,6 @@ shinyServer(function(input, output, session) {
     datos.prueba <<- NULL
     datos.aprendizaje <<- NULL
     variable.predecir <<- NULL
-    #modelo.knn <<- NULL
 
     updateAceEditor(session, "fieldModelCor", value = modelo.cor())
 
@@ -76,6 +75,9 @@ shinyServer(function(input, output, session) {
     error = function(e) {
       return(datos <- NULL)
     })
+
+    close.menu("datos", is.null(datos))
+    close.menu("aprendizaje", is.null(datos.aprendizaje))
 
   })
 
@@ -122,12 +124,15 @@ shinyServer(function(input, output, session) {
     }, error = function(e) {
       return(datos <- NULL)
     })
+
+    close.menu("datos", is.null(datos))
+    close.menu("aprendizaje", is.null(datos.aprendizaje))
   })
 
   #Segmenta los datos en aprendizaje y prueba
   observeEvent(input$segmentButton,{
     if(input$sel.predic.var != ""){
-      codigo <- particion.code("datos", input$segmentacionDatosA ,input$sel.predic.var,input$semilla)
+      codigo <- particion.code("datos", input$segmentacionDatosA ,input$sel.predic.var, input$semilla, input$permitir.semilla)
       updateAceEditor(session, "fieldCodeSegment", value = codigo)
       isolate(eval(parse(text = codigo)))
       nombres <- colnames.empty(datos)
@@ -143,6 +148,16 @@ shinyServer(function(input, output, session) {
     }else{
       showNotification("Tiene que seleccionar una variable a predecir", duration = 15, type = "error")
     }
+
+    close.menu("aprendizaje", is.null(datos.aprendizaje))
+  })
+
+  #Habilitada o deshabilitada la semilla
+  observeEvent(input$permitir.semilla,{
+    if(input$permitir.semilla)
+      shinyjs::enable("semilla")
+    else
+      shinyjs::disable("semilla")
   })
 
   #Cuando cambia la barra de proporcion de datos de prueba (Segmentar Datos)
@@ -219,6 +234,9 @@ shinyServer(function(input, output, session) {
     updateAceEditor(session, "fieldFuncCat", value = func.dya.cat)
 
     updateAceEditor(session, "fieldCodeReport", value = def.reporte())
+
+    shinyjs::disable(selector = 'a[href^="#shiny-tab-parte1"]')
+    shinyjs::disable(selector = 'a[href^="#shiny-tab-parte2"]')
   })
 
   # -------------------  Estadisticas Basicas ------------------------ #
@@ -345,6 +363,7 @@ shinyServer(function(input, output, session) {
         modelo.knn <<- NULL
         MC.knn <<- NULL
         prediccion.knn <<- NULL
+        output$txtknn <- ""
         showNotification("Error al ejecutar el modelo, intente nuevamente",duration = 15,type = "error")
       })
     }
@@ -393,6 +412,7 @@ shinyServer(function(input, output, session) {
         MC.knn <<- NULL
         indices.knn <<- rep(0,8)
         output$plot.knn.mc <- renderPlot(isolate(eval(parse(text = "NULL" ))))
+        output$txtknnMC <- ""
         showNotification("Error al ejecutar la matriz, intente nuevamente",duration = 15,type = "error")
       })
     }
@@ -407,6 +427,8 @@ shinyServer(function(input, output, session) {
         indices.knn <<- indices.generales(MC.knn)
 
         if(ncol(MC.knn) > 2){
+          shinyjs::show("knnPrecGlob")
+          shinyjs::show("knnErrorGlob")
           shinyjs::hide("knnPrecP")
           shinyjs::hide("knnPrecN")
           shinyjs::hide("knnFalP")
@@ -414,6 +436,8 @@ shinyServer(function(input, output, session) {
           shinyjs::hide("knnAserP")
           shinyjs::hide("knnAserN")
         }else{
+          shinyjs::show("knnPrecGlob")
+          shinyjs::show("knnErrorGlob")
           shinyjs::show("knnPrecP")
           shinyjs::show("knnPrecN")
           shinyjs::show("knnFalP")
@@ -493,6 +517,15 @@ shinyServer(function(input, output, session) {
         indices.knn <<- rep(0,8)
         showNotification("Error al ejecutar los indices, intente nuevamente",duration = 15,type = "error")
       })
+    }else{
+      shinyjs::hide("knnPrecGlob")
+      shinyjs::hide("knnErrorGlob")
+      shinyjs::hide("knnPrecP")
+      shinyjs::hide("knnPrecN")
+      shinyjs::hide("knnFalP")
+      shinyjs::hide("knnFalN")
+      shinyjs::hide("knnAserP")
+      shinyjs::hide("knnAserN")
     }
   })
 
@@ -756,28 +789,23 @@ shinyServer(function(input, output, session) {
     }
   })
 
-  #Cuando se selecionan variables para el grafico de clasificacion svm
-  observeEvent(c(input$runSvm,input$select.var.svm.plot),{
-      if(length(input$select.var.svm.plot) == 2){
-        v <- colnames(datos)
-        v <- v[v != variable.predecir]
-        v <- v[!(v %in% input$select.var.svm.plot)]
-        if(length(v) == 0)
-          v <- input$select.var.svm.plot
-        updateAceEditor(session, "fieldCodeSvmPlot", value = svm.plot(input$select.var.svm.plot, v))
-      }else{
-        updateAceEditor(session, "fieldCodeSvmPlot", value = "")
-      }
-  })
-
   #cuando cambia el codigo del grafico de clasificacion svm
-  observeEvent(c(input$fieldCodeSvmPlot),{
-    if(input$fieldCodeSvmPlot != "" ){
-      output$plot.svm <- renderPlot(isolate(eval(parse(text = input$fieldCodeSvmPlot ))))
+  svm.graf <- eventReactive(c(input$runSvm, input$fieldCodeSvmPlot,input$select.var.svm.plot),{
+    if(length(input$select.var.svm.plot) == 2){
+      v <- colnames(datos)
+      v <- v[v != variable.predecir]
+      v <- v[!(v %in% input$select.var.svm.plot)]
+      if(length(v) == 0)
+        v <- input$select.var.svm.plot
+      updateAceEditor(session, "fieldCodeSvmPlot", value = svm.plot(input$select.var.svm.plot, v))
+      return(isolate(eval(parse(text = input$fieldCodeSvmPlot ))))
     }else{
-      output$plot.svm <- renderPlot(isolate(eval(parse(text = "NULL" ))))
+      updateAceEditor(session, "fieldCodeSvmPlot", value = "")
+      return(isolate(eval(parse(text = "NULL" ))))
     }
   })
+
+  output$plot.svm <- renderPlot({svm.graf()})
 
   #Cuando se cambia el codigo de la matriz de confucion de knn
   observeEvent(c(input$runSvm,input$fieldCodeSvm,input$fieldCodeSvmPred,input$fieldCodeSvmMC),{
@@ -930,28 +958,21 @@ shinyServer(function(input, output, session) {
         isolate(eval(parse(text = input$fieldCodeDt)))
         output$txtDt <- renderPrint(print(modelo.dt))
 
-        #Acutaliza el codigo del grafico de clasificacion svm
+        #Cambia el codigo del grafico del árbol
         updateAceEditor(session, "fieldCodeDtPlot", value = dt.plot())
+        output$plot.dt <- renderPlot(isolate(eval(parse(text = input$fieldCodeDtPlot ))))
 
         #Se genera el codigo de la prediccion
         codigo.dt.pred <- dt.prediccion()
         updateAceEditor(session, "fieldCodeDtPred", value = codigo.dt.pred)
       },
       error = function(e) { #Regresamos al estado inicial y mostramos un error
+        output$plot.dt <- renderPlot(renderPlot(isolate(eval(parse(text = "NULL" )))))
         modelo.dt <<- NULL
         MC.dt <<- NULL
         prediccion.dt <<- NULL
         showNotification("Error al ejecutar el modelo, intente nuevamente",duration = 15,type = "error")
       })
-    }
-  })
-
-  #cuando cambia el codigo del grafico del árbol
-  observeEvent(c(input$runDt,input$fieldCodeDtPlot),{
-    if(input$fieldCodeDtPlot != "" ){
-      output$plot.dt <- renderPlot(isolate(eval(parse(text = input$fieldCodeDtPlot ))))
-    }else{
-      output$plot.dt <- renderPlot(isolate(eval(parse(text = "NULL" ))))
     }
   })
 
@@ -1134,6 +1155,10 @@ shinyServer(function(input, output, session) {
         #Se genera el codigo de la prediccion
         codigo.rf.pred <- rf.prediccion(variable.predecir)
         updateAceEditor(session, "fieldCodeRfPred", value = codigo.rf.pred)
+
+        #Cambia el codigo del grafico de rf
+        updateAceEditor(session, "fieldCodeRfPlot", value = rf.plot())
+        output$plot.rf <- renderPlot(isolate(eval(parse(text = input$fieldCodeRfPlot ))))
       },
       error = function(e) { #Regresamos al estado inicial y mostramos un error
         modelo.rf <<- NULL
@@ -1331,11 +1356,19 @@ shinyServer(function(input, output, session) {
         #Se genera el codigo de la prediccion
         codigo.boosting.pred <- boosting.prediccion(variable.predecir)
         updateAceEditor(session, "fieldCodeBoostingPred", value = codigo.boosting.pred)
+
+        #Cambia el codigo del grafico del modelo
+        updateAceEditor(session, "fieldCodeBoostingPlot", value = boosting.plot())
+        output$plot.boosting <- renderPlot(isolate(eval(parse(text = input$fieldCodeBoostingPlot))))
+
+        #Cambia el codigo del grafico de importancia
+        updateAceEditor(session, "fieldCodeBoostingPlotImport", value = boosting.plot.import())
+        output$plot.boosting.import <- renderPlot(isolate(eval(parse(text = input$fieldCodeBoostingPlotImport ))))
       },
       error = function(e) { #Regresamos al estado inicial y mostramos un error
         modelo.boosting <<- NULL
         MC.boosting <<- NULL
-        prediccion.Boosting <<- NULL
+        prediccion.boosting <<- NULL
         showNotification("Error al ejecutar el modelo, intente nuevamente",duration = 15,type = "error")
       })
     }
@@ -1487,6 +1520,402 @@ shinyServer(function(input, output, session) {
     }
   })
 
+  # -------------------  XGBOOSTING ------------------------ #
+
+  #Cuando se genera el modelo xgboosting
+  observeEvent(input$runXgBoosting,{
+    #Validaciones
+    if(is.null(variable.predecir))
+      showNotification("Tiene que seleccionar una variable a predecir",duration = 15, type = "error")
+    if(is.null(datos))
+      showNotification("Tiene que ingresar datos",duration = 15, type = "error")
+    if(is.null(datos.aprendizaje))
+      showNotification("Tiene que crear los datos de aprendizaje y de prueba",duration = 15, type = "error")
+
+    if(!is.null(datos) & !is.null(variable.predecir) & !is.null(datos.aprendizaje)){ #Si se tiene los datos entonces :
+      #Se genera el codigo del modelo
+      codigo.xgboosting <- xg.modelo()
+      updateAceEditor(session, "fieldCodeXgBoosting", value = codigo.xgboosting)
+    }
+  })
+
+  #Cuando se cambia el codigo del modelo  xgboosting
+  observeEvent(c(input$runXgBoosting,input$fieldCodeXgBoosting),{
+    if(input$fieldCodeXgBoosting != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeXgBoosting)))
+        output$txtXgBoosting <- renderPrint(print(modelo.xg))
+
+        #Se genera el codigo de la prediccion
+        codigo.xgboosting.pred <- xg.prediccion()
+        updateAceEditor(session, "fieldCodeXgBoostingPred", value = codigo.xgboosting.pred)
+
+        #Cambia el codigo del grafico de importancia
+        updateAceEditor(session, "fieldCodeXgBoostingPlotImport", value = xgboosting.plot.import())
+        output$plot.xgboosting.import <- renderPlot(isolate(eval(parse(text = input$fieldCodeXgBoostingPlotImport ))))
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        modelo.xg <<- NULL
+        MC.xg <<- NULL
+        prediccion.xg <<- NULL
+        aprendizaje.xg <<- NULL
+        prueba.xg <<- NULL
+        showNotification("Error al ejecutar el modelo, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  #Cuando se cambia el codigo de la prediccion de xgboosting
+  observeEvent(c(input$runXgBoosting,input$fieldCodeXgBoosting,input$fieldCodeXgBoostingPred),{
+    if(input$fieldCodeXgBoostingPred != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeXgBoostingPred)))
+
+        #Cambia la tabla con la prediccion de boosting
+        output$xgboostingPrediTable <- DT::renderDataTable(obj.predic(prediccion.xg))
+
+        # Se genera el codigo de la matriz
+        codigo.xg.mc <- xg.MC()
+        updateAceEditor(session, "fieldCodeXgBoostingMC", value = codigo.xg.mc)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        MC.xg <<- NULL
+        prediccion.xg <<- NULL
+
+        #Cambia la tabla con la prediccion de boosting
+        output$xgboostingPrediTable <- DT::renderDataTable(obj.predic(prediccion.xg))
+
+        showNotification("Error al ejecutar la prediccion, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  #Cuando se cambia el codigo de la matriz de confucion de xgboosting
+  observeEvent(c(input$runXgBoosting,input$fieldCodeXgBoosting,input$fieldCodeXgBoostingPred,input$fieldCodeXgBoostingMC),{
+    if(input$fieldCodeXgBoostingMC != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeXgBoostingMC)))
+        output$txtXgBoostingMC <- renderPrint(print(MC.xg))
+
+        isolate(eval(parse(text = plot.MC.code())))
+        output$plot.xgboosting.mc <- renderPlot(isolate(eval(parse(text = "plot.MC(MC.xg)" ))))
+
+        # Se genera el codigo de la indices
+        codigo.indices <- cod.indices()
+        updateAceEditor(session, "fieldCodeXgBoostingIG", value = codigo.indices)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        MC.xg <<- NULL
+        indices.xg <<- rep(0,8)
+        output$plot.xgboosting.mc <- renderPlot(isolate(eval(parse(text = "NULL" ))))
+        showNotification("Error al ejecutar la matriz, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  #Cuando se cambia el codigo de los indices de boosting
+  observeEvent(c(input$runXgBoosting,input$fieldCodeXgBoosting,input$fieldCodeXgBoostingPred,input$fieldCodeXgBoostingMC,input$fieldCodeXgBoostingIG),{
+    if(input$fieldCodeXgBoostingIG != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeXgBoostingIG)))
+
+        indices.xg <<- indices.generales(MC.xg)
+
+        if(ncol(MC.xg) > 2){
+          shinyjs::hide("xgboostingPrecP")
+          shinyjs::hide("xgboostingPrecN")
+          shinyjs::hide("xgboostingFalP")
+          shinyjs::hide("xgboostingFalN")
+          shinyjs::hide("xgboostingAserP")
+          shinyjs::hide("xgboostingAserN")
+        }else{
+          shinyjs::show("xgboostingPrecP")
+          shinyjs::show("xgboostingPrecN")
+          shinyjs::show("xgboostingFalP")
+          shinyjs::show("xgboostingFalN")
+          shinyjs::show("xgboostingAserP")
+          shinyjs::show("xgboostingAserN")
+        }
+
+        output$xgboostingPrecGlob <- renderGauge({
+          gauge(round(indices.xg[[1]],2),
+                min = 0, max = 100, symbol = '%',
+                label = "Precisión Global",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$xgboostingErrorGlob <- renderGauge({
+          gauge(round(indices.xg[[2]],2),
+                min = 0, max = 100, symbol = '%',
+                label = "Error Global",
+                gaugeSectors( success = c(0, 30), warning = c(31, 45), danger = c(46, 100)))
+        })
+
+        output$xgboostingPrecP <- renderGauge({
+          gauge(round(indices.xg[[3]],2) ,
+                min = 0, max = 100, symbol = '%',
+                label = "Precisión Positiva",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$xgboostingPrecN <- renderGauge({
+          gauge(round(indices.xg[[4]],2), min = 0, max = 100,
+                symbol = '%',
+                label = "Precisión Negativa",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$xgboostingFalP <- renderGauge({
+          gauge(round(indices.xg[[5]],2), min = 0, max = 100, symbol = '%',
+                label = "Falsos Positivos",
+                gaugeSectors( success = c(0, 30),
+                              warning = c(31, 45),
+                              danger = c(46, 100)))
+        })
+
+        output$xgboostingFalN <- renderGauge({
+          gauge(round(indices.xg[[6]],2), min = 0, max = 100, symbol = '%',
+                label = "Falsos Negativos",
+                gaugeSectors( success = c(0, 30),
+                              warning = c(31, 45),
+                              danger = c(46, 100)))
+        })
+
+        output$xgboostingAserP <- renderGauge({
+          gauge(round(indices.xg[[7]],2), min = 0, max = 100, symbol = '%',
+                label = "Asertividad Positiva",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$xgboostingAserN <- renderGauge({
+          gauge(round(indices.xg[[8]],2), min = 0, max = 100, symbol = '%',
+                label = "Asertividad Negativa",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        indices.xg <<- rep(0,8)
+        showNotification("Error al ejecutar los indices, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+
+  # -------------------  NN ------------------------ #
+
+  #Cuando se genera el modelo nn
+  observeEvent(input$runNn,{
+    #Validaciones
+    if(is.null(variable.predecir))
+      showNotification("Tiene que seleccionar una variable a predecir",duration = 15, type = "error")
+    if(is.null(datos))
+      showNotification("Tiene que ingresar datos",duration = 15, type = "error")
+    if(is.null(datos.aprendizaje))
+      showNotification("Tiene que crear los datos de aprendizaje y de prueba",duration = 15, type = "error")
+
+    if(!is.null(datos) & !is.null(variable.predecir) & !is.null(datos.aprendizaje)){ #Si se tiene los datos entonces :
+
+      #Se genera el codigo del modelo
+      codigo.nn <- nn.modelo(variable.pr = variable.predecir, predictoras = input$select.var.nn,
+                             size = input$size.nn, rang = input$rang.nn, decay = 5e-4,
+                             maxit = input$maxit.nn, trace = input$switch.trace.nn)
+
+      updateAceEditor(session, "fieldCodeNn", value = codigo.nn)
+    }
+  })
+
+  #Cuando se cambia el codigo del modelo  nn
+  observeEvent(c(input$runNn,input$fieldCodeNn),{
+    if(input$fieldCodeNn != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeNn)))
+        output$txtNn <- renderPrint(print(modelo.nn))
+
+        #Se genera el codigo de la prediccion
+        codigo.nn.pred <- nn.prediccion()
+        updateAceEditor(session, "fieldCodeNnPred", value = codigo.nn.pred)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        modelo.nn <<- NULL
+        MC.nn <<- NULL
+        prediccion.nn <<- NULL
+        output$txtNn <- ""
+        showNotification("Error al ejecutar el modelo, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  #Cuando se cambia el codigo de la prediccion de nn
+  observeEvent(c(input$runNn,input$fieldCodeNn,input$fieldCodeNnPred),{
+    if(input$fieldCodeNnPred != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeNnPred)))
+
+        #Cambia la tabla con la prediccion de nn
+        output$nnPrediTable <- DT::renderDataTable(obj.predic(prediccion.nn))
+
+        # Se genera el codigo de la matriz
+        codigo.nn.mc <- nn.MC(variable.predecir)
+        updateAceEditor(session, "fieldCodeNnMC", value = codigo.nn.mc)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        MC.nn <<- NULL
+        prediccion.nn <<- NULL
+
+        #Cambia la tabla con la prediccion de nn
+        output$nnPrediTable <- DT::renderDataTable(obj.predic(prediccion.nn))
+
+        showNotification("Error al ejecutar la prediccion, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  #Cuando se cambia el codigo de la matriz de confucion de nn
+  observeEvent(c(input$runNn,input$fieldCodeNn,input$fieldCodeNnPred,input$fieldCodeNnMC),{
+    if(input$fieldCodeNnMC != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeNnMC)))
+        output$txtNnMC <- renderPrint(print(MC.nn))
+
+        isolate(eval(parse(text = plot.MC.code())))
+        output$plot.nn.mc <- renderPlot(isolate(eval(parse(text = "plot.MC(MC.nn)" ))))
+
+        # Se genera el codigo de la indices
+        codigo.indices <- cod.indices()
+        updateAceEditor(session, "fieldCodeNnIG", value = codigo.indices)
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        MC.nn <<- NULL
+        indices.nn <<- rep(0,8)
+        output$plot.nn.mc <- renderPlot(isolate(eval(parse(text = "NULL" ))))
+        output$txtNnMC <- ""
+        showNotification("Error al ejecutar la matriz, intente nuevamente",duration = 15,type = "error")
+      })
+    }
+  })
+
+  #Cuando se cambia el codigo de los indices de nn
+  observeEvent(c(input$runNn,input$fieldCodeNn,input$fieldCodeNnPred,input$fieldCodeNnMC,input$fieldCodeNnIG),{
+    if(input$fieldCodeKnnIG != ""){
+      tryCatch({ #Se corren los codigo
+        isolate(eval(parse(text = input$fieldCodeKnnIG)))
+
+        indices.nn <<- indices.generales(MC.nn)
+
+        if(ncol(MC.nn) > 2){
+          shinyjs::show("nnPrecGlob")
+          shinyjs::show("nnErrorGlob")
+          shinyjs::hide("nnPrecP")
+          shinyjs::hide("nnPrecN")
+          shinyjs::hide("nnFalP")
+          shinyjs::hide("nnFalN")
+          shinyjs::hide("nnAserP")
+          shinyjs::hide("nnAserN")
+        }else{
+          shinyjs::show("nnPrecGlob")
+          shinyjs::show("nnErrorGlob")
+          shinyjs::show("nnPrecP")
+          shinyjs::show("nnPrecN")
+          shinyjs::show("nnFalP")
+          shinyjs::show("nnFalN")
+          shinyjs::show("nnAserP")
+          shinyjs::show("nnAserN")
+        }
+
+        output$nnPrecGlob <- renderGauge({
+          gauge(round(indices.nn[[1]],2),
+                min = 0, max = 100, symbol = '%',
+                label = "Precisión Global",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$nnErrorGlob <- renderGauge({
+          gauge(round(indices.nn[[2]],2),
+                min = 0, max = 100, symbol = '%',
+                label = "Error Global",
+                gaugeSectors( success = c(0, 30), warning = c(31, 45), danger = c(46, 100)))
+        })
+
+        output$nnPrecP <- renderGauge({
+          gauge(round(indices.nn[[3]],2) ,
+                min = 0, max = 100, symbol = '%',
+                label = "Precisión Positiva",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$nnPrecN <- renderGauge({
+          gauge(round(indices.nn[[4]],2), min = 0, max = 100,
+                symbol = '%',
+                label = "Precisión Negativa",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$nnFalP <- renderGauge({
+          gauge(round(indices.nn[[5]],2), min = 0, max = 100, symbol = '%',
+                label = "Falsos Positivos",
+                gaugeSectors( success = c(0, 30),
+                              warning = c(31, 45),
+                              danger = c(46, 100)))
+        })
+
+        output$nnFalN <- renderGauge({
+          gauge(round(indices.nn[[6]],2), min = 0, max = 100, symbol = '%',
+                label = "Falsos Negativos",
+                gaugeSectors( success = c(0, 30),
+                              warning = c(31, 45),
+                              danger = c(46, 100)))
+        })
+
+        output$nnAserP <- renderGauge({
+          gauge(round(indices.nn[[7]],2), min = 0, max = 100, symbol = '%',
+                label = "Asertividad Positiva",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+        output$nnAserN <- renderGauge({
+          gauge(round(indices.nn[[8]],2), min = 0, max = 100, symbol = '%',
+                label = "Asertividad Negativa",
+                gaugeSectors(success = c(70, 100),
+                             warning = c(50, 69),
+                             danger = c(0, 49)))
+        })
+
+      },
+      error = function(e) { #Regresamos al estado inicial y mostramos un error
+        indices.nn <<- rep(0,8)
+        showNotification("Error al ejecutar los indices, intente nuevamente",duration = 15,type = "error")
+      })
+    }else{
+      shinyjs::hide("nnPrecGlob")
+      shinyjs::hide("nnErrorGlob")
+      shinyjs::hide("nnPrecP")
+      shinyjs::hide("nnPrecN")
+      shinyjs::hide("nnFalP")
+      shinyjs::hide("nnFalN")
+      shinyjs::hide("nnAserP")
+      shinyjs::hide("nnAserN")
+    }
+  })
+
   ###########################################################################################################################
   ##### Funcionalidades
   ###########################################################################################################################
@@ -1550,7 +1979,7 @@ shinyServer(function(input, output, session) {
 
   # -------------------  Modelos Predictivos ------------------------ #
 
-  obj.predic <- function(predic.var = NULL ) {
+  obj.predic <- function(predic.var = NULL) {
     real <- as.character(datos.prueba[,variable.predecir])
     predi <- as.character(predic.var)
     df <- cbind(real,predi,ifelse(real == predi,
@@ -1564,7 +1993,6 @@ shinyServer(function(input, output, session) {
                          extensions = c('Responsive'),
                          options = list(dom = 'frtip',pageLength = 15) ))
   }
-
 
   # -------------------  Reporte ------------------------ #
 
@@ -1597,6 +2025,17 @@ shinyServer(function(input, output, session) {
     }
   )
 
+  # -------------------  Otras ------------------------ #
+
+  close.menu <- function(mode = "datos", valor  = T){
+    select <- ifelse(mode == "datos",'a[href^="#shiny-tab-parte1"]', 'a[href^="#shiny-tab-parte2"]')
+    if(valor){
+      shinyjs::hide(selector = "ul.menu-open");
+      shinyjs::disable(selector = select)
+    }else{
+      shinyjs::enable(selector = select)
+    }
+  }
 
 }) ## FIN SERVER
 
