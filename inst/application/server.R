@@ -4,7 +4,6 @@ shinyServer(function(input, output, session) {
   ###########################################################################################################################
   ##### Configuraciones iniciales
   ###########################################################################################################################
-
   source('global.R', local = T)
   Sys.setenv("LANGUAGE" = "ES")
   options(shiny.maxRequestSize=200*1024^2,
@@ -19,6 +18,10 @@ shinyServer(function(input, output, session) {
 
   #Termina la Sesion
   session$onSessionEnded(function() {
+    browser()
+    borrar <- ls(envir = .GlobalEnv)
+    borrar <- c(borrar[!(borrar %in% .GlobalEnv$foto)], "foto")
+    rm(envir = .GlobalEnv, list = borrar)
     stopApp()
   })
 
@@ -29,11 +32,15 @@ shinyServer(function(input, output, session) {
     codigo <- code.carga(nombre.filas = input$rowname, ruta = input$file1$datapath,
                          separador = input$sep, sep.decimal = input$dec, encabezado = input$header)
 
+
     tryCatch({
       isolate(eval(parse(text = codigo)))
-    },
-    error = function(e) {
-      showNotification("Error al cargar los datos, intente nuevamente", duration = 15, type = "error")
+      if(ncol(datos) < 1){
+        showNotification(paste0("Error al cargar los Datos: Revisar separadores"), duration = 10, type = "error")
+        return(NULL)
+      }
+    }, error = function(e) {
+      showNotification(paste0("Error al cargar los Datos: ", e), duration = 10, type = "error")
       datos <<- NULL
       datos.originales <<- NULL
       return(NULL)
