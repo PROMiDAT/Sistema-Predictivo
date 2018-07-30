@@ -60,6 +60,60 @@ cod.indices <- function(){
 }')
 }
 
+#Hace el grafico de la curba de roc
+plotROC <- function(prediccion,real,adicionar=FALSE,color="red",ylim = c(0,1.5)) {
+  pred <- prediction(prediccion,real)
+  perf <- performance(pred,"tpr","fpr")
+  plot(perf,col=color,add=adicionar,main="Curva ROC", ylim = ylim)
+  segments(0,0,1,1,col='black')
+  grid()
+}
+
+#Calcula el area de la curva ROC
+areaROC <- function(prediccion,real) {
+  pred <- prediction(prediccion,real)
+  auc<-performance(pred,"auc")
+  return(attributes(auc)$y.values[[1]])
+}
+
+#Para el grafico de poder predictivo
+plot.dist.porc <- function(data, variable, nom.variable, var.predecir, nom.predecir, colores = NA, label.size = 9.5){
+  colores <- gg_color_hue(length(unique(data[,var.predecir])))
+  label.size <- label.size - length(unique(data[,variable]))
+  label.size <- ifelse(label.size < 3, 3, label.size)
+  data. <- dist.x.predecir(data, variable, var.predecir)
+  ggplot(data., aes(fct_reorder(data.[[variable]], count, .desc = T), prop, fill = data.[[var.predecir]])) +
+    geom_bar(stat = "identity") +
+    geom_text(aes(label = paste0(count, " (", scales::percent(prop), ")"), y = prop), color = "gray90",
+              position = position_stack(vjust = .5), size = label.size) +
+    theme_minimal() +
+    theme(text = element_text(size=15)) +
+    scale_fill_manual(values = colores) +
+    scale_y_continuous(labels = scales::percent)+
+    coord_flip() +
+    labs(title = paste0("Distribución relativa de la variable '", nom.variable, "' según la ", nom.predecir), x = "", y = "") +
+    guides(fill = guide_legend(reverse=T)) +
+    theme(legend.position = "top", legend.title = element_blank())
+}
+
+#Para el grafico de poder predictivo
+dist.x.predecir <- function(data, variable, variable.predecir) {
+  data. <- data %>%
+    group_by_(variable, variable.predecir) %>%
+    summarise(count = n()) %>%
+    mutate(prop = round(count/sum(count),4))
+  return(data.)
+}
+
+#Grafica el pairs
+pairs.poder <- function(){
+  vars.p <- datos[,variable.predecir]
+  col <- gg_color_hue( length(unique(vars.p)) + 1 )
+  col <- col[2:length(col)]
+  pairs.panels(var.numericas(datos),bg = col[datos[,variable.predecir]],
+               pch= 22, main="", hist.col = gg_color_hue(1), ellipses = FALSE)
+}
+
 # -------------------  Pagina Datos ------------------------ #
 
 #Transforma las variables a disyuntivas
@@ -93,12 +147,15 @@ code.carga <- function(nombre.filas = T, ruta = NULL, separador = ";", sep.decim
 
 #Eliminar NAs
 code.NA <- function(deleteNA = T) {
-  res <- ifelse(deleteNA, "datos <<- na.omit(datos)",
-                paste0("for (variable in colnames(datos)) {\n",
-                       "  if(any(is.na(datos[, variable]))){\n",
-                       "    ifelse(class(datos[, variable]) %in% c('numeric', 'integer'),\n",
-                       "           datos[, variable][is.na(datos[, variable])] <<- mean(datos[, variable], na.rm = T),\n",
-                       "           datos[, variable][is.na(datos[, variable])] <<- modeest::mfv(datos[, variable], na.rm = T))",
+  res <- ifelse(deleteNA, "datos.originales <<- na.omit(datos.originales)\n",
+                paste0("Mode <- function(x) {\n  x[which.max(summary(x))]\n}\n",
+                       "for (variable in colnames(datos.originales)) {\n",
+                       "  if(any(is.na(datos.originales[, variable]))){\n",
+                       "    ifelse(class(datos.originales[, variable]) %in% c('numeric', 'integer'),\n",
+                       "           datos.originales[, variable][is.na(datos.originales[, variable])] <<- \n",
+                       "                                              mean(datos.originales[, variable], na.rm = T),\n",
+                       "           datos.originales[, variable][is.na(datos.originales[, variable])] <<- \n",
+                       "                                     Mode(datos.originales[, variable]))",
                        "\n   }\n}"))
   return(res)
 }
@@ -274,11 +331,8 @@ knn.MC <- function(variable.p){
 # -------------------  SVM ------------------------ #
 
 #Crea el modelo SVM
-svm.modelo <- function(variable.pr = NULL, predictoras = ".", scale = TRUE, kernel = "linear"){
-  if(all(predictoras == ""))
-    predictoras <- "."
-  predictoras <- paste0(predictoras, collapse = "+")
-  codigo <- paste0("modelo.svm <<- svm(",variable.pr,"~",predictoras,", data = datos.aprendizaje, scale =",scale,", kernel = '",kernel,"')")
+svm.modelo <- function(variable.pr = NULL, scale = TRUE, kernel = "linear"){
+  codigo <- paste0("modelo.svm <<- svm(",variable.pr,"~., data = datos.aprendizaje, scale =",scale,", kernel = '",kernel,"')")
   return(codigo)
 }
 

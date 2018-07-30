@@ -29,6 +29,9 @@ library(randomForest)
 library(ada)
 library(xgboost)
 library(nnet)
+library(dplyr)
+library(forcats)
+library(psych)
 
 ###########################################################################################################################
 #####  MENU
@@ -41,7 +44,8 @@ menu.estadisticas <- menuItem("Estadísticas Básicas", tabName = "parte1", icon
                               menuSubItem("Test de Normalidad", tabName = "normalidad", icon = icon("th")),
                               menuSubItem("Dispersión", tabName = "dispersion", icon = icon("th")),
                               menuSubItem("Distribuciones", tabName = "distribucion", icon = icon("th")),
-                              menuSubItem("Correlación", tabName = "correlacion", icon = icon("th")))
+                              menuSubItem("Correlación", tabName = "correlacion", icon = icon("th")),
+                              menuItem("Poder Predictivo", tabName = "poderPred", icon = icon("th")))
 
 menu.aprendizaje.supervisado <- menuItem("Aprendizaje Supervisado", tabName = "parte2", icon = icon("th"),
                                          menuSubItem("K Vecinos Más Cercanos",tabName = "knn",icon = icon("bar-chart-o")),
@@ -52,11 +56,14 @@ menu.aprendizaje.supervisado <- menuItem("Aprendizaje Supervisado", tabName = "p
 
 menu.reporte <- menuItem("Generar Reporte", tabName = "reporte", icon = icon("save-file",lib = "glyphicon"))
 
+menu.comparar <- menuItem("Comparación de Modelos", tabName = "comparar", icon = icon("list"))
+
 mi.menu <- sidebarMenu(id = "principal",
               tags$div(style="padding-top:10px;"),
               menu.cargar,
               menu.estadisticas,
               menu.aprendizaje.supervisado,
+              menu.comparar,
               menu.reporte)
 
 ###########################################################################################################################
@@ -260,6 +267,19 @@ pagina.distribuciones <- tabItem(tabName = "distribucion",
                                                resultados.distribucion.numericas,
                                                resultados.distribucion.categoricas )) )
 
+###########################################################################################################################
+##### PAGINA DE PODER PREDICTIVO
+###########################################################################################################################
+
+plot.dist.poder <- tabPanel(title = 'PARTE 1',
+                             plotOutput('plot.dist.poder', height = "65vh"),
+                             selectInput(inputId = "sel.distribucion.poder", label = NULL, choices =  ""))
+
+plot.pairs.poder <- tabPanel(title = 'PARTE 2',
+                             plotOutput('plot.pairs.poder', height = "65vh"))
+
+
+pagina.poder <- tabItem(tabName = "poderPred", column(width = 12, tabBox(width = 12, plot.dist.poder,plot.pairs.poder)) )
 
 ###########################################################################################################################
 ##### PAGINA DE KNN
@@ -553,6 +573,42 @@ pagina.boosting <- tabItem(tabName = "boosting",
                                     panel.matriz.confucion.boosting,
                                     panel.indices.generales.boosting)))
 
+###########################################################################################################################
+##### PAGINA DE COMPARACION DE MODELOS
+###########################################################################################################################
+
+panel.comparacion.tabla <- tabPanel(title = "Tabla Comparativa",
+                                    DT::dataTableOutput("TablaComp"),
+                                    hr(),
+                                    checkboxGroupInput("select.models", "Mostrar Modelos:",
+                                                       c("KNN" = "sel.knn",
+                                                         "SVM" = "sel.svm",
+                                                         "ÁRBOLES" = "sel.dt",
+                                                         "BOSQUES" = "sel.rf",
+                                                         "ADA - BOOSTING" = "sel.boosting"),
+                                                       inline = TRUE,
+                                                       selected = c("sel.knn","sel.svm","sel.dt","sel.rf","sel.boosting")))
+
+plot.comparacion.roc <- tabPanel(title = "Curva ROC",
+                          plotOutput('plot.roc', height = "55vh"),
+                          hr(),
+                          checkboxGroupInput("select.models.roc", "Mostrar Modelos:",
+                                             c("KNN" = "sel.knn",
+                                               "SVM" = "sel.svm",
+                                               "ÁRBOLES" = "sel.dt",
+                                               "BOSQUES" = "sel.rf",
+                                               "ADA - BOOSTING" = "sel.boosting"),
+                                             inline = TRUE,
+                                             selected = c("sel.knn","sel.svm","sel.dt","sel.rf","sel.boosting")),
+                          fluidRow(column(width = 12, selectInput(inputId = "roc.sel",
+                                                                  label = h4("Seleccionar la Categoría:"),
+                                                                  choices =  "", width = "100%"))))
+
+pagina.comparacion <- tabItem(tabName = "comparar",
+                           column(width = 12,
+                                  tabBox(width = 12,
+                                         panel.comparacion.tabla,
+                                         plot.comparacion.roc )))
 
 ###########################################################################################################################
 ##### PAGINA DE REPORTE
@@ -581,14 +637,16 @@ shinyUI(dashboardPage(title="PROMiDAT",
                       dashboardBody(mi.head,
                                     div(id = "loaderWrapper", div(id="loader")),
                                     tabItems( pagina.cargar.datos,
-                                                       pagina.resumen.numerico,
-                                                       pagina.test.normalidad,
-                                                       pagina.dispersion,
-                                                       pagina.correlaciones,
-                                                       pagina.distribuciones,
-                                                       pagina.generar.reporte,
-                                                       pagina.knn,
-                                                       pagina.svm,
-                                                       pagina.dt,
-                                                       pagina.rf,
-                                                       pagina.boosting))) )
+                                              pagina.resumen.numerico,
+                                              pagina.test.normalidad,
+                                              pagina.dispersion,
+                                              pagina.correlaciones,
+                                              pagina.distribuciones,
+                                              pagina.poder,
+                                              pagina.knn,
+                                              pagina.svm,
+                                              pagina.dt,
+                                              pagina.rf,
+                                              pagina.boosting,
+                                              pagina.comparacion,
+                                              pagina.generar.reporte))) )
