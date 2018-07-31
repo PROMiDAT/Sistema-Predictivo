@@ -1,7 +1,7 @@
 Package: PROMIDAT.PREDICTIVO.SHINY
 Type: Package
 Title: Predictivo Shiny
-Version: 0.1.0
+Version: 1.0
 Author: Andres and Diego
 Maintainer: Andrés Navarro Durán <andres.navarro@promidat.com>, DIEGO <yourself@somewhere.net>
 Description: Hace cosas bonitas
