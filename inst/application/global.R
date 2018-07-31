@@ -61,18 +61,39 @@ cod.indices <- function(){
 }
 
 #Hace el grafico de la curba de roc
-plotROC <- function(prediccion,real,adicionar=FALSE,color="red",ylim = c(0,1.5)) {
+plotROCInd <- function(prediccion,real,adicionar=FALSE,color="red",ylim = c(0,1.5)) {
   pred <- prediction(prediccion,real)
   perf <- performance(pred,"tpr","fpr")
-  plot(perf,col=color,add=adicionar,main="Curva ROC", ylim = ylim)
-  segments(0,0,1,1,col='black')
+  plot(perf,col=color, add=adicionar, main="Curva ROC", ylim = ylim)
+  segments(0,0,1,1, col='black')
   grid()
+}
+
+plotROC <- function(sel) {
+  plot.new()
+  modelos <- list("KNN" = score.knn, "SVM" = score.svm, "ÁRBOLES" = score.dt,
+                  "BOSQUES" = score.rf, "ADA-BOOSTING" = score.booting)
+  clase <- datos.prueba[,variable.predecir]
+  col <- gg_color_hue(5)
+
+  if(is.numeric(modelos[[1]]) & "sel.knn" %in% sel)
+    plotROCInd(score.knn[,input$roc.sel],clase,T,col[1])
+  if(is.factor(modelos[[2]]) & "sel.svm" %in% sel)
+    plotROCInd(attributes(score.svm)$probabilities[,input$roc.sel],clase,T,col[2])
+  if(is.numeric(modelos[[3]]) & "sel.dt" %in% sel)
+    plotROCInd(score.dt[,input$roc.sel],clase,T,col[3])
+  if(is.numeric(modelos[[4]]) & "sel.rf" %in% sel)
+    plotROCInd(score.rf[,input$roc.sel],clase,T,col[4])
+  if(is.numeric(modelos[[5]]) & "sel.boosting" %in% sel)
+    plotROCInd(score.booting[,which(levels(clase) == input$roc.sel)],clase,T,col[5])
+  legend(x=0.88, y=0.25, legend = names(modelos), bty = "n", pch=20 ,
+          col=col , text.col = "grey", cex=1.2, pt.cex=1.5)
 }
 
 #Calcula el area de la curva ROC
 areaROC <- function(prediccion,real) {
-  pred <- prediction(prediccion,real)
-  auc<-performance(pred,"auc")
+  pred <- ROCR::prediction(prediccion,real)
+  auc <- ROCR::performance(pred,"auc")
   return(attributes(auc)$y.values[[1]])
 }
 
@@ -395,7 +416,9 @@ dt.MC <- function(variable.p){
 #Codigo del grafico de dt
 dt.plot <- function(){
   num <- length(levels(datos[,variable.predecir]))
-  return(paste0("prp(modelo.dt, extra=104, branch.type = 2, box.col = gg_color_hue(",num,")[modelo.dt$frame$yval])"))
+  return(paste0("prp(modelo.dt, type = 2, extra = 104, nn = T, varlen = 0, faclen = 0,
+fallen.leaves = TRUE, branch.lty = 6, shadow.col = 'gray82',
+box.col = gg_color_hue(",num,")[modelo.dt$frame$yval])"))
 }
 
 # -------------------  RF ------------------------ #
@@ -604,6 +627,8 @@ modelo.knn <<- NULL
 MC.knn <<- NULL
 prediccion.knn <<- NULL
 indices.knn <<- rep(0,8)
+score.knn <<- NULL
+area.knn <<- NA
 
 # -------------------  SVM ------------------------ #
 
@@ -611,6 +636,8 @@ modelo.svm <<- NULL
 MC.svm <<- NULL
 prediccion.svm <<- NULL
 indices.svm <<- rep(0,8)
+score.svm <<- NULL
+area.svm <<- NA
 
 # -------------------  DT ------------------------ #
 
@@ -618,6 +645,8 @@ modelo.dt <<- NULL
 MC.dt <<- NULL
 prediccion.dt <<- NULL
 indices.dt <<- rep(0,8)
+score.dt <<- NULL
+area.dt <<- NA
 
 # -------------------  RF ------------------------ #
 
@@ -625,6 +654,8 @@ modelo.rf <<- NULL
 MC.rf <<- NULL
 prediccion.rf <<- NULL
 indices.rf <<- rep(0,8)
+score.rf <<- NULL
+area.rf <<- NA
 
 # -------------------  BOOSTING ------------------------ #
 
@@ -632,3 +663,6 @@ modelo.boosting <<- NULL
 MC.boosting <<- NULL
 prediccion.boosting <<- NULL
 indices.boosting <<- rep(0,8)
+score.booting <<- NULL
+area.boosting <<- NA
+

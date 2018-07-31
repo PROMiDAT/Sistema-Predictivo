@@ -85,7 +85,7 @@ shinyServer(function(input, output, session) {
     datos.prueba <<- NULL
     datos.aprendizaje <<- NULL
     variable.predecir <<- NULL
-
+    borrar.modelos()
     updateAceEditor(session, "fieldModelCor", value = modelo.cor())
 
     tryCatch({
@@ -140,6 +140,7 @@ shinyServer(function(input, output, session) {
     datos.prueba <<- NULL
     datos.aprendizaje <<- NULL
     variable.predecir <<- NULL
+    borrar.modelos()
 
     updateAceEditor(session, "fieldModelCor", value = modelo.cor())
     tryCatch({
@@ -168,7 +169,8 @@ shinyServer(function(input, output, session) {
       nombres <- colnames.empty(datos)
       nambres.sin.pred <- nombres[-which(nombres == variable.predecir)]
       updateSelectizeInput(session, "select.var.svm.plot", choices = nambres.sin.pred)
-      updateSelectInput(session, "roc.sel", choices = as.character(unique(datos[,variable.predecir])))
+      choices <- as.character(unique(datos[,variable.predecir]))
+      updateSelectInput(session, "roc.sel", choices = choices, selected = choices[1])
       cat.sin.pred <- colnames.empty(var.categoricas(datos))
       cat.sin.pred <- cat.sin.pred[cat.sin.pred != input$sel.predic.var]
       updateSelectInput(session, "sel.distribucion.poder", choices = cat.sin.pred)
@@ -190,6 +192,7 @@ shinyServer(function(input, output, session) {
 
     #Cambia las tablas de aprendizaje y de prueba
     actualizar.tabla(c("datos.aprendizaje", "datos.prueba"))
+    borrar.modelos()
   })
 
   #Habilitada o deshabilitada la semilla
@@ -377,6 +380,8 @@ shinyServer(function(input, output, session) {
     tryCatch({ #Se corren los codigo
       isolate(eval(parse(text = input$fieldCodeKnnPred)))
 
+      score.knn <<- predict(modelo.knn, datos.prueba, type = "prob")
+
       #Cambia la tabla con la prediccion de knn
       output$knnPrediTable <- DT::renderDataTable(obj.predic(prediccion.knn))
     },
@@ -531,6 +536,7 @@ shinyServer(function(input, output, session) {
     tryCatch({ #Se corren los codigo
       isolate(eval(parse(text = input$fieldCodeSvm)))
       output$txtSvm <- renderPrint(print(modelo.svm))
+
     },
     error = function(e) { #Regresamos al estado inicial y mostramos un error
       modelo.svm <<- NULL
@@ -544,6 +550,14 @@ shinyServer(function(input, output, session) {
   ejecutar.svm.pred <- function(){
     tryCatch({ #Se corren los codigo
       isolate(eval(parse(text = input$fieldCodeSvmPred)))
+
+      modelo.svm.roc <- svm(as.formula(paste0(variable.predecir, "~.")),
+                            data = datos.aprendizaje,
+                            scale =T,
+                            kernel = input$kernel.svm,
+                            probability = T)
+
+      score.svm <<- predict(modelo.svm.roc, datos.prueba, probability = T)
 
       #Cambia la tabla con la prediccion de knn
       output$svmPrediTable <- DT::renderDataTable(obj.predic(prediccion.svm))
@@ -739,6 +753,9 @@ shinyServer(function(input, output, session) {
   ejecutar.dt.pred <- function(){
     tryCatch({ #Se corren los codigo
       isolate(eval(parse(text = input$fieldCodeDtPred)))
+
+      score.dt <<- predict(modelo.dt, datos.prueba, type='prob')
+
       #Cambia la tabla con la prediccion de dt
       output$dtPrediTable <- DT::renderDataTable(obj.predic(prediccion.dt))
     },
@@ -913,6 +930,9 @@ shinyServer(function(input, output, session) {
   ejecutar.rf.pred <- function(){
     tryCatch({ #Se corren los codigo
       isolate(eval(parse(text = input$fieldCodeRfPred)))
+
+      score.rf <<- predict(modelo.rf,datos.prueba[,-which(colnames(datos.prueba) == variable.predecir)], type = "prob")
+
       #Cambia la tabla con la prediccion de rf
       output$rfPrediTable <- DT::renderDataTable(obj.predic(prediccion.rf))
     },
@@ -1093,6 +1113,9 @@ shinyServer(function(input, output, session) {
   ejecutar.boosting.pred <- function(){
     tryCatch({ #Se corren los codigo
       isolate(eval(parse(text = input$fieldCodeBoostingPred)))
+
+      score.booting <<- predict(modelo.boosting, datos.prueba[,-which(colnames(datos.prueba) == variable.predecir)], type = "prob")
+
       #Cambia la tabla con la prediccion de boosting
       output$boostingPrediTable <- DT::renderDataTable(obj.predic(prediccion.boosting))
     },
@@ -1297,6 +1320,49 @@ shinyServer(function(input, output, session) {
 
   # -------------------  Otros  ------------------------ #
 
+  #Borra los datos de los modelos
+  borrar.modelos <- function(){
+    modelo.knn <<- NULL
+    MC.knn <<- NULL
+    prediccion.knn <<- NULL
+    indices.knn <<- rep(0,8)
+    score.knn <<- NULL
+    area.knn <<- NA
+
+    # -------------------  SVM ------------------------ #
+
+    modelo.svm <<- NULL
+    MC.svm <<- NULL
+    prediccion.svm <<- NULL
+    indices.svm <<- rep(0,8)
+    score.svm <<- NULL
+
+    # -------------------  DT ------------------------ #
+
+    modelo.dt <<- NULL
+    MC.dt <<- NULL
+    prediccion.dt <<- NULL
+    indices.dt <<- rep(0,8)
+    score.dt <<- NULL
+    svm.roc <<- NULL
+
+    # -------------------  RF ------------------------ #
+
+    modelo.rf <<- NULL
+    MC.rf <<- NULL
+    prediccion.rf <<- NULL
+    indices.rf <<- rep(0,8)
+    score.rf <<- NULL
+
+    # -------------------  BOOSTING ------------------------ #
+
+    modelo.boosting <<- NULL
+    MC.boosting <<- NULL
+    prediccion.boosting <<- NULL
+    indices.boosting <<- rep(0,8)
+    score.booting <<- NULL
+  }
+
   #Crea la tabla de comparacion entre prediccion y datos reales (datos de prueba)
   obj.predic <- function(predic.var = NULL) {
     real <- as.character(datos.prueba[,variable.predecir])
@@ -1424,7 +1490,9 @@ shinyServer(function(input, output, session) {
   tabla.comparativa <- function(){
     tryCatch({
       matrices <- list("KNN" = MC.knn, "SVM" = MC.svm, "ÁRBOLES" = MC.dt, "BOSQUES" = MC.rf, "ADA-BOOSTING" = MC.boosting)
+      areas <- list("KNN" = area.knn, "SVM" = area.svm, "ÁRBOLES" = area.dt, "BOSQUES" = area.rf, "ADA-BOOSTING" = area.boosting)
       matrices <- matrices[c("sel.knn","sel.svm","sel.dt","sel.rf","sel.boosting") %in% input$select.models]
+      areas <- areas[c("sel.knn","sel.svm","sel.dt","sel.rf","sel.boosting") %in% input$select.models]
       cant.class <- length(unique(datos[,variable.predecir]))
       names.class <- as.character(unique(datos[,variable.predecir]))
 
@@ -1438,7 +1506,7 @@ shinyServer(function(input, output, session) {
         }else{
           df <- rbind(df,c(names(matrices)[i],round(c((sum(diag(matrices[[i]])) / sum(matrices[[i]])) * 100,
                            diag(matrices[[i]])/rowSums(matrices[[i]]) * 100,
-                           NA), 2)))
+                           areas[[i]]), 2)))
         }
       }
       colnames(df) <- c("Modelo","Precisión Global",names.class,"Área de ROC")
@@ -1449,60 +1517,41 @@ shinyServer(function(input, output, session) {
     })
   }
 
-  roc.info <- function(){
-    if(!is.null(datos.prueba) && length(unique(datos[,variable.predecir]))){
-      nombres <- c()
-      scores <- list()
-
-      if(!is.null(modelo.knn) &&  any("sel.knn" %in% input$select.models.roc)){
-        pred <- predict(modelo.knn, datos.prueba, type="prob")
-        scores[[length(scores)+1]] <- pred[,colnames(pred) == input$roc.sel]
-        nombres <- c(nombres,"KNN")
-      }
-
-      if(!is.null(modelo.svm) && any("sel.svm" %in% input$select.models.roc)){
-        modelo.svm.aux <- svm(as.formula(paste0(variable.predecir,"~.")), data = datos.aprendizaje,
-                              scale =input$switch.scale.svm, kernel = input$kernel.svm,probability = TRUE)
-        pred <- predict(modelo.svm.aux, datos.prueba, probability = TRUE)
-        scores[[length(scores)+1]] <- pred[,colnames(pred) == input$roc.sel]
-        nombres <- c(nombres,"SVM")
-      }
-
-      if(!is.null(modelo.dt) && any("sel.dt" %in% input$select.models.roc)){
-        pred <- predict(modelo.dt, datos.prueba, type='prob')
-        scores[[length(scores)+1]] <- pred[,colnames(pred) == input$roc.sel]
-        nombres <- c(nombres,"ÁRBOLES")
-      }
-
-      if(!is.null(modelo.rf) && any("sel.rf" %in% input$select.models.roc)){
-        pred <- predict(modelo.rf,datos.prueba[,-which(colnames(datos.prueba) == variable.predecir)], type="prob")
-        scores[[length(scores)+1]] <- pred[,colnames(pred) == input$roc.sel]
-        nombres <- c(nombres,"BOSQUES")
-      }
-
-      if(!is.null(modelo.boosting) && any("sel.boosting" %in% input$select.models.roc)){
-        pred <- predict(modelo.boosting, datos.prueba[,-which(colnames(datos.prueba) == variable.predecir)], type="prob")
-        scores[[length(scores)+1]] <- pred[,colnames(pred) == input$roc.sel]
-        nombres <- c(nombres,"ADA-BOOSTING")
-      }
-      return(list(s = scores, n = nombres))
+  calcular.areas <- function(){
+    clase <- datos.prueba[,variable.predecir]
+    if(length(unique(clase)) == 2){
+      if(is.numeric(score.knn))
+        area.knn <<- areaROC(score.knn[,input$roc.sel],clase)
+      if(is.factor(score.svm))
+        area.svm <<- areaROC(attributes(score.svm)$probabilities[,input$roc.sel],clase)
+      if(is.numeric(score.dt))
+        area.dt <<- areaROC(score.dt[,input$roc.sel],clase)
+      if(is.numeric(score.rf))
+        area.rf <<- areaROC(score.rf[,input$roc.sel],clase)
+      if(is.numeric(score.booting))
+        area.booting <<- areaROC(score.booting[,which(levels(clase) == input$roc.sel)],clase)
     }
-    return(NULL)
   }
 
-  # plot.roc.sel <- eventReactive(input$roc.sel,{
-  #    #info <- roc.info()
-  #
-  #
-  # })
+  observeEvent(c(input$select.models.roc, input$roc.sel),{
+    if(!is.null(datos.prueba)){
+      calcular.areas()
+      output$plot.roc <- renderPlot(plotROC(input$select.models.roc))
+    }else{
+      output$plot.roc <- renderPlot(NULL)
+    }
+  })
 
-  observeEvent(c(input$runKnn,input$runSvm,input$runDt,input$runRf,input$runBoosting,input$select.models),{
-    output$TablaComp <- DT::renderDataTable(DT::datatable(tabla.comparativa(), selection = 'none',
-                                                          editable = FALSE, extensions = c('Responsive'),
-                                                          options = list(dom = 'frtip',
-                                                                         pageLength = 10,
-                                                                         buttons = NULL,
-                                                                         scrollY = T)))
+  observeEvent(c(input$runKnn,input$runSvm,input$runDt,input$runRf,input$runBoosting,input$select.models,input$roc.sel),{
+    if(!is.null(datos.prueba)){
+      calcular.areas()
+      output$TablaComp <- DT::renderDataTable(DT::datatable(tabla.comparativa(), selection = 'none',
+                                                            editable = FALSE, extensions = c('Responsive'),
+                                                            options = list(dom = 'frtip',
+                                                                           pageLength = 10,
+                                                                           buttons = NULL,
+                                                                           scrollY = T)))
+    }
   })
 
 

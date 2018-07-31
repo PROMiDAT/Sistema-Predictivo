@@ -32,6 +32,7 @@ library(nnet)
 library(dplyr)
 library(forcats)
 library(psych)
+library(ROCR)
 
 
 ###########################################################################################################################
@@ -421,7 +422,7 @@ plot.dt <- tabPanel(title = "Gráfico Árbol",
                      plotOutput('plot.dt', height = "55vh"),
                      hr(),
                      aceEditor("fieldCodeDtPlot", mode = "r", theme = "monokai",
-                               value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
+                               value = "", height = "6vh", readOnly = F, autoComplete = "enabled"))
 
 panel.prediccion.dt <- tabPanel(title = "Predicción del Modelo",
                                  DT::dataTableOutput("dtPrediTable"),
