@@ -251,13 +251,26 @@ default.normal <- function(data = "datos", vars = NULL, color = "#00FF22AA"){
   if(is.null(vars)){
     return(NULL)
   } else {
-    return(paste0("hist(", data, "[, '", vars, "'], col = '", color,
-                  "', border=F, main = paste0('Test de normalidad de la variable ','", vars,"'), axes=F, freq = F)
-axis(1, col=par('bg'), col.ticks='grey81', lwd.ticks=1, tck=-0.025)
-axis(2, col=par('bg'), col.ticks='grey81', lwd.ticks=1, tck=-0.025)
-curve(dnorm(x, mean = mean(", data, "[, '", vars, "']), sd = sd(", data, "[, '", vars, "'])), add=T, col='blue', lwd=2)
-legend('bottom', legend = 'Curva Normal', col = 'blue', lty=1, cex=1.5)"))
+    return(paste0("promedio <- mean(", data, "[, '", vars, "']) \n",
+                  "desviacion <- sd(", data, "[, '", vars, "']) \n",
+                  "values <- dnorm(", data, "[, '", vars, "'], mean = promedio, sd = desviacion) \n",
+                  "values <- c(values, hist(", data, "[, '", vars, "'],  plot = F)$density) \n",
+                  "hist(", data, "[, '", vars, "'], col = '", color, "', border=F, axes=F,\n",
+                  "  freq = F, ylim = range(0, max(values)), \n",
+                  "  main = paste0('Test de normalidad de la variable ','", vars, "')) \n",
+                  "axis(1, col=par('bg'), col.ticks='grey81', lwd.ticks=1, tck=-0.025) \n",
+                  "axis(2, col=par('bg'), col.ticks='grey81', lwd.ticks=1, tck=-0.025) \n",
+                  "curve(dnorm(x, mean = promedio, sd = desviacion), add=T, col='blue', lwd=2)\n",
+                  "legend('bottom', legend = 'Curva Normal', col = 'blue', lty=1, cex=1.5)"))
   }
+}
+
+default.calc.normal <- function(data = "datos"){
+  return(paste0("calc <- lapply(var.numericas(datos), function(i) modeest::skewness(i)[1]) \n",
+                "calc <- as.data.frame(calc) \n",
+                "calc <- rbind(calc, lapply(calc, function(i) ifelse(i > 0, 'Positiva', \n",
+                "                                                           ifelse(i < 0, 'Negativa', 'Sin Asimetría')))) \n",
+                "calc <- t(calc)\ncolnames(calc) <- c('Cálculo de Fisher', 'Asimetría')\ncalc"))
 }
 
 #Codigo del grafico de dispersion

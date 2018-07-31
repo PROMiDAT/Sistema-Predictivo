@@ -299,6 +299,16 @@ shinyServer(function(input, output, session) {
     updateAceEditor(session, "fieldCodeNormal", value = cod.normal)
   })
 
+  obj.calc.normal <- eventReactive(c(input$loadButton, input$transButton), {
+    tryCatch({
+      res <- isolate(eval(parse(text = default.calc.normal())))
+      updateAceEditor(session, "fieldCalcNormal", value = default.calc.normal())
+      return(res)
+    }, error = function(e){
+      showNotification(paste0("ERROR AL CALCULAR TEST DE NORMALIDAD: ", e), duration = 10, type = "error")
+    })
+  })
+
   #Cuando cambian las variables seleccionadas para el grafico de disperesion o el color
   observeEvent(c(input$select.var, input$col.disp), {
     cod.disp <<- default.disp(data = "datos", vars = input$select.var, color = input$col.disp)
@@ -322,11 +332,11 @@ shinyServer(function(input, output, session) {
 
   #Cambia el grafico de poder predictivo (pairs)
   plot.pairs.poder.fun <- eventReactive(input$segmentButton,{
-    if(!is.null(datos.aprendizaje)){
+    tryCatch({
       return(pairs.poder())
-    }else{
+    },error =  function(e){
       return(NULL)
-    }
+    })
   })
 
   #Grafica
@@ -1271,6 +1281,8 @@ shinyServer(function(input, output, session) {
   #Hace el grafico de la pagina de test de normalidad
   output$plot.normal <- renderPlot(obj.normal())
 
+  output$calculo.normal <- DT::renderDataTable(obj.calc.normal())
+
   #Hace el grafico de la pagina de dispersion
   output$plot.disp <- renderPlot(obj.disp())
 
@@ -1290,8 +1302,8 @@ shinyServer(function(input, output, session) {
     real <- as.character(datos.prueba[,variable.predecir])
     predi <- as.character(predic.var)
     df <- cbind(real,predi,ifelse(real == predi,
-                                  rep("<span style='color:green'><b>acertó</b></span>",length(real)),
-                                  rep("<span style='color:red'><b>falló</b></span>",length(real))))
+                                  rep("<span style='color:green'><b>Acertó</b></span>",length(real)),
+                                  rep("<span style='color:red'><b>Falló</b></span>",length(real))))
     colnames(df) <- c( "Datos Reales", "Predicción", " ")
     sketch <- htmltools::withTags(table(
       tableHeader(c("Datos Reales", "Predicción", " "))

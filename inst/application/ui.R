@@ -33,6 +33,7 @@ library(dplyr)
 library(forcats)
 library(psych)
 
+
 ###########################################################################################################################
 #####  MENU
 ###########################################################################################################################
@@ -151,27 +152,39 @@ pagina.resumen.numerico <- tabItem(tabName = "resumen",
 ##### PAGINA DEL TEST DE NORMALIDAD
 ###########################################################################################################################
 
-boton.colores <- dropdownButton(h4("Opciones"),
-                                      colourpicker::colourInput("col.normal", "Seleccionar Color:",
-                                                                value = "#00FF22AA", allowTransparent = T),
-                                      circle = F, status = "danger", icon = icon("gear"), width = "100%",
-                                      tooltip = tooltipOptions(title = "Clic para ver opciones"), right = T)
+boton.colores <- column(width = 3, dropdownButton(h4("Opciones"),
+                                                  colourpicker::colourInput("col.normal", "Seleccionar Color:",
+                                                                            value = "#00FF22AA", allowTransparent = T),
+                                                  circle = F, status = "danger", icon = icon("gear"), width = "100%",
+                                                  tooltip = tooltipOptions(title = "Clic para ver opciones"), right = T))
 
-opciones.normalidad <- fluidRow(column(width = 9, selectInput(inputId = "sel.normal", label = NULL, choices =  "")),
-                                column(width = 3, boton.colores))
 
-panel.grafico.normalidad <- tabPanel(title = "Test de Normalidad", value = "tabNormal",
-                                     plotOutput('plot.normal', height = "72vh"))
+opciones.normalidad <-  fluidRow( column(width = 9, selectInput(inputId = "sel.normal", label = NULL, choices =  "")),
+                                  boton.colores )
 
-codigo.normalidad <- aceEditor("fieldCodeNormal", mode = "r", theme = "monokai", value = "",
-                               height = "9vh", autoComplete = "enabled")
+panel.grafico.normalidad.num <- tabPanel(title = "Gráfico Normalidad", value = "tabNormalPlot", plotOutput('plot.normal', height = "72vh"))
+
+panel.grafico.normalidad.cat <- tabPanel(title = "Test de Normalidad", value = "tabNormalCalc", DT::dataTableOutput('calculo.normal'))
+
+codigo.normalidad.uno <- conditionalPanel("input.BoxNormal == 'tabNormalPlot'",
+                                          aceEditor("fieldCodeNormal", mode = "r",
+                                                    theme = "monokai", value = "",
+                                                    height = "8vh", autoComplete = "enabled"))
+
+codigo.normalidad.dos <- conditionalPanel("input.BoxNormal == 'tabNormalCalc'",
+                                          aceEditor("fieldCalcNormal", mode = "r",
+                                                    theme = "monokai", value = "",
+                                                    height = "8vh", autoComplete = "enabled",
+                                                    readOnly = T))
 
 pagina.test.normalidad <- tabItem(tabName = "normalidad",
-                                  column(width = 12,
-                                         tabBox(id = "BoxNormal", width = NULL,
-                                                title = opciones.normalidad,
-                                                panel.grafico.normalidad)),
-                                  codigo.normalidad)
+                                  column(width = 12,  tabBox(id = "BoxNormal",
+                                                             width = NULL,
+                                                             title = opciones.normalidad,
+                                                             panel.grafico.normalidad.num,
+                                                             panel.grafico.normalidad.cat)),
+                                  codigo.normalidad.uno,
+                                  codigo.normalidad.dos)
 
 ###########################################################################################################################
 ##### PAGINA DE DISPERSION
@@ -271,11 +284,11 @@ pagina.distribuciones <- tabItem(tabName = "distribucion",
 ##### PAGINA DE PODER PREDICTIVO
 ###########################################################################################################################
 
-plot.dist.poder <- tabPanel(title = 'PARTE 1',
+plot.dist.poder <- tabPanel(title = 'Variables Numéricas',
                              plotOutput('plot.dist.poder', height = "65vh"),
-                             selectInput(inputId = "sel.distribucion.poder", label = NULL, choices =  ""))
+                             selectInput(inputId = "sel.distribucion.poder", label = NULL, choices =  "", width = "100%"))
 
-plot.pairs.poder <- tabPanel(title = 'PARTE 2',
+plot.pairs.poder <- tabPanel(title = 'Variables Categóricas',
                              plotOutput('plot.pairs.poder', height = "65vh"))
 
 
