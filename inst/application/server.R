@@ -18,6 +18,7 @@ shinyServer(function(input, output, session) {
 
   #Termina la Sesion
   session$onSessionEnded(function() {
+    browser()
     borrar <- ls(envir = .GlobalEnv)
     borrar <- c(borrar[!(borrar %in% .GlobalEnv$foto)], "foto")
     rm(envir = .GlobalEnv, list = borrar)
