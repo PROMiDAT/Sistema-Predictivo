@@ -170,3 +170,18 @@ input[type="checkbox"]:hover:before {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+.run-button {
+    padding-top: 5px;
+    padding-left: 10px;
+    background: transparent;
+    color: green;
+    border: 0px;
+    font-size: 15px;
+}
+
+.run-button:active {
+  transform: translateY(4px);
+}
+
+#action-button

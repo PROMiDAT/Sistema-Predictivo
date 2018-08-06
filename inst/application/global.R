@@ -41,12 +41,12 @@ cod.indices <- function(){
 
   precision.global <- (sum(diag(MC)) / sum(MC)) * 100
   error.global <- (1 - (sum(diag(MC)) / sum(MC))) * 100
-  precision.positiva <- ifelse(ncol(MC) == 2, MC[2, 2] / sum(MC[2, ]) , 0) * 100
-  precision.negativa <- ifelse(ncol(MC) == 2, MC[1, 1] / sum(MC[1, ]) , 0) * 100
-  falsos.positivos   <- ifelse(ncol(MC) == 2, MC[1, 2] / sum(MC[1, ]) , 0) * 100
-  falsos.negativos   <- ifelse(ncol(MC) == 2, MC[2, 1] / sum(MC[2, ]) , 0) * 100
-  asertividad.positiva <- ifelse(ncol(MC) == 2,  MC[2, 2] / sum(MC[, 2]) , 0) * 100
-  asertividad.negativa <- ifelse(ncol(MC) == 2, MC[1, 1] / sum(MC[, 1]) , 0) * 100
+  precision.positiva <- ifelse(ncol(MC) == 2, MC[2, 2] / sum(MC[2,]),0) * 100
+  precision.negativa <- ifelse(ncol(MC) == 2, MC[1, 1] / sum(MC[1,]),0) * 100
+  falsos.positivos   <- ifelse(ncol(MC) == 2, MC[1, 2] / sum(MC[1,]),0) * 100
+  falsos.negativos   <- ifelse(ncol(MC) == 2, MC[2, 1] / sum(MC[2,]),0) * 100
+  asertividad.positiva <- ifelse(ncol(MC) == 2,  MC[2, 2] / sum(MC[,2]),0) * 100
+  asertividad.negativa <- ifelse(ncol(MC) == 2, MC[1, 1] / sum(MC[,1]),0) * 100
 
   res <- list( precision.global = precision.global,
                error.global = error.global,
@@ -129,7 +129,7 @@ dist.x.predecir <- function(data, variable, variable.predecir) {
 #Grafica el pairs
 pairs.poder <- function(){
   vars.p <- datos[,variable.predecir]
-  col <- gg_color_hue( length(unique(vars.p)) + 1 )
+  col <- rainbow( length(unique(vars.p)) + 1 )
   col <- col[2:length(col)]
   pairs.panels(var.numericas(datos),bg = col[datos[,variable.predecir]],
                pch= 22, main="", hist.col = gg_color_hue(1), ellipses = FALSE)

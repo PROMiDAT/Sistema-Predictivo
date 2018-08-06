@@ -5,15 +5,13 @@ shinyServer(function(input, output, session) {
   ##### Configuraciones iniciales
   ###########################################################################################################################
   source('global.R', local = T)
-  Sys.setenv("LANGUAGE" = "ES")
   options(shiny.maxRequestSize=200*1024^2,
           DT.options = list(aLengthMenu = c(10, 30, 50),
-                            iDisplayLength = 10, scrollX = TRUE),
-          encoding = "utf8")
+                            iDisplayLength = 10, scrollX = TRUE))
 
 
   ###########################################################################################################################
-  ##### Eventos
+  # Eventos ----------------------------------------------------------------------------------------------------------------
   ###########################################################################################################################
 
   #Termina la Sesion
@@ -126,9 +124,9 @@ shinyServer(function(input, output, session) {
     }
 
     isolate(eval(parse(text = code.res)))
-    if(length(var.noactivas) > 0)
+    if(length(var.noactivas) > 0){
       isolate(eval(parse(text = code.desactivar(var.noactivas))))
-
+    }
     updateAceEditor(session, "fieldCodeTrans", value = code.res)
 
     updateSelectizeInput(session, "sel.normal", choices = colnames.empty(var.numericas(datos)))
@@ -166,7 +164,7 @@ shinyServer(function(input, output, session) {
       codigo <- particion.code("datos", input$segmentacionDatosA ,input$sel.predic.var, input$semilla, input$permitir.semilla)
       updateAceEditor(session, "fieldCodeSegment", value = codigo)
       isolate(eval(parse(text = codigo)))
-      nombres <- colnames.empty(datos)
+      nombres <- colnames.empty(var.numericas(datos))
       nambres.sin.pred <- nombres[-which(nombres == variable.predecir)]
       updateSelectizeInput(session, "select.var.svm.plot", choices = nambres.sin.pred)
       choices <- as.character(unique(datos[,variable.predecir]))
@@ -197,10 +195,11 @@ shinyServer(function(input, output, session) {
 
   #Habilitada o deshabilitada la semilla
   observeEvent(input$permitir.semilla,{
-    if(input$permitir.semilla)
+    if(input$permitir.semilla){
       shinyjs::enable("semilla")
-    else
+    }else{
       shinyjs::disable("semilla")
+    }
   })
 
   #Cuando cambia la barra de proporcion de datos de prueba (Segmentar Datos)
@@ -327,7 +326,9 @@ shinyServer(function(input, output, session) {
   #Cambia el grafico de poder predictivo (Distribucion)
   observeEvent(input$sel.distribucion.poder,{
     if(input$sel.distribucion.poder != ""){
-     output$plot.dist.poder <- renderPlot(plot.dist.porc(datos,input$sel.distribucion.poder, input$sel.distribucion.poder, variable.predecir, variable.predecir))
+     output$plot.dist.poder <- renderPlot(plot.dist.porc(datos,input$sel.distribucion.poder,
+                                                         input$sel.distribucion.poder, variable.predecir,
+                                                         variable.predecir))
     }else{
       output$plot.dist.poder <- renderPlot(NULL)
     }
@@ -517,6 +518,11 @@ shinyServer(function(input, output, session) {
     actualizar.codigo.knn()
   })
 
+  #Regresa el codigo a su forma original
+  observeEvent(input$restarKnn,{
+    actualizar.codigo.knn()
+  })
+
   # -------------------  SVM ------------------------ #
 
   #Cuando se genera el modelo svm
@@ -701,14 +707,20 @@ shinyServer(function(input, output, session) {
     actualizar.codigo.svm()
   })
 
+  #Regresa el codigo a su forma original
+  observeEvent(input$restarSvm,{
+    actualizar.codigo.svm()
+  })
+
   #cuando cambia el codigo del grafico de clasificacion svm
   svm.graf <- eventReactive(c(input$runSvm, input$fieldCodeSvmPlot, input$select.var.svm.plot),{
     if(length(input$select.var.svm.plot) == 2){
       v <- colnames(datos)
       v <- v[v != variable.predecir]
       v <- v[!(v %in% input$select.var.svm.plot)]
-      if(length(v) == 0)
+      if(length(v) == 0){
         v <- input$select.var.svm.plot
+      }
       updateAceEditor(session, "fieldCodeSvmPlot", value = svm.plot(input$select.var.svm.plot, v))
       return(isolate(eval(parse(text = input$fieldCodeSvmPlot ))))
     }else{
@@ -893,6 +905,11 @@ shinyServer(function(input, output, session) {
 
   }
 
+  #Regresa el codigo a su forma original
+  observeEvent(input$restarDt,{
+    actualizar.codigo.dt()
+  })
+
   #Si las opciones cambian
   observeEvent(c(input$minsplit.dt),{
     actualizar.codigo.dt()
@@ -1070,6 +1087,11 @@ shinyServer(function(input, output, session) {
     updateAceEditor(session, "fieldCodeRfIG", value = codigo.indices)
   }
 
+  #Regresa el codigo a su forma original
+  observeEvent(input$restarRf,{
+    actualizar.codigo.rf()
+  })
+
   #Si las opciones cambian
   observeEvent(input$ntree.rf,{
     actualizar.codigo.rf()
@@ -1082,10 +1104,7 @@ shinyServer(function(input, output, session) {
     if(length(levels(datos[,variable.predecir])) == 2 ){
       if(validar.datos()){ #Si se tiene los datos entonces :
         load.page(T)
-        ejecutar.boosting()
-        ejecutar.boosting.pred()
-        ejecutar.boosting.mc()
-        ejecutar.boosting.ind()
+        ejecutar.boosting.full(TRUE)
         load.page(F)
       }
     }else{
@@ -1095,7 +1114,7 @@ shinyServer(function(input, output, session) {
   })
 
   #Genera el modelo
-  ejecutar.boosting <- function(){
+  ejecutar.boosting <- function(error = TRUE){
     tryCatch({ #Se corren los codigo
       isolate(eval(parse(text = input$fieldCodeBoosting)))
       output$txtBoosting <- renderPrint(print(modelo.boosting))
@@ -1104,13 +1123,15 @@ shinyServer(function(input, output, session) {
       modelo.boosting <<- NULL
       MC.boosting <<- NULL
       prediccion.boosting <<- NULL
-      output$txtBoosting <- renderPrint(print(""))
-      showNotification("Error al ejecutar el modelo, intente nuevamente",duration = 15,type = "error")
+      output$txtBoosting <- renderPrint(NULL)
+      if(error){
+        showNotification("Error al ejecutar el modelo, intente nuevamente",duration = 15,type = "error")
+      }
     })
   }
 
   #Genera la prediccion
-  ejecutar.boosting.pred <- function(){
+  ejecutar.boosting.pred <- function(error = TRUE){
     tryCatch({ #Se corren los codigo
       isolate(eval(parse(text = input$fieldCodeBoostingPred)))
 
@@ -1123,12 +1144,14 @@ shinyServer(function(input, output, session) {
       MC.boosting <<- NULL
       prediccion.boosting <<- NULL
       output$boostingPrediTable <- DT::renderDataTable(NULL)
-      showNotification("Error al ejecutar la prediccion, intente nuevamente",duration = 15,type = "error")
+      if(error){
+        showNotification("Error al ejecutar la prediccion, intente nuevamente",duration = 15,type = "error")
+      }
     })
   }
 
   #Genera la matriz de confusion
-  ejecutar.boosting.mc <- function(){
+  ejecutar.boosting.mc <- function(error = TRUE){
     tryCatch({ #Se corren los codigo
       isolate(eval(parse(text = input$fieldCodeBoostingMC)))
       output$txtBoostingMC <- renderPrint(print(MC.boosting))
@@ -1141,12 +1164,14 @@ shinyServer(function(input, output, session) {
       indices.boosting <<- rep(0,8)
       output$plot.boosting.mc <- renderPlot(isolate(eval(parse(text = "NULL" ))))
       output$txtBoostingMC <- renderPrint(print(""))
-      showNotification("Error al ejecutar la matriz, intente nuevamente",duration = 15,type = "error")
+      if(error){
+        showNotification("Error al ejecutar la matriz, intente nuevamente",duration = 15,type = "error")
+      }
     })
   }
 
   #Genera los indices
-  ejecutar.boosting.ind <- function(){
+  ejecutar.boosting.ind <- function(error = TRUE){
     tryCatch({ #Se corren los codigo
       isolate(eval(parse(text = input$fieldCodeBoostingIG)))
 
@@ -1223,8 +1248,17 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { #Regresamos al estado inicial y mostramos un error
       indices.boosting <<- rep(0,8)
-      showNotification("Error al ejecutar los indices, intente nuevamente",duration = 15,type = "error")
+      if(error){
+        showNotification("Error al ejecutar los indices, intente nuevamente",duration = 15,type = "error")
+      }
     })
+  }
+
+  ejecutar.boosting.full <- function(error = TRUE){
+    ejecutar.boosting(error)
+    ejecutar.boosting.pred(error)
+    ejecutar.boosting.mc(error)
+    ejecutar.boosting.ind(error)
   }
 
   #Acualiza el codigo a la version por defecto
@@ -1244,12 +1278,19 @@ shinyServer(function(input, output, session) {
 
     #Cambia el codigo del grafico del modelo
     updateAceEditor(session, "fieldCodeBoostingPlot", value = boosting.plot())
-    output$plot.boosting <- renderPlot(isolate(eval(parse(text = input$fieldCodeBoostingPlot))))
+    tryCatch({
+      output$plot.boosting <- renderPlot(isolate(eval(parse(text = input$fieldCodeBoostingPlot))))
+    },error = function(e){
+      output$plot.boosting <- renderPlot(NULL)
+    })
 
     #Cambia el codigo del grafico de importancia
     updateAceEditor(session, "fieldCodeBoostingPlotImport", value = boosting.plot.import())
-    output$plot.boosting.import <- renderPlot(isolate(eval(parse(text = input$fieldCodeBoostingPlotImport ))))
-
+    tryCatch({
+      output$plot.boosting.import <- renderPlot(isolate(eval(parse(text = input$fieldCodeBoostingPlotImport ))))
+    },error = function(e){
+      output$plot.boosting.import <- renderPlot(NULL)
+    })
     # Se genera el codigo de la matriz
     codigo.boosting.mc <- boosting.MC(variable.predecir)
     updateAceEditor(session, "fieldCodeBoostingMC", value = codigo.boosting.mc)
@@ -1259,7 +1300,12 @@ shinyServer(function(input, output, session) {
     updateAceEditor(session, "fieldCodeBoostingIG", value = codigo.indices)
   }
 
-  #Si las opciones cambian
+  #Regresa el codigo a su forma original
+  observeEvent(input$restarBoosting,{
+    actualizar.codigo.boosting()
+  })
+
+  #Si las opciones cambian o actualizar el codigo
   observeEvent(c(input$iter.boosting, input$nu.boosting, input$tipo.boosting),{
     actualizar.codigo.boosting()
   })
@@ -1356,6 +1402,7 @@ shinyServer(function(input, output, session) {
 
     # -------------------  BOOSTING ------------------------ #
 
+    browser()
     modelo.boosting <<- NULL
     MC.boosting <<- NULL
     prediccion.boosting <<- NULL
@@ -1381,10 +1428,11 @@ shinyServer(function(input, output, session) {
 
   #Crea una tabla dependiendo de los datos ingresados
   renderizar.tabla.datos <- function(data,editable = TRUE, extensions = c('Buttons'), dom = 'Bfrtip', pageLength = 5, buttons = T, filename = NA){
-    if(buttons)
+    if(buttons){
       buttons <- list(list(extend = 'csv', filename = filename, text = 'Descargar'))
-    else
+    }else{
       buttons <- NULL
+    }
     nombre.columnas <- c("ID", colnames(data))
     tipo.columnas <- c("", sapply(colnames(data),
                                   function(i) ifelse(class(data[,i]) %in% c("numeric", "integer"), "Numérico", "Categórico")))
@@ -1400,23 +1448,26 @@ shinyServer(function(input, output, session) {
 
   #Acualiza las distintas tablas
   actualizar.tabla <- function(x = c("datos","datos.aprendizaje","datos.prueba")){
-    if(any("datos" %in% x)) #Cambia la tabla de datos
+    if(any("datos" %in% x)){ #Cambia la tabla de datos
       output$contents <- DT::renderDT(renderizar.tabla.datos(datos,editable = T,
                                                              pageLength = 10,
                                                              buttons = T,
                                                              filename = "datos"), server = F)
+    }
 
-    if(any("datos.aprendizaje" %in% x)) #Cambia la tabla de datos de aprendizaje
+    if(any("datos.aprendizaje" %in% x)){ #Cambia la tabla de datos de aprendizaje
       output$contentsAprend <- DT::renderDT(renderizar.tabla.datos(datos.aprendizaje,editable = T,
                                                                    pageLength = 5,
                                                                    buttons = T,
                                                                    filename = "datos.aprendizaje"), server = F)
+    }
 
-    if(any("datos.prueba" %in% x)) #Cambia la tabla de datos de prueba
+    if(any("datos.prueba" %in% x)){ #Cambia la tabla de datos de prueba
       output$contentsPrueba <- DT::renderDT(renderizar.tabla.datos(datos.prueba, editable = T,
                                                                    pageLength = 5,
                                                                    buttons = T,
                                                                    filename = "datos.prueba"), server = F)
+    }
   }
 
   #Cierra el menu
@@ -1477,13 +1528,15 @@ shinyServer(function(input, output, session) {
   #Validacion comun para todos los modelos
   validar.datos <- function(){
     #Validaciones
-    if(is.null(variable.predecir))
+    if(is.null(variable.predecir)){
       showNotification("Tiene que seleccionar una variable a predecir",duration = 10, type = "error")
-    if(is.null(datos))
+    }
+    if(is.null(datos)){
       showNotification("Tiene que ingresar datos",duration = 10, type = "error")
-    if(is.null(datos.aprendizaje))
+    }
+    if(is.null(datos.aprendizaje)){
       showNotification("Tiene que crear los datos de aprendizaje y de prueba",duration = 10, type = "error")
-
+    }
     return(!is.null(datos) & !is.null(variable.predecir) & !is.null(datos.aprendizaje))
   }
 
@@ -1496,8 +1549,9 @@ shinyServer(function(input, output, session) {
       cant.class <- length(unique(datos[,variable.predecir]))
       names.class <- as.character(unique(datos[,variable.predecir]))
 
-      if(length(matrices) == 0)
+      if(length(matrices) == 0){
         return(data.frame())
+      }
 
       df <- NULL
       for (i in 1:length(matrices)) {
@@ -1512,7 +1566,6 @@ shinyServer(function(input, output, session) {
       colnames(df) <- c("Modelo","Precisión Global",names.class,"Área de ROC")
       return(df)
     }, error =  function(){
-      browser()
       return(data.frame())
     })
   }
@@ -1520,16 +1573,21 @@ shinyServer(function(input, output, session) {
   calcular.areas <- function(){
     clase <- datos.prueba[,variable.predecir]
     if(length(unique(clase)) == 2){
-      if(is.numeric(score.knn))
+      if(is.numeric(score.knn)){
         area.knn <<- areaROC(score.knn[,input$roc.sel],clase)
-      if(is.factor(score.svm))
+      }
+      if(is.factor(score.svm)){
         area.svm <<- areaROC(attributes(score.svm)$probabilities[,input$roc.sel],clase)
-      if(is.numeric(score.dt))
+      }
+      if(is.numeric(score.dt)){
         area.dt <<- areaROC(score.dt[,input$roc.sel],clase)
-      if(is.numeric(score.rf))
+      }
+      if(is.numeric(score.rf)){
         area.rf <<- areaROC(score.rf[,input$roc.sel],clase)
-      if(is.numeric(score.booting))
+      }
+      if(is.numeric(score.booting)){
         area.booting <<- areaROC(score.booting[,which(levels(clase) == input$roc.sel)],clase)
+      }
     }
   }
 
