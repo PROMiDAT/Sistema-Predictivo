@@ -80,7 +80,8 @@ mi.menu <- sidebarMenu(id = "principal",
               menu.estadisticas,
               menu.aprendizaje.supervisado,
               menu.comparar,
-              menu.reporte)
+              menu.reporte,
+              menu.info)
 
 
 # HEAD HTML ---------------------------------------------------------------------------------------------------------
@@ -148,7 +149,7 @@ pagina.cargar.datos <- tabItem(tabName = "cargar",
 
 cuadro.resumen.completo <- box(title = "Resumen Numérico", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
                                DT::dataTableOutput("resumen.completo"), hr(),
-                               aceEditor("fieldCodeResum", mode = "r", theme = "monokai", value = "", height = "8vh", autoComplete = "enabled"))
+                               campo.codigo("run.resume", "ref.resume", "fieldCodeResum", height = "8vh"))
 
 cuadro.resumen.variable <- box(title = "Resumen Numérico por Variable", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
                                selectInput(inputId = "sel.resumen", label = h4("Seleccionar Variable:"), choices =  ""),
@@ -157,7 +158,6 @@ cuadro.resumen.variable <- box(title = "Resumen Numérico por Variable", status 
 pagina.resumen.numerico <- tabItem(tabName = "resumen",
                                    column(width = 7, cuadro.resumen.completo ),
                                    column(width = 5, cuadro.resumen.variable ))
-
 
 # PAGINA DEL TEST DE NORMALIDAD -------------------------------------------------------------------------------------------
 
@@ -171,20 +171,15 @@ boton.colores <- column(width = 3, dropdownButton(h4("Opciones"),
 opciones.normalidad <-  fluidRow( column(width = 9, selectInput(inputId = "sel.normal", label = NULL, choices =  "")),
                                   boton.colores )
 
-panel.grafico.normalidad.num <- tabPanel(title = "Gráfico Normalidad", value = "tabNormalPlot", plotOutput('plot.normal', height = "72vh"))
+panel.grafico.normalidad.num <- tabPanel(title = "Gráfico Normalidad", value = "tabNormalPlot", plotOutput('plot.normal', height = "65vh"))
 
 panel.grafico.normalidad.cat <- tabPanel(title = "Test de Normalidad", value = "tabNormalCalc", DT::dataTableOutput('calculo.normal'))
 
 codigo.normalidad.uno <- conditionalPanel("input.BoxNormal == 'tabNormalPlot'",
-                                          aceEditor("fieldCodeNormal", mode = "r",
-                                                    theme = "monokai", value = "",
-                                                    height = "8vh", autoComplete = "enabled"))
+                                          column(width = 12, campo.codigo("run.normal", "ref.normal", "fieldCodeNormal", height = "8vh")))
 
 codigo.normalidad.dos <- conditionalPanel("input.BoxNormal == 'tabNormalCalc'",
-                                          aceEditor("fieldCalcNormal", mode = "r",
-                                                    theme = "monokai", value = "",
-                                                    height = "8vh", autoComplete = "enabled",
-                                                    readOnly = T))
+                                          column(width = 12, campo.codigo("run.calc.normal", "ref.calc.normal", "fieldCalcNormal", height = "8vh")))
 
 pagina.test.normalidad <- tabItem(tabName = "normalidad",
                                   column(width = 12,  tabBox(id = "BoxNormal",
@@ -198,7 +193,7 @@ pagina.test.normalidad <- tabItem(tabName = "normalidad",
 # PAGINA DE DISPERSION -----------------------------------------------------------------------------------------------------
 
 
-codigo.dispersion <- aceEditor("fieldCodeDisp", mode = "r", theme = "monokai", value = "", height = "8vh", autoComplete = "enabled")
+codigo.dispersion <- column(width = 12, campo.codigo("run.disp", "ref.disp", "fieldCodeDisp", height = "8vh"))
 
 opciones.dispersion <- fluidRow(column(width = 9, tags$div(class="select-var-ind",
                                                             selectizeInput("select.var", NULL, multiple = T, choices = c(""),
@@ -210,7 +205,7 @@ opciones.dispersion <- fluidRow(column(width = 9, tags$div(class="select-var-ind
                                                                  tooltip = tooltipOptions(title = "Clic para ver opciones"), right = T)))
 
 
-grafico.dispersion <- tabPanel(title = "Dispersión", value = "tabDisp", plotOutput('plot.disp', height = "72vh"))
+grafico.dispersion <- tabPanel(title = "Dispersión", value = "tabDisp", plotOutput('plot.disp', height = "65vh"))
 
 pagina.dispersion<- tabItem(tabName = "dispersion",
                             column(width = 12, tabBox(id = "BoxDisp", width = NULL,
@@ -228,20 +223,18 @@ opciones.correlaciones <- dropdownButton(h4("Opciones"),
                                          tooltip = tooltipOptions(title = "Clic para ver opciones"))
 
 tab.correlacion <- tabPanel(title = 'Correlación', value = "correlacion",
-                            plotOutput('plot.cor', height = "76vh"),
-                            fluidRow(column(width = 4, aceEditor("fieldModelCor", mode = "r", theme = "monokai", value = "",
-                                                                 height = "6vh", autoComplete = "enabled")),
-                                     column(width = 8, aceEditor("fieldCodeCor", mode = "r", theme = "monokai", value = "",
-                                                                 height = "6vh", autoComplete = "enabled"))))
+                            plotOutput('plot.cor', height = "67vh"),
+                            fluidRow(column(width = 4,aceEditor("fieldModelCor", height = "6vh", mode = "r",
+                                                                theme = "monokai", value = "", readOnly = T)),
+                                     column(width = 8,campo.codigo("run.code.cor", "ref.code.cor", "fieldCodeCor", height = "6vh"))))
 
-tab.codigo.correlaciones <- tabPanel(title = 'Salida Código', value = "cor.salida", verbatimTextOutput("txtcor"))
+tab.codigo.correlaciones <- tabPanel(title = 'Resultados Numéricos', value = "cor.salida", verbatimTextOutput("txtcor"))
 
 pagina.correlaciones <- tabItem(tabName = "correlacion",
                                 column(width = 12, tabBox(id = "tabCor", width = NULL,
                                                           title = opciones.correlaciones,
                                                           tab.correlacion,
                                                           tab.codigo.correlaciones)))
-
 
 #PAGINA DE DISTRIBUCIONES -------------------------------------------------------------------------------------------------
 
