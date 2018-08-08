@@ -149,7 +149,7 @@ pagina.cargar.datos <- tabItem(tabName = "cargar",
 
 cuadro.resumen.completo <- box(title = "Resumen Numérico", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
                                DT::dataTableOutput("resumen.completo"), hr(),
-                               campo.codigo("run.resume", "ref.resume", "fieldCodeResum", height = "8vh"))
+                               aceEditor("fieldCodeResum", mode = "r", theme = "monokai", value = "", height = "8vh",  readOnly = T))
 
 cuadro.resumen.variable <- box(title = "Resumen Numérico por Variable", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
                                selectInput(inputId = "sel.resumen", label = h4("Seleccionar Variable:"), choices =  ""),

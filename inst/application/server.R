@@ -3,6 +3,91 @@ shinyServer(function(input, output, session) {
 
   # Funciones Utilitarias ---------------------------------------------------------------------------------------------------
 
+  #Mostar o ocultar la paginina de cargado
+  load.page <- function(value = NA){
+    if(value){
+      shinyjs::show("loaderWrapper")
+    }else{
+      Sys.sleep(1)
+      shinyjs::hide("loaderWrapper")
+    }
+  }
+
+  #Crea una tabla dependiendo de los datos ingresados
+  renderizar.tabla.datos <- function(data,editable = TRUE, extensions = c('Buttons'), dom = 'Bfrtip', pageLength = 5, buttons = T, filename = NA){
+    if(buttons){
+      buttons <- list(list(extend = 'csv', filename = filename, text = 'Descargar'))
+    }else{
+      buttons <- NULL
+    }
+    nombre.columnas <- c("ID", colnames(data))
+    tipo.columnas <- c("", sapply(colnames(data),
+                                  function(i) ifelse(class(data[,i]) %in% c("numeric", "integer"), "Numérico", "Categórico")))
+
+    sketch <- htmltools::withTags(table(
+      tableHeader(nombre.columnas),
+      tableFooter(tipo.columnas)
+    ))
+
+    return(DT::datatable(data, selection = 'none', editable = editable, container = sketch, extensions = extensions,
+                         options = list(dom = dom, pageLength = pageLength, buttons = buttons, scrollY = T)))
+  }
+
+  #Acualiza las distintas tablas
+  actualizar.tabla <- function(x = c("datos","datos.aprendizaje","datos.prueba")){
+    if(any("datos" %in% x)){ #Cambia la tabla de datos
+      output$contents <- DT::renderDT(renderizar.tabla.datos(datos,editable = T,
+                                                             pageLength = 10,
+                                                             buttons = T,
+                                                             filename = "datos"), server = F)
+    }
+
+    if(any("datos.aprendizaje" %in% x)){ #Cambia la tabla de datos de aprendizaje
+      output$contentsAprend <- DT::renderDT(renderizar.tabla.datos(datos.aprendizaje,editable = T,
+                                                                   pageLength = 5,
+                                                                   buttons = T,
+                                                                   filename = "datos.aprendizaje"), server = F)
+    }
+
+    if(any("datos.prueba" %in% x)){ #Cambia la tabla de datos de prueba
+      output$contentsPrueba <- DT::renderDT(renderizar.tabla.datos(datos.prueba, editable = T,
+                                                                   pageLength = 5,
+                                                                   buttons = T,
+                                                                   filename = "datos.prueba"), server = F)
+    }
+  }
+
+  #Cierra un menu segun su tabName
+  close.menu <- function(tabname = NA, valor  = T){
+    select <- paste0("a[href^='#shiny-tab-",tabname,"']")
+    if(valor){
+      shinyjs::hide(selector = "ul.menu-open");
+      shinyjs::disable(selector = select)
+    }else{
+      shinyjs::enable(selector = select)
+    }
+  }
+
+  # Configuraciones iniciales -----------------------------------------------------------------------------------------------
+
+  source('global.R', local = T)
+  options(shiny.maxRequestSize=200*1024^2, DT.options = list(aLengthMenu = c(10, 30, 50), iDisplayLength = 10, scrollX = TRUE))
+  load.page(F)
+  shinyjs::disable(selector = 'a[href^="#shiny-tab-parte1"]')
+  shinyjs::disable(selector = 'a[href^="#shiny-tab-parte2"]')
+  shinyjs::disable(selector = 'a[href^="#shiny-tab-comparar"]')
+  shinyjs::disable(selector = 'a[href^="#shiny-tab-poderPred]')
+  shinyjs::disable(selector = 'a[href^="#shiny-tab-parte1"]')
+  actualizar.tabla()
+  updateAceEditor(session, "fieldCodeResum", value = cod.resum())
+
+  # Valores Reactivos -------------------------------------------------------------------------------------------------------
+
+  updatePlot <- reactiveValues(calc.normal = default.calc.normal(), normal = NULL, disp = NULL,
+                               cor = NULL, dya.num = NULL, dya.cat = NULL)
+
+  # Pagina de Datos ---------------------------------------------------------------------------------------------------------
+
   #Carga datos
   cargar.datos <- function(codigo.carga = ""){
     tryCatch({
@@ -137,90 +222,6 @@ shinyServer(function(input, output, session) {
     indices.boosting <<- rep(0,8)
     score.booting <<- NULL
   }
-
-  #Mostar o ocultar la paginina de cargado
-  load.page <- function(value = NA){
-    if(value){
-      shinyjs::show("loaderWrapper")
-    }else{
-      Sys.sleep(1)
-      shinyjs::hide("loaderWrapper")
-    }
-  }
-
-  #Crea una tabla dependiendo de los datos ingresados
-  renderizar.tabla.datos <- function(data,editable = TRUE, extensions = c('Buttons'), dom = 'Bfrtip', pageLength = 5, buttons = T, filename = NA){
-    if(buttons){
-      buttons <- list(list(extend = 'csv', filename = filename, text = 'Descargar'))
-    }else{
-      buttons <- NULL
-    }
-    nombre.columnas <- c("ID", colnames(data))
-    tipo.columnas <- c("", sapply(colnames(data),
-                                  function(i) ifelse(class(data[,i]) %in% c("numeric", "integer"), "Numérico", "Categórico")))
-
-    sketch <- htmltools::withTags(table(
-      tableHeader(nombre.columnas),
-      tableFooter(tipo.columnas)
-    ))
-
-    return(DT::datatable(data, selection = 'none', editable = editable, container = sketch, extensions = extensions,
-                         options = list(dom = dom, pageLength = pageLength, buttons = buttons, scrollY = T)))
-  }
-
-  #Acualiza las distintas tablas
-  actualizar.tabla <- function(x = c("datos","datos.aprendizaje","datos.prueba")){
-    if(any("datos" %in% x)){ #Cambia la tabla de datos
-      output$contents <- DT::renderDT(renderizar.tabla.datos(datos,editable = T,
-                                                             pageLength = 10,
-                                                             buttons = T,
-                                                             filename = "datos"), server = F)
-    }
-
-    if(any("datos.aprendizaje" %in% x)){ #Cambia la tabla de datos de aprendizaje
-      output$contentsAprend <- DT::renderDT(renderizar.tabla.datos(datos.aprendizaje,editable = T,
-                                                                   pageLength = 5,
-                                                                   buttons = T,
-                                                                   filename = "datos.aprendizaje"), server = F)
-    }
-
-    if(any("datos.prueba" %in% x)){ #Cambia la tabla de datos de prueba
-      output$contentsPrueba <- DT::renderDT(renderizar.tabla.datos(datos.prueba, editable = T,
-                                                                   pageLength = 5,
-                                                                   buttons = T,
-                                                                   filename = "datos.prueba"), server = F)
-    }
-  }
-
-  #Cierra un menu segun su tabName
-  close.menu <- function(tabname = NA, valor  = T){
-    select <- paste0("a[href^='#shiny-tab-",tabname,"']")
-    if(valor){
-      shinyjs::hide(selector = "ul.menu-open");
-      shinyjs::disable(selector = select)
-    }else{
-      shinyjs::enable(selector = select)
-    }
-  }
-
-  # Configuraciones iniciales -----------------------------------------------------------------------------------------------
-
-  source('global.R', local = T)
-  options(shiny.maxRequestSize=200*1024^2, DT.options = list(aLengthMenu = c(10, 30, 50), iDisplayLength = 10, scrollX = TRUE))
-  load.page(F)
-  shinyjs::disable(selector = 'a[href^="#shiny-tab-parte1"]')
-  shinyjs::disable(selector = 'a[href^="#shiny-tab-parte2"]')
-  shinyjs::disable(selector = 'a[href^="#shiny-tab-comparar"]')
-  shinyjs::disable(selector = 'a[href^="#shiny-tab-poderPred]')
-  shinyjs::disable(selector = 'a[href^="#shiny-tab-parte1"]')
-  actualizar.tabla()
-
-  # Valores Reactivos -------------------------------------------------------------------------------------------------------
-
-  updatePlot <- reactiveValues(calc.normal = default.calc.normal(), normal = NULL, disp = NULL,
-                               cor = NULL, dya.num = NULL, dya.cat = NULL)
-
-  # Pagina de Datos ---------------------------------------------------------------------------------------------------------
 
   #Cunado es precionado el boton de cargar datos
   observeEvent(input$loadButton, {
