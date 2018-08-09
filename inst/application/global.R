@@ -1,8 +1,5 @@
 
-###########################################################################################################################
-##### FUNCIONES GLOBALES
-###########################################################################################################################
-
+# FUNCIONES GLOBALES --------------------------------------------------------------------------------------------------------
 
 #Colores de ggplot2
 gg_color_hue <- function(n) {
@@ -97,45 +94,7 @@ areaROC <- function(prediccion,real) {
   return(attributes(auc)$y.values[[1]])
 }
 
-#Para el grafico de poder predictivo
-plot.dist.porc <- function(data, variable, nom.variable, var.predecir, nom.predecir, colores = NA, label.size = 9.5){
-  colores <- gg_color_hue(length(unique(data[,var.predecir])))
-  label.size <- label.size - length(unique(data[,variable]))
-  label.size <- ifelse(label.size < 3, 3, label.size)
-  data. <- dist.x.predecir(data, variable, var.predecir)
-  ggplot(data., aes(fct_reorder(data.[[variable]], count, .desc = T), prop, fill = data.[[var.predecir]])) +
-    geom_bar(stat = "identity") +
-    geom_text(aes(label = paste0(count, " (", scales::percent(prop), ")"), y = prop), color = "gray90",
-              position = position_stack(vjust = .5), size = label.size) +
-    theme_minimal() +
-    theme(text = element_text(size=15)) +
-    scale_fill_manual(values = colores) +
-    scale_y_continuous(labels = scales::percent)+
-    coord_flip() +
-    labs(title = paste0("Distribución relativa de la variable '", nom.variable, "' según la ", nom.predecir), x = "", y = "") +
-    guides(fill = guide_legend(reverse=T)) +
-    theme(legend.position = "top", legend.title = element_blank())
-}
-
-#Para el grafico de poder predictivo
-dist.x.predecir <- function(data, variable, variable.predecir) {
-  data. <- data %>%
-    group_by_(variable, variable.predecir) %>%
-    summarise(count = n()) %>%
-    mutate(prop = round(count/sum(count),4))
-  return(data.)
-}
-
-#Grafica el pairs
-pairs.poder <- function(){
-  vars.p <- datos[,variable.predecir]
-  col <- rainbow( length(unique(vars.p)) + 1 )
-  col <- col[2:length(col)]
-  pairs.panels(var.numericas(datos),bg = col[datos[,variable.predecir]],
-               pch= 22, main="", hist.col = gg_color_hue(1), ellipses = FALSE)
-}
-
-# -------------------  Pagina Datos ------------------------ #
+# Pagina de Cargar y Transformar Datos --------------------------------------------------------------------------------------
 
 #Transforma las variables a disyuntivas
 datos.disyuntivos <- function(data, vars){
@@ -181,15 +140,6 @@ code.NA <- function(deleteNA = T) {
   return(res)
 }
 
-#Crea el código de la particion en testing y learning data
-particion.code <- function(data = "datos", p = "0.5", variable = NULL, semilla = 5, perm.semilla = FALSE){
-  variable.predecir <<- variable
-  semilla <- ifelse(is.numeric(semilla), semilla, 5)
-  semilla <- ifelse(perm.semilla, paste0("set.seed(",semilla,")"), "rm(.Random.seed, envir = globalenv())")
-  return(paste0(semilla,"\nparticion <- createDataPartition(datos$",variable,", p = ",p/100,", list = FALSE)\n
-datos.prueba <<- datos[-particion,]\ndatos.aprendizaje <<- datos[particion,]"))
-}
-
 #Genera el codigo para transformar datos
 code.trans <- function(variable, nuevo.tipo){
   if(nuevo.tipo == "categorico"){
@@ -208,7 +158,19 @@ code.desactivar <- function(variables){
   return(paste0("datos <<- subset(datos, select = -c(", paste(variables, collapse = ","), "))"))
 }
 
-# -------------------  Estadisticas Basicas ------------------------ #
+# Pagina de Segmentar Datos -------------------------------------------------------------------------------------------------
+
+#Crea el código de la particion en testing y learning data
+particion.code <- function(data = "datos", p = "0.5", variable = NULL, semilla = 5, perm.semilla = FALSE){
+  variable.predecir <<- variable
+  semilla <- ifelse(is.numeric(semilla), semilla, 5)
+  semilla <- ifelse(perm.semilla, paste0("set.seed(",semilla,")"), "rm(.Random.seed, envir = globalenv())")
+  return(paste0(semilla,"\nparticion <- createDataPartition(datos$",variable,", p = ",p/100,", list = FALSE)\n
+datos.prueba <<- datos[-particion,]\ndatos.aprendizaje <<- datos[particion,]"))
+}
+
+
+# Pagina de Resumen ---------------------------------------------------------------------------------------------------------
 
 #Resumen Completo
 cod.resum <- function(data = "datos"){
@@ -263,16 +225,8 @@ resumen.categorico <- function(data, variable){
   return(salida)
 }
 
-#Calcula la matriz de correlacion
-modelo.cor <- function(data = "datos"){
-  return(paste0("correlacion <<- cor(var.numericas(", data, "))"))
-}
 
-#Codigo de la generacion de correlaciones
-correlaciones <- function(metodo = 'circle', tipo = "lower"){
-  return(paste0("corrplot(correlacion, method='", metodo,"', shade.col=NA, tl.col='black',
-                tl.srt=20, addCoef.col='black', order='AOE', type = '", tipo, "')"))
-}
+# Pagina del Test de Normalidad ---------------------------------------------------------------------------------------------
 
 #Codigo de la genracion de la curva normal (test de normalidad)
 default.normal <- function(data = "datos", vars = NULL, color = "#00FF22AA"){
@@ -293,6 +247,7 @@ default.normal <- function(data = "datos", vars = NULL, color = "#00FF22AA"){
   }
 }
 
+#Genera  la tabla de normalidad
 default.calc.normal <- function(data = "datos"){
   return(paste0("calc <- lapply(var.numericas(datos), function(i) modeest::skewness(i)[1]) \n",
                 "calc <- as.data.frame(calc) \n",
@@ -300,6 +255,8 @@ default.calc.normal <- function(data = "datos"){
                 "                                                           ifelse(i < 0, 'Negativa', 'Sin Asimetría')))) \n",
                 "calc <- t(calc)\ncolnames(calc) <- c('Cálculo de Fisher', 'Asimetría')\ncalc"))
 }
+
+# Pagina de Dispersion ------------------------------------------------------------------------------------------------------
 
 #Codigo del grafico de dispersion
 default.disp <- function(data = "datos", vars = NULL, color = "#FF0000AA"){
@@ -314,14 +271,19 @@ default.disp <- function(data = "datos", vars = NULL, color = "#FF0000AA"){
   }
 }
 
+# Pagina de Distribucion ----------------------------------------------------------------------------------------------------
+
+#Llama a la funcion que crea la distribuccion numerica
 def.code.num <- function(data = "datos", variable = "input$sel.distribucion", color = 'input$col.dist'){
   return(paste0("distribucion.numerico(", data, "[, ", variable, "], ", variable, ", color = ", color,")"))
 }
 
+#Llama a la funcion que crea la distribuccion categorica
 def.code.cat <- function(data = "datos", variable = "input$sel.distribucion", color = 'input$col.dist'){
   return(paste0("distribucion.categorico(", data, "[, ", variable,"], color = ", color, ")"))
 }
 
+#Hace el grafico de la distribucion numerica
 default.func.num <- function(){
   return(paste0("distribucion.numerico <<- function(var, nombre.var, color){
                 nf <- graphics::layout(mat = matrix(c(1, 2), 2, 1, byrow=TRUE),  height = c(3,1))
@@ -336,32 +298,83 @@ default.func.num <- function(){
 }"))
 }
 
+#Hace el grafico de la distribucion categorica
 default.func.cat <- function(){
   return(paste0("distribucion.categorico <<- function(var, color = 'input$col.dist'){
                 colores <- sapply(c(1:length(levels(var))), function(i) rgb(sample(0:255, 1), sample(0:255, 1), sample(0:255, 1), 180, maxColorValue = 255))
                 data <- data.frame(label = levels(var), value = summary(var))
-                ggplot(data, aes(label, value)) +
+                plot(ggplot(data, aes(label, value)) +
                 geom_bar(stat = 'identity', fill = colores) +
                 geom_text(aes(label = value, y = value), vjust = -0.5, size = 4) +
                 theme_minimal() +
-                labs(title = 'Distribución', y = 'Cantidad de casos', x = 'Categorias')
+                labs(title = 'Distribución', y = 'Cantidad de casos', x = 'Categorias'))
 }"))
 }
 
-# -------------------  KNN ------------------------ #
+# Pagina de Correlacion -----------------------------------------------------------------------------------------------------
+
+#Calcula la matriz de correlacion
+modelo.cor <- function(data = "datos"){
+  return(paste0("correlacion <<- cor(var.numericas(", data, "))"))
+}
+
+#Codigo de la generacion de correlaciones
+correlaciones <- function(metodo = 'circle', tipo = "lower"){
+  return(paste0("corrplot(correlacion, method='", metodo,"', shade.col=NA, tl.col='black',
+                tl.srt=20, addCoef.col='black', order='AOE', type = '", tipo, "')"))
+}
+
+# Pagina de Poder Predictivo ------------------------------------------------------------------------------------------------
+
+#Calcula proporciones
+dist.x.predecir <- function(data, variable, variable.predecir) {
+  data. <- data %>%
+    group_by_(variable, variable.predecir) %>%
+    summarise(count = n()) %>%
+    mutate(prop = round(count/sum(count),4))
+  return(data.)
+}
+
+#Hace la grafica de proporciones segun la variable predictiva
+plot.code.dist.porc <- function(variable, nom.variable, var.predecir, nom.predecir, colores = NA, label.size = 9.5){
+  return(paste0("colores <- gg_color_hue(length(unique(datos[,'",var.predecir,"'])))
+                label.size <- ",label.size," - length(unique(datos[,'",variable,"']))
+                label.size <- ifelse(label.size < 3, 3, label.size)
+                data. <- dist.x.predecir(datos, '",variable,"', '",var.predecir,"')
+                ggplot(data., aes(fct_reorder(data.[['",variable,"']], count, .desc = T), prop, fill = data.[['",var.predecir,"']])) +
+                geom_bar(stat = 'identity') +
+                geom_text(aes(label = paste0(count, ' (', scales::percent(prop), ')'), y = prop), color = 'gray90',
+                position = position_stack(vjust = .5), size = label.size) +
+                theme_minimal() +
+                theme(text = element_text(size=15)) +
+                scale_fill_manual(values = colores) +
+                scale_y_continuous(labels = scales::percent)+
+                coord_flip() +
+                labs(title = 'Distribución relativa de la variable ",nom.variable," según la ",nom.predecir,"', x = '', y = '') +
+                guides(fill = guide_legend(reverse=T)) +
+                theme(legend.position = 'top', legend.title = element_blank())
+                "))
+}
+
+#Grafica el pairs
+pairs.poder <- function(){
+  return(paste0("vars.p <- datos[,'",variable.predecir,"']
+                col <- rainbow( length(unique(vars.p)) + 1 )
+                col <- col[2:length(col)]
+                pairs.panels(var.numericas(datos),bg = col[datos[,'",variable.predecir,"']],
+                pch= 22, main='', hist.col = gg_color_hue(1), ellipses = FALSE)"))
+}
+
+# Pagina de KNN -------------------------------------------------------------------------------------------------------------
 
 #Crea el modelo KNN
-kkn.modelo <- function(variable.pr = NULL, predictoras = ".", scale = TRUE,kmax = 7, kernel = "optimal"){
-  if(all(predictoras == ""))
-    predictoras <- "."
-  predictoras <- paste0(predictoras, collapse = "+")
-  codigo <- paste0("modelo.knn <<- train.kknn(",variable.pr,"~",predictoras,", data = datos.aprendizaje,scale =",scale,", kmax=",kmax,", kernel = '",kernel,"')")
-  return(codigo)
+kkn.modelo <- function(variable.pr = NULL, scale = TRUE,kmax = 7, kernel = "optimal"){
+  return(paste0("modelo.knn <<- train.kknn(",variable.pr,"~., data = datos.aprendizaje, scale =",scale,", kmax=",kmax,", kernel = '",kernel,"')"))
 }
 
 #Codigo de la prediccion de knn
 kkn.prediccion <- function() {
-  return(paste0("prediccion.knn <<- predict(modelo.knn, datos.prueba)"))
+  return("prediccion.knn <<- predict(modelo.knn, datos.prueba)")
 }
 
 #Codigo de la matriz de confucion de knn
@@ -373,8 +386,7 @@ knn.MC <- function(variable.p){
 
 #Crea el modelo SVM
 svm.modelo <- function(variable.pr = NULL, scale = TRUE, kernel = "linear"){
-  codigo <- paste0("modelo.svm <<- svm(",variable.pr,"~., data = datos.aprendizaje, scale =",scale,", kernel = '",kernel,"')")
-  return(codigo)
+  return(paste0("modelo.svm <<- svm(",variable.pr,"~., data = datos.aprendizaje, scale =",scale,", kernel = '",kernel,"')"))
 }
 
 #Codigo de la prediccion de svm
@@ -389,10 +401,12 @@ svm.MC <- function(variable.p){
 
 #Codigo del grafico de svm
 svm.plot <- function(variables, resto){
-  if(is.null(variables)) return("")
+  if(is.null(variables)){
+    return("NULL")
+  }
   l <- c()
   for(i in 1:length(resto)){
-    l <- c(l , paste0(resto[i],"=",i))
+    l <- c(l , paste0(resto[i],"=",2+i))
   }
   l <- paste0("list(",paste0(l,collapse = ","),")")
   return(paste0("plot(modelo.svm, datos, ",variables[1],"~",variables[2],", slice = ",l,")"))
@@ -621,14 +635,13 @@ contador <<- 0
 
 
 correlacion <<- NULL
-
 cod.disp <- default.disp()
 cod.cor <- correlaciones()
-
 cod.dya.cat <- def.code.cat()
 cod.dya.num <- def.code.num()
-func.dya.num <- default.func.num()
-func.dya.cat <- default.func.cat()
+
+cod.poder.cat <- NULL
+cod.poder.num <- NULL
 
 # -------------------  KNN ------------------------ #
 

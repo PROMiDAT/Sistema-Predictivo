@@ -39,12 +39,16 @@ library(ROCR)
 
 # Crea un campo de codigo con boton de ejecutar y cargar
 campo.codigo <- function(runid, refid, fieldid, ...){
+  if(!missing(refid))
+    undo <- tags$button(id = refid, type = "button", class = "run-button action-button",
+                        icon("undo"), tags$a("Recuperar", style = "color:white"))
+  else
+    undo <- div()
   tags$div(class = "box box-solid bg-black",
            tags$div(style = "text-align:right;padding-right: 10px;",
                     tags$button(id = runid, type = "button", class = "run-button action-button",
                                 icon("play"), tags$a("Ejecutar", style = "color:white")),
-           tags$button(id = refid, type = "button", class = "run-button action-button",
-                       icon("undo"), tags$a("Recuperar", style = "color:white"))),
+                    undo),
            tags$div(class = "box-body",
                     aceEditor(fieldid, mode = "r", theme = "monokai", value = "", ...)))
 }
@@ -115,9 +119,10 @@ panel.tansformar.datos <- tabPanel(title = "Transformar", width = 12, solidHeade
                                    aceEditor("fieldCodeTrans", mode = "r", theme = "monokai", value = "", height = "10vh",  readOnly = T))
 
 panel.segmentar.datos <- tabPanel(title = "Prueba y Aprendizaje", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
-                                  fluidRow(column(width = 9, numericInput("semilla", "Semilla Aleatoria:", "NULL", width = "100%")), br(),
-                                           column(width = 1, switchInput(inputId = "permitir.semilla", onStatus = "success", offStatus = "danger", value = F, width = "100%",
-                                                                         label = "", onLabel = "", offLabel = "", labelWidth = "100%",inline = T,size = "large"))),
+                                  fluidRow(column(width = 5, numericInput("semilla", "Semilla Aleatoria:", "NULL", width = "100%")), br(),
+                                           column(width = 4, switchInput(inputId = "permitir.semilla", onStatus = "success", offStatus = "danger", value = F, width = "100%",
+                                                                         label = "", onLabel = "Habilitada", offLabel = "Deshabilitada", labelWidth = "100%",
+                                                                         inline = T,size = "large"))),
                                   selectInput(inputId = "sel.predic.var", label = h4("Seleccionar Variable a Predecir:"), choices =  "", width = "100%"),
                                   sliderInput("segmentacionDatosA", "Proporción Aprendizaje:",width = "100%",
                                               min = 5, max = 95, value = 70, step = 5),
@@ -176,10 +181,10 @@ panel.grafico.normalidad.num <- tabPanel(title = "Gráfico Normalidad", value = 
 panel.grafico.normalidad.cat <- tabPanel(title = "Test de Normalidad", value = "tabNormalCalc", DT::dataTableOutput('calculo.normal'))
 
 codigo.normalidad.uno <- conditionalPanel("input.BoxNormal == 'tabNormalPlot'",
-                                          column(width = 12, campo.codigo("run.normal", "ref.normal", "fieldCodeNormal", height = "8vh")))
+                                          column(width = 12, campo.codigo(runid = "run.normal", fieldid = "fieldCodeNormal", height = "8vh")))
 
 codigo.normalidad.dos <- conditionalPanel("input.BoxNormal == 'tabNormalCalc'",
-                                          column(width = 12, campo.codigo("run.calc.normal", "ref.calc.normal", "fieldCalcNormal", height = "8vh")))
+                                          column(width = 12, campo.codigo(runid = "run.calc.normal", fieldid = "fieldCalcNormal", height = "8vh")))
 
 pagina.test.normalidad <- tabItem(tabName = "normalidad",
                                   column(width = 12,  tabBox(id = "BoxNormal",
@@ -193,7 +198,7 @@ pagina.test.normalidad <- tabItem(tabName = "normalidad",
 # PAGINA DE DISPERSION -----------------------------------------------------------------------------------------------------
 
 
-codigo.dispersion <- column(width = 12, campo.codigo("run.disp", "ref.disp", "fieldCodeDisp", height = "8vh"))
+codigo.dispersion <- column(width = 12, campo.codigo(runid = "run.disp", fieldid = "fieldCodeDisp", height = "8vh"))
 
 opciones.dispersion <- fluidRow(column(width = 9, tags$div(class="select-var-ind",
                                                             selectizeInput("select.var", NULL, multiple = T, choices = c(""),
@@ -226,7 +231,7 @@ tab.correlacion <- tabPanel(title = 'Correlación', value = "correlacion",
                             plotOutput('plot.cor', height = "67vh"),
                             fluidRow(column(width = 4,aceEditor("fieldModelCor", height = "6vh", mode = "r",
                                                                 theme = "monokai", value = "", readOnly = T)),
-                                     column(width = 8,campo.codigo("run.code.cor", "ref.code.cor", "fieldCodeCor", height = "6vh"))))
+                                     column(width = 8,campo.codigo(runid = "run.code.cor",fieldid =  "fieldCodeCor", height = "6vh"))))
 
 tab.codigo.correlaciones <- tabPanel(title = 'Resultados Numéricos', value = "cor.salida", verbatimTextOutput("txtcor"))
 
@@ -258,12 +263,11 @@ selector.variables.distribucion <- column(width = 7,tags$div(class = "select-var
 
 resultados.distribucion.numericas <- tabPanel(title = 'Numéricas', value = "numericas",
                                               plotOutput('plot.num', height = "65vh"),
-                                              fluidRow(column(width = 6, aceEditor("fieldCodeNum", mode = "r", theme = "monokai",
-                                                                                   value = "", height = "15vh", autoComplete = "enabled")),
+                                              fluidRow(column(width = 6, campo.codigo(runid = "run.dya.num",fieldid = "fieldCodeNum", height = "8vh")),
                                                        column(width = 6, DT::dataTableOutput("mostrar.atipicos"))) )
 
 resultados.distribucion.categoricas <- tabPanel(title = 'Categóricas', value = "categoricas", plotOutput('plot.cat', height = "76vh"),
-                                                aceEditor("fieldCodeCat", mode = "r", theme = "monokai", value = "", height = "6vh", autoComplete = "enabled"))
+                                                campo.codigo(runid = "run.dya.cat", fieldid = "fieldCodeCat", height = "6vh"))
 
 pagina.distribuciones <- tabItem(tabName = "distribucion",
                                  column(width = 12,
@@ -278,21 +282,23 @@ pagina.distribuciones <- tabItem(tabName = "distribucion",
 
 # PAGINA DE PODER PREDICTIVO ----------------------------------------------------------------------------------------------
 
-plot.dist.poder <- tabPanel(title = 'Variables Numéricas',
-                             plotOutput('plot.dist.poder', height = "65vh"),
-                             selectInput(inputId = "sel.distribucion.poder", label = NULL, choices =  "", width = "100%"))
+plot.dist.poder <- tabPanel(title = 'Variables Categóricas',
+                            plotOutput('plot.dist.poder', height = "55vh"),
+                            selectInput(inputId = "sel.distribucion.poder", label = NULL, choices =  "", width = "100%"),
+                            campo.codigo(runid = "run.code.poder.cat", fieldid = "fieldCodePoderCat", height = "16vh"))
 
-plot.pairs.poder <- tabPanel(title = 'Variables Categóricas',
-                             plotOutput('plot.pairs.poder', height = "65vh"))
+plot.pairs.poder <- tabPanel(title = 'Variables Numéricas',
+                             plotOutput('plot.pairs.poder', height = "55vh"),
+                             campo.codigo(runid = "run.code.poder.num", fieldid = "fieldCodePoderNum", height = "16vh"))
 
 
-pagina.poder <- tabItem(tabName = "poderPred", column(width = 12, tabBox(width = 12, plot.dist.poder,plot.pairs.poder)) )
+pagina.poder <- tabItem(tabName = "poderPred", column(width = 12, tabBox(width = 12, plot.dist.poder, plot.pairs.poder)) )
 
 # PAGINA DE KNN -----------------------------------------------------------------------------------------------------------
 
 panel.generar.knn <- tabPanel(title = "Generación del Modelo",
                              verbatimTextOutput("txtknn"),
-                             campo.codigo("runKnn","restarKnn","fieldCodeKnn",height = "3vh", readOnly = FALSE))
+                             campo.codigo(runid = "runKnn",fieldid = "fieldCodeKnn",height = "4vh", readOnly = F))
 
 panel.prediccion.knn <- tabPanel(title = "Predicción del Modelo",
                                  DT::dataTableOutput("knnPrediTable"),
@@ -343,7 +349,7 @@ pagina.knn <- tabItem(tabName = "knn",
 
 panel.generar.svm <- tabPanel(title = "Generación del Modelo",
                               verbatimTextOutput("txtSvm"),
-                              campo.codigo("runSvm","restarSvm","fieldCodeSvm",height = "3vh", readOnly = FALSE, autoComplete = "enabled"))
+                              campo.codigo(runid = "runSvm",fieldid = "fieldCodeSvm",height = "4vh", readOnly = F))
 
 plot.svm <- tabPanel(title = "Gráfico Clasificación",
                      plotOutput('plot.svm', height = "55vh"),

@@ -154,75 +154,75 @@
   #   actualizar.tabla("datos")
   # })
 
-  #Segmenta los datos en aprendizaje y prueba
-  observeEvent(input$segmentButton,{
-    if(input$sel.predic.var != ""){
-      codigo <- particion.code("datos", input$segmentacionDatosA ,input$sel.predic.var, input$semilla, input$permitir.semilla)
-      updateAceEditor(session, "fieldCodeSegment", value = codigo)
-      isolate(eval(parse(text = codigo)))
-      nombres <- colnames.empty(var.numericas(datos))
-      nambres.sin.pred <- nombres[-which(nombres == variable.predecir)]
-      updateSelectizeInput(session, "select.var.svm.plot", choices = nambres.sin.pred)
-      choices <- as.character(unique(datos[,variable.predecir]))
-      updateSelectInput(session, "roc.sel", choices = choices, selected = choices[1])
-      cat.sin.pred <- colnames.empty(var.categoricas(datos))
-      cat.sin.pred <- cat.sin.pred[cat.sin.pred != input$sel.predic.var]
-      updateSelectInput(session, "sel.distribucion.poder", choices = cat.sin.pred)
+  # #Segmenta los datos en aprendizaje y prueba
+  # observeEvent(input$segmentButton,{
+  #   if(input$sel.predic.var != ""){
+  #     codigo <- particion.code("datos", input$segmentacionDatosA ,input$sel.predic.var, input$semilla, input$permitir.semilla)
+  #     updateAceEditor(session, "fieldCodeSegment", value = codigo)
+  #     isolate(eval(parse(text = codigo)))
+  #     nombres <- colnames.empty(var.numericas(datos))
+  #     nambres.sin.pred <- nombres[-which(nombres == variable.predecir)]
+  #     updateSelectizeInput(session, "select.var.svm.plot", choices = nambres.sin.pred)
+  #     choices <- as.character(unique(datos[,variable.predecir]))
+  #     updateSelectInput(session, "roc.sel", choices = choices, selected = choices[1])
+  #     cat.sin.pred <- colnames.empty(var.categoricas(datos))
+  #     cat.sin.pred <- cat.sin.pred[cat.sin.pred != input$sel.predic.var]
+  #     updateSelectInput(session, "sel.distribucion.poder", choices = cat.sin.pred)
+  #
+  #     #Cambia los codigos de los modelos
+  #     actualizar.codigo.knn()
+  #     actualizar.codigo.svm()
+  #     actualizar.codigo.dt()
+  #     actualizar.codigo.rf()
+  #     actualizar.codigo.boosting()
+  #   }else{
+  #     showNotification("Tiene que seleccionar una variable a predecir", duration = 15, type = "error")
+  #   }
+  #
+  #   #Cierre o abre el menu
+  #   close.menu("parte2", is.null(datos.aprendizaje))
+  #   close.menu("comparar", is.null(datos.aprendizaje))
+  #   close.menu("poderPred", is.null(datos.aprendizaje))
+  #
+  #   #Cambia las tablas de aprendizaje y de prueba
+  #   actualizar.tabla(c("datos.aprendizaje", "datos.prueba"))
+  #   borrar.modelos()
+  # })
+  #
+  # #Habilitada o deshabilitada la semilla
+  # observeEvent(input$permitir.semilla,{
+  #   if(input$permitir.semilla){
+  #     shinyjs::enable("semilla")
+  #   }else{
+  #     shinyjs::disable("semilla")
+  #   }
+  # })
+  #
+  # #Cuando cambia la barra de proporcion de datos de prueba (Segmentar Datos)
+  # observeEvent(input$segmentacionDatosA,{
+  #   updateSliderInput(session,"segmentacionDatosT",value = 100 - input$segmentacionDatosA)
+  # })
+  #
+  # #Cuando cambia la barra de proporcion de datos de aprendizaje (Segmentar Datos)
+  # observeEvent(input$segmentacionDatosT,{
+  #   updateSliderInput(session,"segmentacionDatosA",value = 100 - input$segmentacionDatosT)
+  # })
 
-      #Cambia los codigos de los modelos
-      actualizar.codigo.knn()
-      actualizar.codigo.svm()
-      actualizar.codigo.dt()
-      actualizar.codigo.rf()
-      actualizar.codigo.boosting()
-    }else{
-      showNotification("Tiene que seleccionar una variable a predecir", duration = 15, type = "error")
-    }
-
-    #Cierre o abre el menu
-    close.menu("parte2", is.null(datos.aprendizaje))
-    close.menu("comparar", is.null(datos.aprendizaje))
-    close.menu("poderPred", is.null(datos.aprendizaje))
-
-    #Cambia las tablas de aprendizaje y de prueba
-    actualizar.tabla(c("datos.aprendizaje", "datos.prueba"))
-    borrar.modelos()
-  })
-
-  #Habilitada o deshabilitada la semilla
-  observeEvent(input$permitir.semilla,{
-    if(input$permitir.semilla){
-      shinyjs::enable("semilla")
-    }else{
-      shinyjs::disable("semilla")
-    }
-  })
-
-  #Cuando cambia la barra de proporcion de datos de prueba (Segmentar Datos)
-  observeEvent(input$segmentacionDatosA,{
-    updateSliderInput(session,"segmentacionDatosT",value = 100 - input$segmentacionDatosA)
-  })
-
-  #Cuando cambia la barra de proporcion de datos de aprendizaje (Segmentar Datos)
-  observeEvent(input$segmentacionDatosT,{
-    updateSliderInput(session,"segmentacionDatosA",value = 100 - input$segmentacionDatosT)
-  })
-
-  #Crea los select box del panel de trasnformar datos
-  update.trans <- eventReactive(c(input$loadButton),{
-    if(!is.null(datos) && ncol(datos) > 0){
-      n <- ncol(datos)
-      res <-  data.frame(Variables = colnames(datos), Tipo = c(1:n), Activa = c(1:n))
-    }else{
-      res <-  as.data.frame(NULL)
-      showNotification("Tiene que cargar los datos", duration = 15, type = "error")
-    }
-    res$Tipo <- sapply(colnames(datos), function(i) paste0('<select id="sel', i, '"> <option value="categorico">Categórico</option>
-                                                           <option value="numerico" ', ifelse(class(datos[, i]) %in% c("numeric","integer"), ' selected="selected"', ''),
-                                                           '>Numérico</option> <option value="disyuntivo">Disyuntivo</option> </select>'))
-    res$Activa <- sapply(colnames(datos), function(i) paste0('<input type="checkbox" id="box', i, '" checked/>'))
-    return(res)
-  })
+  # #Crea los select box del panel de trasnformar datos
+  # update.trans <- eventReactive(c(input$loadButton),{
+  #   if(!is.null(datos) && ncol(datos) > 0){
+  #     n <- ncol(datos)
+  #     res <-  data.frame(Variables = colnames(datos), Tipo = c(1:n), Activa = c(1:n))
+  #   }else{
+  #     res <-  as.data.frame(NULL)
+  #     showNotification("Tiene que cargar los datos", duration = 15, type = "error")
+  #   }
+  #   res$Tipo <- sapply(colnames(datos), function(i) paste0('<select id="sel', i, '"> <option value="categorico">Categórico</option>
+  #                                                          <option value="numerico" ', ifelse(class(datos[, i]) %in% c("numeric","integer"), ' selected="selected"', ''),
+  #                                                          '>Numérico</option> <option value="disyuntivo">Disyuntivo</option> </select>'))
+  #   res$Activa <- sapply(colnames(datos), function(i) paste0('<input type="checkbox" id="box', i, '" checked/>'))
+  #   return(res)
+  # })
 
   # -------------------  Estadisticas Basicas ------------------------ #
 
@@ -234,117 +234,117 @@
 
   #Cuando es precionado el boton de cargar datos, de transformar datos o se modifica el codigo
   #Hace el grafico la distribucion de normalidad
-  obj.normal <- eventReactive(c(input$loadButton, input$transButton, input$fieldCodeNormal), {
-    cod.normal <<- input$fieldCodeNormal
-    isolate(eval(parse(text = cod.normal)))
-  })
+  # obj.normal <- eventReactive(c(input$loadButton, input$transButton, input$fieldCodeNormal), {
+  #   cod.normal <<- input$fieldCodeNormal
+  #   isolate(eval(parse(text = cod.normal)))
+  # })
 
   #Cuando se seleccionan las variables o se cambia el color del test de normalidad
   #Hace el grafico la distribucion de normalidad
-  observeEvent(c(input$sel.normal, input$col.normal), {
-    cod.normal <<- default.normal(data = "datos", vars = input$sel.normal, color = input$col.normal)
-    updateAceEditor(session, "fieldCodeNormal", value = cod.normal)
-  })
+  # observeEvent(c(input$sel.normal, input$col.normal), {
+  #   cod.normal <<- default.normal(data = "datos", vars = input$sel.normal, color = input$col.normal)
+  #   updateAceEditor(session, "fieldCodeNormal", value = cod.normal)
+  # })
 
   #Cuando es precionado el boton de cargar datos, de transformar datos o se modifica el codigo
   #Hace el grafico de dispersion
-  obj.disp <- eventReactive(c(input$loadButton, input$transButton, input$fieldCodeDisp), {
-    cod.disp <<- input$fieldCodeDisp
-    isolate(eval(parse(text = cod.disp)))
-  })
+  # obj.disp <- eventReactive(c(input$loadButton, input$transButton, input$fieldCodeDisp), {
+  #   cod.disp <<- input$fieldCodeDisp
+  #   isolate(eval(parse(text = cod.disp)))
+  # })
 
   #Cuando es precionado el boton de cargar datos, de transformar datos o se modifica el codigo
   #Hace el grafico de correlaciones
-  obj.cor <- eventReactive(c(input$loadButton, input$transButton, input$fieldModelCor, input$fieldCodeCor), {
-    cod.cor <<- input$fieldCodeCor
-    return(isolate(eval(parse(text = cod.cor))))
-  })
+  # obj.cor <- eventReactive(c(input$loadButton, input$transButton, input$fieldModelCor, input$fieldCodeCor), {
+  #   cod.cor <<- input$fieldCodeCor
+  #   return(isolate(eval(parse(text = cod.cor))))
+  # })
 
   #Cuando es precionado el boton de cargar datos, de transformar datos o se modifica el codigo
   #Hace el grafico de distribuciones numericas
-  obj.dya.num <- eventReactive(c(input$loadButton, input$transButton, input$fieldFuncNum, input$fieldCodeNum), {
-    cod.dya.num  <<- input$fieldCodeNum
-    func.dya.num <<- input$fieldFuncNum
-    isolate(eval(parse(text = func.dya.num)))
-    return(isolate(eval(parse(text = cod.dya.num))))
-  })
+  # obj.dya.num <- eventReactive(c(input$loadButton, input$transButton, input$fieldFuncNum, input$fieldCodeNum), {
+  #   cod.dya.num  <<- input$fieldCodeNum
+  #   func.dya.num <<- input$fieldFuncNum
+  #   isolate(eval(parse(text = func.dya.num)))
+  #   return(isolate(eval(parse(text = cod.dya.num))))
+  # })
 
   #Cuando es precionado el boton de cargar datos, de transformar datos o se modifica el codigo
   #Hace el grafico de distribuciones categoricas
-  obj.dya.cat <- eventReactive(c(input$loadButton, input$transButton, input$fieldFuncCat, input$fieldCodeCat), {
-    cod.dya.cat  <<- input$fieldCodeCat
-    func.dya.cat <<- input$fieldFuncCat
-    return(isolate(eval(parse(text = cod.dya.cat))))
-  })
+  # obj.dya.cat <- eventReactive(c(input$loadButton, input$transButton, input$fieldFuncCat, input$fieldCodeCat), {
+  #   cod.dya.cat  <<- input$fieldCodeCat
+  #   func.dya.cat <<- input$fieldFuncCat
+  #   return(isolate(eval(parse(text = cod.dya.cat))))
+  # })
 
   #Cuando cambia la variable del grafico de distribucion numerica
-  observeEvent(c(input$sel.distribucion.num, input$col.dist), {
-    cod.dya.num <<- def.code.num(data = "datos", variable = paste0("'", input$sel.distribucion.num, "'"),
-                                 color = paste0("'", input$col.dist, "'"))
-    updateAceEditor(session, "fieldCodeNum", value = cod.dya.num)
-  })
+  # observeEvent(c(input$sel.distribucion.num, input$col.dist), {
+  #   cod.dya.num <<- def.code.num(data = "datos", variable = paste0("'", input$sel.distribucion.num, "'"),
+  #                                color = paste0("'", input$col.dist, "'"))
+  #   updateAceEditor(session, "fieldCodeNum", value = cod.dya.num)
+  # })
 
   #Cuando cambia la variable del grafico de distribucion categorica
-  observeEvent(c(input$sel.distribucion.cat), {
-    cod.dya.cat <<- def.code.cat(data = "datos", variable = paste0("'", input$sel.distribucion.cat, "'"))
-    updateAceEditor(session, "fieldCodeCat", value = cod.dya.cat)
-  })
+  # observeEvent(c(input$sel.distribucion.cat), {
+  #   cod.dya.cat <<- def.code.cat(data = "datos", variable = paste0("'", input$sel.distribucion.cat, "'"))
+  #   updateAceEditor(session, "fieldCodeCat", value = cod.dya.cat)
+  # })
 
   #Cuando cambia la variable seleccionada para el grafico de normalidad
-  observeEvent(c(input$sel.normal), {
-    cod.normal <<- default.normal(data = "datos", vars = input$sel.normal)
-    updateAceEditor(session, "fieldCodeNormal", value = cod.normal)
-  })
+  # observeEvent(c(input$sel.normal), {
+  #   cod.normal <<- default.normal(data = "datos", vars = input$sel.normal)
+  #   updateAceEditor(session, "fieldCodeNormal", value = cod.normal)
+  # })
 
-  obj.calc.normal <- eventReactive(c(input$loadButton, input$transButton), {
-    tryCatch({
-      res <- isolate(eval(parse(text = default.calc.normal())))
-      updateAceEditor(session, "fieldCalcNormal", value = default.calc.normal())
-      return(res)
-    }, error = function(e){
-      showNotification(paste0("ERROR AL CALCULAR TEST DE NORMALIDAD: ", e), duration = 10, type = "error")
-    })
-  })
+  # obj.calc.normal <- eventReactive(c(input$loadButton, input$transButton), {
+  #   tryCatch({
+  #     res <- isolate(eval(parse(text = default.calc.normal())))
+  #     updateAceEditor(session, "fieldCalcNormal", value = default.calc.normal())
+  #     return(res)
+  #   }, error = function(e){
+  #     showNotification(paste0("ERROR AL CALCULAR TEST DE NORMALIDAD: ", e), duration = 10, type = "error")
+  #   })
+  # })
 
   #Cuando cambian las variables seleccionadas para el grafico de disperesion o el color
-  observeEvent(c(input$select.var, input$col.disp), {
-    cod.disp <<- default.disp(data = "datos", vars = input$select.var, color = input$col.disp)
-    updateAceEditor(session, "fieldCodeDisp", value = cod.disp)
-  })
+  # observeEvent(c(input$select.var, input$col.disp), {
+  #   cod.disp <<- default.disp(data = "datos", vars = input$select.var, color = input$col.disp)
+  #   updateAceEditor(session, "fieldCodeDisp", value = cod.disp)
+  # })
 
   #Cuando cambian las opciones para el grafico de correlacion
-  observeEvent(c(input$cor.metodo, input$cor.tipo), {
-    cod.cor <<- correlaciones(metodo = input$cor.metodo, tipo = input$cor.tipo)
-    updateAceEditor(session, "fieldCodeCor", value = cod.cor)
-  })
+  # observeEvent(c(input$cor.metodo, input$cor.tipo), {
+  #   cod.cor <<- correlaciones(metodo = input$cor.metodo, tipo = input$cor.tipo)
+  #   updateAceEditor(session, "fieldCodeCor", value = cod.cor)
+  # })
 
   #Cambia el grafico de poder predictivo (Distribucion)
-  observeEvent(input$sel.distribucion.poder,{
-    if(input$sel.distribucion.poder != ""){
-      output$plot.dist.poder <- renderPlot(plot.dist.porc(datos,input$sel.distribucion.poder,
-                                                          input$sel.distribucion.poder, variable.predecir,
-                                                          variable.predecir))
-    }else{
-      output$plot.dist.poder <- renderPlot(NULL)
-    }
-  })
-
-  #Cambia el grafico de poder predictivo (pairs)
-  plot.pairs.poder.fun <- eventReactive(input$segmentButton,{
-    tryCatch({
-      return(pairs.poder())
-    },error =  function(e){
-      return(NULL)
-    })
-  })
-
-  #Grafica
-  output$plot.pairs.poder <- renderPlot(plot.pairs.poder.fun())
+  # observeEvent(input$sel.distribucion.poder,{
+  #   if(input$sel.distribucion.poder != ""){
+  #     output$plot.dist.poder <- renderPlot(plot.dist.porc(datos,input$sel.distribucion.poder,
+  #                                                         input$sel.distribucion.poder, variable.predecir,
+  #                                                         variable.predecir))
+  #   }else{
+  #     output$plot.dist.poder <- renderPlot(NULL)
+  #   }
+  # })
+  #
+  # #Cambia el grafico de poder predictivo (pairs)
+  # plot.pairs.poder.fun <- eventReactive(input$segmentButton,{
+  #   tryCatch({
+  #     return(pairs.poder())
+  #   },error =  function(e){
+  #     return(NULL)
+  #   })
+  # })
+  #
+  # #Grafica
+  # output$plot.pairs.poder <- renderPlot(plot.pairs.poder.fun())
 
 
   # -------------------  KNN ------------------------ #
 
-  #Cuando se genera el modelo knn
+  # Cuando se genera el modelo knn
   observeEvent(input$runKnn,{
     if(validar.datos()){ #Si se tiene los datos entonces :
       load.page(T)
@@ -485,32 +485,33 @@
     })
   }
 
-  #Acualiza el codigo a la version por defecto
-  actualizar.codigo.knn <- function(){
-    #Se genera el codigo del modelo
-    cod.knn <- kkn.modelo(variable.pr = variable.predecir,
-                          scale = input$switch.scale.knn,
-                          kmax = input$kmax.knn, kernel = input$kernel.knn)
-
-    #Se genera el codigo de la prediccion
-    codigo.knn.pred <- kkn.prediccion()
-
-    # Se genera el codigo de la matriz
-    codigo.knn.mc <- knn.MC(variable.predecir)
-
-    # Se genera el codigo de la indices
-    codigo.indices <- cod.indices()
-
-    codigos <- ifelse(rep(is.null(datos.aprendizaje),4),
-                      rep("",4),
-                      c(cod.knn,codigo.knn.pred,codigo.knn.mc,codigo.indices))
-
-    #Se acualiza el codigo del modelo
-    updateAceEditor(session, "fieldCodeKnn", value = codigos[1])
-    updateAceEditor(session, "fieldCodeKnnPred", value = codigos[2])
-    updateAceEditor(session, "fieldCodeKnnMC", value = codigos[3])
-    updateAceEditor(session, "fieldCodeKnnIG", value = codigos[4])
-  }
+  # #Acualiza el codigo a la version por defecto
+  # actualizar.codigo.knn <- function(){
+  #   #Se genera el codigo del modelo
+  #   cod.knn <- kkn.modelo(variable.pr = variable.predecir,
+  #                         scale = input$switch.scale.knn,
+  #                         kmax = input$kmax.knn,
+  #                         kernel = input$kernel.knn)
+  #
+  #   #Se genera el codigo de la prediccion
+  #   codigo.knn.pred <- kkn.prediccion()
+  #
+  #   # Se genera el codigo de la matriz
+  #   codigo.knn.mc <- knn.MC(variable.predecir)
+  #
+  #   # Se genera el codigo de la indices
+  #   codigo.indices <- cod.indices()
+  #
+  #   codigos <- ifelse(rep(is.null(datos.aprendizaje),4),
+  #                     rep("",4),
+  #                     c(cod.knn,codigo.knn.pred,codigo.knn.mc,codigo.indices))
+  #
+  #   #Se acualiza el codigo del modelo
+  #   updateAceEditor(session, "fieldCodeKnn", value = codigos[1])
+  #   updateAceEditor(session, "fieldCodeKnnPred", value = codigos[2])
+  #   updateAceEditor(session, "fieldCodeKnnMC", value = codigos[3])
+  #   updateAceEditor(session, "fieldCodeKnnIG", value = codigos[4])
+  # }
 
   #Si las opciones cambian
   observeEvent(c(input$switch.scale.knn, input$kmax.knn,input$kernel.knn),{
@@ -675,31 +676,31 @@
     })
   }
 
-  #Acualiza el codigo a la version por defecto
-  actualizar.codigo.svm <- function(){
-    #Se genera el codigo del modelo
-    codigo.svm <- svm.modelo(variable.pr = variable.predecir,
-                             scale = input$switch.scale.svm,
-                             kernel = input$kernel.svm)
-
-    #Se acualiza el codigo del modelo
-    updateAceEditor(session, "fieldCodeSvm", value = codigo.svm)
-
-    #Acutaliza el codigo del grafico de clasificacion svm
-    updateAceEditor(session, "fieldCodeSvmPlot", value = svm.plot(NULL))
-
-    #Se genera el codigo de la prediccion
-    codigo.svm.pred <- svm.prediccion()
-    updateAceEditor(session, "fieldCodeSvmPred", value = codigo.svm.pred)
-
-    # Se genera el codigo de la matriz
-    codigo.svm.mc <- svm.MC(variable.predecir)
-    updateAceEditor(session, "fieldCodeSvmMC", value = codigo.svm.mc)
-
-    # Se genera el codigo de la indices
-    codigo.indices <- cod.indices()
-    updateAceEditor(session, "fieldCodeSvmIG", value = codigo.indices)
-  }
+  # #Acualiza el codigo a la version por defecto
+  # actualizar.codigo.svm <- function(){
+  #   #Se genera el codigo del modelo
+  #   codigo.svm <- svm.modelo(variable.pr = variable.predecir,
+  #                            scale = input$switch.scale.svm,
+  #                            kernel = input$kernel.svm)
+  #
+  #   #Se acualiza el codigo del modelo
+  #   updateAceEditor(session, "fieldCodeSvm", value = codigo.svm)
+  #
+  #   #Acutaliza el codigo del grafico de clasificacion svm
+  #   updateAceEditor(session, "fieldCodeSvmPlot", value = svm.plot(NULL))
+  #
+  #   #Se genera el codigo de la prediccion
+  #   codigo.svm.pred <- svm.prediccion()
+  #   updateAceEditor(session, "fieldCodeSvmPred", value = codigo.svm.pred)
+  #
+  #   # Se genera el codigo de la matriz
+  #   codigo.svm.mc <- svm.MC(variable.predecir)
+  #   updateAceEditor(session, "fieldCodeSvmMC", value = codigo.svm.mc)
+  #
+  #   # Se genera el codigo de la indices
+  #   codigo.indices <- cod.indices()
+  #   updateAceEditor(session, "fieldCodeSvmIG", value = codigo.indices)
+  # }
 
   #Si las opciones cambian
   observeEvent(c(input$switch.scale.svm, input$kernel.svm),{
@@ -877,32 +878,32 @@
     })
   }
 
-  #Acualiza el codigo a la version por defecto
-  actualizar.codigo.dt <- function(){
-    #Se genera el codigo del modelo
-    codigo.dt <- dt.modelo(variable.pr = variable.predecir,
-                           minsplit = input$minsplit.dt)
-
-    #Se acualiza el codigo del modelo
-    updateAceEditor(session, "fieldCodeDt", value = codigo.dt)
-
-    #Cambia el codigo del grafico del árbol
-    updateAceEditor(session, "fieldCodeDtPlot", value = dt.plot())
-    output$plot.dt <- renderPlot(isolate(eval(parse(text = input$fieldCodeDtPlot ))))
-
-    #Se genera el codigo de la prediccion
-    codigo.dt.pred <- dt.prediccion()
-    updateAceEditor(session, "fieldCodeDtPred", value = codigo.dt.pred)
-
-    # Se genera el codigo de la matriz
-    codigo.dt.mc <- dt.MC(variable.predecir)
-    updateAceEditor(session, "fieldCodeDtMC", value = codigo.dt.mc)
-
-    # Se genera el codigo de la indices
-    codigo.indices <- cod.indices()
-    updateAceEditor(session, "fieldCodeDtIG", value = codigo.indices)
-
-  }
+  # #Acualiza el codigo a la version por defecto
+  # actualizar.codigo.dt <- function(){
+  #   #Se genera el codigo del modelo
+  #   codigo.dt <- dt.modelo(variable.pr = variable.predecir,
+  #                          minsplit = input$minsplit.dt)
+  #
+  #   #Se acualiza el codigo del modelo
+  #   updateAceEditor(session, "fieldCodeDt", value = codigo.dt)
+  #
+  #   #Cambia el codigo del grafico del árbol
+  #   updateAceEditor(session, "fieldCodeDtPlot", value = dt.plot())
+  #   output$plot.dt <- renderPlot(isolate(eval(parse(text = input$fieldCodeDtPlot ))))
+  #
+  #   #Se genera el codigo de la prediccion
+  #   codigo.dt.pred <- dt.prediccion()
+  #   updateAceEditor(session, "fieldCodeDtPred", value = codigo.dt.pred)
+  #
+  #   # Se genera el codigo de la matriz
+  #   codigo.dt.mc <- dt.MC(variable.predecir)
+  #   updateAceEditor(session, "fieldCodeDtMC", value = codigo.dt.mc)
+  #
+  #   # Se genera el codigo de la indices
+  #   codigo.indices <- cod.indices()
+  #   updateAceEditor(session, "fieldCodeDtIG", value = codigo.indices)
+  #
+  # }
 
   #Regresa el codigo a su forma original
   observeEvent(input$restarDt,{
@@ -1061,30 +1062,30 @@
   }
 
   #Acualiza el codigo a la version por defecto
-  actualizar.codigo.rf <- function(){
-    #Se genera el codigo del modelo
-    codigo.rf <- rf.modelo( variable.pr = variable.predecir,
-                            ntree = input$ntree.rf)
-
-    #Se acualiza el codigo del modelo
-    updateAceEditor(session, "fieldCodeRf", value = codigo.rf)
-
-    #Se genera el codigo de la prediccion
-    codigo.rf.pred <- rf.prediccion(variable.predecir)
-    updateAceEditor(session, "fieldCodeRfPred", value = codigo.rf.pred)
-
-    #Cambia el codigo del grafico de rf
-    updateAceEditor(session, "fieldCodeRfPlot", value = rf.plot())
-    output$plot.rf <- renderPlot(isolate(eval(parse(text = input$fieldCodeRfPlot ))))
-
-    # Se genera el codigo de la matriz
-    codigo.rf.mc <- rf.MC(variable.predecir)
-    updateAceEditor(session, "fieldCodeRfMC", value = codigo.rf.mc)
-
-    # Se genera el codigo de la indices
-    codigo.indices <- cod.indices()
-    updateAceEditor(session, "fieldCodeRfIG", value = codigo.indices)
-  }
+  # actualizar.codigo.rf <- function(){
+  #   #Se genera el codigo del modelo
+  #   codigo.rf <- rf.modelo( variable.pr = variable.predecir,
+  #                           ntree = input$ntree.rf)
+  #
+  #   #Se acualiza el codigo del modelo
+  #   updateAceEditor(session, "fieldCodeRf", value = codigo.rf)
+  #
+  #   #Se genera el codigo de la prediccion
+  #   codigo.rf.pred <- rf.prediccion(variable.predecir)
+  #   updateAceEditor(session, "fieldCodeRfPred", value = codigo.rf.pred)
+  #
+  #   #Cambia el codigo del grafico de rf
+  #   updateAceEditor(session, "fieldCodeRfPlot", value = rf.plot())
+  #   output$plot.rf <- renderPlot(isolate(eval(parse(text = input$fieldCodeRfPlot ))))
+  #
+  #   # Se genera el codigo de la matriz
+  #   codigo.rf.mc <- rf.MC(variable.predecir)
+  #   updateAceEditor(session, "fieldCodeRfMC", value = codigo.rf.mc)
+  #
+  #   # Se genera el codigo de la indices
+  #   codigo.indices <- cod.indices()
+  #   updateAceEditor(session, "fieldCodeRfIG", value = codigo.indices)
+  # }
 
   #Regresa el codigo a su forma original
   observeEvent(input$restarRf,{
@@ -1260,44 +1261,44 @@
     ejecutar.boosting.ind(error)
   }
 
-  #Acualiza el codigo a la version por defecto
-  actualizar.codigo.boosting <- function(){
-    #Se genera el codigo del modelo
-    codigo.boosting <- boosting.modelo(variable.pr = variable.predecir,
-                                       iter = input$iter.boosting,
-                                       nu = input$nu.boosting,
-                                       type = input$tipo.boosting)
-
-    #Se acualiza el codigo del modelo
-    updateAceEditor(session, "fieldCodeBoosting", value = codigo.boosting)
-
-    #Se genera el codigo de la prediccion
-    codigo.boosting.pred <- boosting.prediccion(variable.predecir)
-    updateAceEditor(session, "fieldCodeBoostingPred", value = codigo.boosting.pred)
-
-    #Cambia el codigo del grafico del modelo
-    updateAceEditor(session, "fieldCodeBoostingPlot", value = boosting.plot())
-    tryCatch({
-      output$plot.boosting <- renderPlot(isolate(eval(parse(text = input$fieldCodeBoostingPlot))))
-    },error = function(e){
-      output$plot.boosting <- renderPlot(NULL)
-    })
-
-    #Cambia el codigo del grafico de importancia
-    updateAceEditor(session, "fieldCodeBoostingPlotImport", value = boosting.plot.import())
-    tryCatch({
-      output$plot.boosting.import <- renderPlot(isolate(eval(parse(text = input$fieldCodeBoostingPlotImport ))))
-    },error = function(e){
-      output$plot.boosting.import <- renderPlot(NULL)
-    })
-    # Se genera el codigo de la matriz
-    codigo.boosting.mc <- boosting.MC(variable.predecir)
-    updateAceEditor(session, "fieldCodeBoostingMC", value = codigo.boosting.mc)
-
-    # Se genera el codigo de la indices
-    codigo.indices <- cod.indices()
-    updateAceEditor(session, "fieldCodeBoostingIG", value = codigo.indices)
-  }
+  # #Acualiza el codigo a la version por defecto
+  # actualizar.codigo.boosting <- function(){
+  #   #Se genera el codigo del modelo
+  #   codigo.boosting <- boosting.modelo(variable.pr = variable.predecir,
+  #                                      iter = input$iter.boosting,
+  #                                      nu = input$nu.boosting,
+  #                                      type = input$tipo.boosting)
+  #
+  #   #Se acualiza el codigo del modelo
+  #   updateAceEditor(session, "fieldCodeBoosting", value = codigo.boosting)
+  #
+  #   #Se genera el codigo de la prediccion
+  #   codigo.boosting.pred <- boosting.prediccion(variable.predecir)
+  #   updateAceEditor(session, "fieldCodeBoostingPred", value = codigo.boosting.pred)
+  #
+  #   #Cambia el codigo del grafico del modelo
+  #   updateAceEditor(session, "fieldCodeBoostingPlot", value = boosting.plot())
+  #   tryCatch({
+  #     output$plot.boosting <- renderPlot(isolate(eval(parse(text = input$fieldCodeBoostingPlot))))
+  #   },error = function(e){
+  #     output$plot.boosting <- renderPlot(NULL)
+  #   })
+  #
+  #   #Cambia el codigo del grafico de importancia
+  #   updateAceEditor(session, "fieldCodeBoostingPlotImport", value = boosting.plot.import())
+  #   tryCatch({
+  #     output$plot.boosting.import <- renderPlot(isolate(eval(parse(text = input$fieldCodeBoostingPlotImport ))))
+  #   },error = function(e){
+  #     output$plot.boosting.import <- renderPlot(NULL)
+  #   })
+  #   # Se genera el codigo de la matriz
+  #   codigo.boosting.mc <- boosting.MC(variable.predecir)
+  #   updateAceEditor(session, "fieldCodeBoostingMC", value = codigo.boosting.mc)
+  #
+  #   # Se genera el codigo de la indices
+  #   codigo.indices <- cod.indices()
+  #   updateAceEditor(session, "fieldCodeBoostingIG", value = codigo.indices)
+  # }
 
   #Regresa el codigo a su forma original
   observeEvent(input$restarBoosting,{
@@ -1316,14 +1317,14 @@
   # -------------------  Pagina Datos ------------------------ #
 
   #Cambia la tabla de con las opciones del panel de transformar
-  output$transData <- DT::renderDataTable(update.trans(), escape = FALSE, selection = 'none', server = FALSE,
-                                          options = list(dom = 't', paging = FALSE, ordering = FALSE), rownames = F,
-                                          callback = JS("table.rows().every(function(i, tab, row) {
-                                                        var $this = $(this.node());
-                                                        $this.attr('id', this.data()[0]);
-                                                        $this.addClass('shiny-input-checkbox');});
-                                                        Shiny.unbindAll(table.table().node());
-                                                        Shiny.bindAll(table.table().node());"))
+  # output$transData <- DT::renderDataTable(update.trans(), escape = FALSE, selection = 'none', server = FALSE,
+  #                                         options = list(dom = 't', paging = FALSE, ordering = FALSE), rownames = F,
+  #                                         callback = JS("table.rows().every(function(i, tab, row) {
+  #                                                       var $this = $(this.node());
+  #                                                       $this.attr('id', this.data()[0]);
+  #                                                       $this.addClass('shiny-input-checkbox');});
+  #                                                       Shiny.unbindAll(table.table().node());
+  #                                                       Shiny.bindAll(table.table().node());"))
 
   # -------------------  Estadisticas Basicas ------------------------ #
 
@@ -1340,28 +1341,28 @@
   # })
 
   #Cambia la tabla de valores atipicos en la pagina de distribuciones
-  output$mostrar.atipicos <- DT::renderDataTable({
-    atipicos <- boxplot.stats(datos[, input$sel.distribucion.num])
-    datos <- datos[datos[, input$sel.distribucion.num] %in% atipicos$out, input$sel.distribucion.num, drop = F]
-    return(datos[order(datos[, input$sel.distribucion.num]), , drop = F])
-  }, options = list(dom = 't', scrollX = TRUE, scrollY = "10vh"))
+  # output$mostrar.atipicos <- DT::renderDataTable({
+  #   atipicos <- boxplot.stats(datos[, input$sel.distribucion.num])
+  #   datos <- datos[datos[, input$sel.distribucion.num] %in% atipicos$out, input$sel.distribucion.num, drop = F]
+  #   return(datos[order(datos[, input$sel.distribucion.num]), , drop = F])
+  # }, options = list(dom = 't', scrollX = TRUE, scrollY = "10vh"))
 
   #Hace el grafico de la pagina de test de normalidad
-  output$plot.normal <- renderPlot(obj.normal())
+  # output$plot.normal <- renderPlot(obj.normal())
 
-  output$calculo.normal <- DT::renderDataTable(obj.calc.normal())
+  # output$calculo.normal <- DT::renderDataTable(obj.calc.normal())
 
-  #Hace el grafico de la pagina de dispersion
-  output$plot.disp <- renderPlot(obj.disp())
+  # #Hace el grafico de la pagina de dispersion
+  # output$plot.disp <- renderPlot(obj.disp())
 
-  #Hace el grafico de correlaciones
-  output$plot.cor <- renderPlot(obj.cor())
-
-  #Hace el grafico de distribuciones numericas
-  output$plot.num <- renderPlot(obj.dya.num())
-
-  #Hace el grafico de distribuciones categoricas
-  output$plot.cat <- renderPlot(obj.dya.cat())
+  # #Hace el grafico de correlaciones
+  # output$plot.cor <- renderPlot(obj.cor())
+  #
+  # #Hace el grafico de distribuciones numericas
+  # output$plot.num <- renderPlot(obj.dya.num())
+  #
+  # #Hace el grafico de distribuciones categoricas
+  # output$plot.cat <- renderPlot(obj.dya.cat())
 
   # -------------------  Otros  ------------------------ #
 
@@ -1531,20 +1532,20 @@
     }
   }
 
-  #Validacion comun para todos los modelos
-  validar.datos <- function(){
-    #Validaciones
-    if(is.null(variable.predecir)){
-      showNotification("Tiene que seleccionar una variable a predecir",duration = 10, type = "error")
-    }
-    if(is.null(datos)){
-      showNotification("Tiene que ingresar datos",duration = 10, type = "error")
-    }
-    if(is.null(datos.aprendizaje)){
-      showNotification("Tiene que crear los datos de aprendizaje y de prueba",duration = 10, type = "error")
-    }
-    return(!is.null(datos) & !is.null(variable.predecir) & !is.null(datos.aprendizaje))
-  }
+  # #Validacion comun para todos los modelos
+  # validar.datos <- function(){
+  #   #Validaciones
+  #   if(is.null(variable.predecir)){
+  #     showNotification("Tiene que seleccionar una variable a predecir",duration = 10, type = "error")
+  #   }
+  #   if(is.null(datos)){
+  #     showNotification("Tiene que ingresar datos",duration = 10, type = "error")
+  #   }
+  #   if(is.null(datos.aprendizaje)){
+  #     showNotification("Tiene que crear los datos de aprendizaje y de prueba",duration = 10, type = "error")
+  #   }
+  #   return(!is.null(datos) & !is.null(variable.predecir) & !is.null(datos.aprendizaje))
+  # }
 
   tabla.comparativa <- function(){
     tryCatch({
@@ -1650,8 +1651,27 @@
     }
   )
 
-  }) ## FIN SERVER
+  # }) ## FIN SERVER
 
 
+  # #Para el grafico de poder predictivo
+  # plot.dist.porc <- function(variable, nom.variable, var.predecir, nom.predecir, colores = NA, label.size = 9.5){
+  #   colores <- gg_color_hue(length(unique(data[,var.predecir])))
+  #   label.size <- label.size - length(unique(data[,variable]))
+  #   label.size <- ifelse(label.size < 3, 3, label.size)
+  #   data. <- dist.x.predecir(datos, variable, var.predecir)
+  #   ggplot(data., aes(fct_reorder(data.[[variable]], count, .desc = T), prop, fill = data.[[var.predecir]])) +
+  #     geom_bar(stat = "identity") +
+  #     geom_text(aes(label = paste0(count, " (", scales::percent(prop), ")"), y = prop), color = "gray90",
+  #               position = position_stack(vjust = .5), size = label.size) +
+  #     theme_minimal() +
+  #     theme(text = element_text(size=15)) +
+  #     scale_fill_manual(values = colores) +
+  #     scale_y_continuous(labels = scales::percent)+
+  #     coord_flip() +
+  #     labs(title = paste0("Distribución relativa de la variable '", nom.variable, "' según la ", nom.predecir), x = "", y = "") +
+  #     guides(fill = guide_legend(reverse=T)) +
+  #     theme(legend.position = "top", legend.title = element_blank())
+  # }
 
 
