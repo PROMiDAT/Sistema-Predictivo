@@ -405,7 +405,7 @@ pagina.svm <- tabItem(tabName = "svm",
 
 panel.generar.dt <- tabPanel(title = "Generación del Modelo",
                               verbatimTextOutput("txtDt"),
-                              campo.codigo("runDt","restarDt","fieldCodeDt",height = "3vh", readOnly = F, autoComplete = "enabled"))
+                              campo.codigo(runid = "runDt",fieldid = "fieldCodeDt",height = "4vh", readOnly = F))
 
 plot.dt <- tabPanel(title = "Gráfico Árbol",
                      plotOutput('plot.dt', height = "55vh"),
@@ -457,7 +457,7 @@ pagina.dt <- tabItem(tabName = "dt",
 
 panel.generar.rf <- tabPanel(title = "Generación del Modelo",
                              verbatimTextOutput("txtRf"),
-                             campo.codigo("runRf","restarRf","fieldCodeRf",height = "3vh", readOnly = F, autoComplete = "enabled"))
+                             campo.codigo(runid = "runRf",fieldid = "fieldCodeRf",height = "4vh", readOnly = F))
 
 plot.rf <- tabPanel(title = "Importancia de Variables",
                      plotOutput('plot.rf', height = "55vh"),
@@ -509,7 +509,7 @@ pagina.rf <- tabItem(tabName = "rf",
 
 panel.generar.boosting <- tabPanel(title = "Generación del Modelo",
                               verbatimTextOutput("txtBoosting"),
-                              campo.codigo("runBoosting","restarBoosting","fieldCodeBoosting",height = "3vh", readOnly = F, autoComplete = "enabled"))
+                              campo.codigo(runid = "runBoosting",fieldid = "fieldCodeBoosting",height = "4vh", readOnly = F))
 
 plot.boosting <- tabPanel(title = "Evolución del Error",
                                  plotOutput('plot.boosting', height = "55vh"),
