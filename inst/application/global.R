@@ -654,6 +654,7 @@ indices.knn <<- rep(0,8)
 score.knn <<- NULL
 area.knn <<- NA
 
+
 # -------------------  SVM ------------------------ #
 
 modelo.svm <<- NULL
