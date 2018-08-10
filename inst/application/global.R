@@ -622,6 +622,8 @@ plot.MC <<- function(cm){
 ###########################################################################################################################
 
 # -------------------  Datos ------------------------ #
+codigo.reporte <<- list()
+
 
 datos <<- NULL  # Los datos cargados pueden estar transformados
 datos.originales <<- NULL # Los datos cargados originales
