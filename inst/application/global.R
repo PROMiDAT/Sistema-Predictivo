@@ -38,53 +38,80 @@ cod.indices <- function(){
 
   precision.global <- (sum(diag(MC)) / sum(MC)) * 100
   error.global <- (1 - (sum(diag(MC)) / sum(MC))) * 100
-  precision.positiva <- ifelse(ncol(MC) == 2, MC[2, 2] / sum(MC[2,]),0) * 100
-  precision.negativa <- ifelse(ncol(MC) == 2, MC[1, 1] / sum(MC[1,]),0) * 100
-  falsos.positivos   <- ifelse(ncol(MC) == 2, MC[1, 2] / sum(MC[1,]),0) * 100
-  falsos.negativos   <- ifelse(ncol(MC) == 2, MC[2, 1] / sum(MC[2,]),0) * 100
-  asertividad.positiva <- ifelse(ncol(MC) == 2,  MC[2, 2] / sum(MC[,2]),0) * 100
-  asertividad.negativa <- ifelse(ncol(MC) == 2, MC[1, 1] / sum(MC[,1]),0) * 100
+  precision.clase <- diag(MC)/rowSums(MC) * 100
+  error.clase <- 100 - precision.clase
+
+  # precision.positiva <- ifelse(ncol(MC) == 2, MC[2, 2] / sum(MC[2,]),0) * 100
+  # precision.negativa <- ifelse(ncol(MC) == 2, MC[1, 1] / sum(MC[1,]),0) * 100
+  # falsos.positivos   <- ifelse(ncol(MC) == 2, MC[1, 2] / sum(MC[1,]),0) * 100
+  # falsos.negativos   <- ifelse(ncol(MC) == 2, MC[2, 1] / sum(MC[2,]),0) * 100
+  # asertividad.positiva <- ifelse(ncol(MC) == 2,  MC[2, 2] / sum(MC[,2]),0) * 100
+  # asertividad.negativa <- ifelse(ncol(MC) == 2, MC[1, 1] / sum(MC[,1]),0) * 100
 
   res <- list( precision.global = precision.global,
                error.global = error.global,
-               precision.positiva = precision.positiva,
-               precision.negativa = precision.negativa,
-               falsos.positivos = falsos.positivos,
-               falsos.negativos = falsos.negativos,
-               asertividad.positiva = asertividad.positiva,
-               asertividad.negativa = asertividad.negativa)
+               # precision.positiva = precision.positiva,
+               # precision.negativa = precision.negativa,
+               # falsos.positivos = falsos.positivos,
+               # falsos.negativos = falsos.negativos,
+               # asertividad.positiva = asertividad.positiva,
+               # asertividad.negativa = asertividad.negativa,
+               precision.clase = precision.clase,
+               error.clase = error.clase)
   return(res)
 }')
 }
 
 #Hace el grafico de la curba de roc
-plotROCInd <- function(prediccion,real,adicionar=FALSE,color="red",ylim = c(0,1.5)) {
+plotROCInd <- function(prediccion,real,adicionar=FALSE,color="red") {
   pred <- prediction(prediccion,real)
   perf <- performance(pred,"tpr","fpr")
-  plot(perf,col=color, add=adicionar, main="Curva ROC", ylim = ylim)
+  plot(perf, col=color, add=adicionar, main="Curva ROC")
   segments(0,0,1,1, col='black')
   grid()
 }
 
 plotROC <- function(sel) {
-  plot.new()
   modelos <- list("KNN" = score.knn, "SVM" = score.svm, "ÁRBOLES" = score.dt,
                   "BOSQUES" = score.rf, "ADA-BOOSTING" = score.booting)
   clase <- datos.prueba[,variable.predecir]
   col <- gg_color_hue(5)
+  nombres <- c()
+  colores <- c()
+  adicionar <- FALSE
 
-  if(is.numeric(modelos[[1]]) & "sel.knn" %in% sel)
-    plotROCInd(score.knn[,input$roc.sel],clase,T,col[1])
-  if(is.factor(modelos[[2]]) & "sel.svm" %in% sel)
-    plotROCInd(attributes(score.svm)$probabilities[,input$roc.sel],clase,T,col[2])
-  if(is.numeric(modelos[[3]]) & "sel.dt" %in% sel)
-    plotROCInd(score.dt[,input$roc.sel],clase,T,col[3])
-  if(is.numeric(modelos[[4]]) & "sel.rf" %in% sel)
-    plotROCInd(score.rf[,input$roc.sel],clase,T,col[4])
-  if(is.numeric(modelos[[5]]) & "sel.boosting" %in% sel)
-    plotROCInd(score.booting[,which(levels(clase) == input$roc.sel)],clase,T,col[5])
-  legend(x=0.88, y=0.25, legend = names(modelos), bty = "n", pch=20 ,
-          col=col , text.col = "grey", cex=1.2, pt.cex=1.5)
+  if(is.numeric(modelos[[1]]) & "sel.knn" %in% sel){
+    plotROCInd(score.knn[,input$roc.sel],clase, adicionar,col[1])
+    nombres <- c("KNN")
+    colores <- c(colores,col[1])
+    adicionar <- TRUE
+  }
+  if(is.factor(modelos[[2]]) & "sel.svm" %in% sel){
+    plotROCInd(attributes(score.svm)$probabilities[,input$roc.sel],clase,adicionar,col[2])
+    nombres <- c(nombres, "SVM")
+    colores <- c(colores,col[2])
+    adicionar <- TRUE
+  }
+  if(is.numeric(modelos[[3]]) & "sel.dt" %in% sel){
+    plotROCInd(score.dt[,input$roc.sel],clase,adicionar,col[3])
+    nombres <- c(nombres, "ÁRBOLES")
+    colores <- c(colores,col[3])
+    adicionar <- TRUE
+  }
+  if(is.numeric(modelos[[4]]) & "sel.rf" %in% sel){
+    plotROCInd(score.rf[,input$roc.sel],clase,adicionar,col[4])
+    nombres <- c(nombres, "BOSQUES")
+    colores <- c(colores,col[4])
+    adicionar <- TRUE
+  }
+  if(is.numeric(modelos[[5]]) & "sel.boosting" %in% sel){
+    plotROCInd(score.booting[,which(levels(clase) == input$roc.sel)],clase,adicionar,col[5])
+    nombres <- c(nombres, "ADA-BOOSTING")
+    colores <- c(colores,col[5])
+    adicionar <- TRUE
+  }
+  legend(x=0.88, y=0.25, legend = nombres, bty = "n", pch=20 ,
+          col = colores , text.col = "grey", cex=1.2, pt.cex=1.5)
 }
 
 #Calcula el area de la curva ROC
@@ -93,6 +120,17 @@ areaROC <- function(prediccion,real) {
   auc <- ROCR::performance(pred,"auc")
   return(attributes(auc)$y.values[[1]])
 }
+
+#Genera un gauge
+new.gauge <- function(id, val, lab){
+return(paste0("output$",id," <- renderGauge({
+        gauge(round(",val,",2),
+              min = 0, max = 100, symbol = '%',
+              label = '",lab,"',
+              gaugeSectors( success = c(0, 100)))
+      })"))
+}
+
 
 # Pagina de Cargar y Transformar Datos --------------------------------------------------------------------------------------
 
@@ -286,28 +324,28 @@ def.code.cat <- function(data = "datos", variable = "input$sel.distribucion", co
 #Hace el grafico de la distribucion numerica
 default.func.num <- function(){
   return(paste0("distribucion.numerico <<- function(var, nombre.var, color){
-                nf <- graphics::layout(mat = matrix(c(1, 2), 2, 1, byrow=TRUE),  height = c(3,1))
-                par(mar=c(3.1, 3.1, 1.1, 2.1))
-                hist(var, col = color, border=F, main = paste0('Distribución y atipicidad de la variable ', nombre.var), axes=F)
-                axis(1, col=par('bg'), col.ticks='grey81', lwd.ticks=1, tck=-0.025)
-                axis(2, col=par('bg'), col.ticks='grey81', lwd.ticks=1, tck=-0.025)
-                boxplot(var, col = color, boxcol = color, boxlty = 1, boxlwd = 3, boxwex = 1.5,
-                edcol = color, medlty = 1, medlwd = 8, medcol = color, whiskcol = color, whisklty = 3,
-                staplecol = color, staplelty = 1, staplelwd = 3, horizontal=TRUE, outline=TRUE,
-                frame=F, whisklwd = 2.5, outpch = 20, outcex = 1.5, outcol = 'red', axes=F)
+        nf <- graphics::layout(mat = matrix(c(1, 2), 2, 1, byrow=TRUE),  height = c(3,1))
+        par(mar=c(3.1, 3.1, 1.1, 2.1))
+        hist(var, col = color, border=F, main = paste0('Distribución y atipicidad de la variable ', nombre.var), axes=F)
+        axis(1, col=par('bg'), col.ticks='grey81', lwd.ticks=1, tck=-0.025)
+        axis(2, col=par('bg'), col.ticks='grey81', lwd.ticks=1, tck=-0.025)
+        boxplot(var, col = color, boxcol = color, boxlty = 1, boxlwd = 3, boxwex = 1.5,
+        edcol = color, medlty = 1, medlwd = 8, medcol = color, whiskcol = color, whisklty = 3,
+        staplecol = color, staplelty = 1, staplelwd = 3, horizontal=TRUE, outline=TRUE,
+        frame=F, whisklwd = 2.5, outpch = 20, outcex = 1.5, outcol = 'red', axes=F)
 }"))
 }
 
 #Hace el grafico de la distribucion categorica
 default.func.cat <- function(){
   return(paste0("distribucion.categorico <<- function(var, color = 'input$col.dist'){
-                colores <- sapply(c(1:length(levels(var))), function(i) rgb(sample(0:255, 1), sample(0:255, 1), sample(0:255, 1), 180, maxColorValue = 255))
-                data <- data.frame(label = levels(var), value = summary(var))
-                plot(ggplot(data, aes(label, value)) +
-                geom_bar(stat = 'identity', fill = colores) +
-                geom_text(aes(label = value, y = value), vjust = -0.5, size = 4) +
-                theme_minimal() +
-                labs(title = 'Distribución', y = 'Cantidad de casos', x = 'Categorias'))
+        colores <- sapply(c(1:length(levels(var))), function(i) rgb(sample(0:255, 1), sample(0:255, 1), sample(0:255, 1), 180, maxColorValue = 255))
+        data <- data.frame(label = levels(var), value = summary(var))
+        plot(ggplot(data, aes(label, value)) +
+        geom_bar(stat = 'identity', fill = colores) +
+        geom_text(aes(label = value, y = value), vjust = -0.5, size = 4) +
+        theme_minimal() +
+        labs(title = 'Distribución', y = 'Cantidad de casos', x = 'Categorias'))
 }"))
 }
 
@@ -338,31 +376,31 @@ dist.x.predecir <- function(data, variable, variable.predecir) {
 #Hace la grafica de proporciones segun la variable predictiva
 plot.code.dist.porc <- function(variable, nom.variable, var.predecir, nom.predecir, colores = NA, label.size = 9.5){
   return(paste0("colores <- gg_color_hue(length(unique(datos[,'",var.predecir,"'])))
-                label.size <- ",label.size," - length(unique(datos[,'",variable,"']))
-                label.size <- ifelse(label.size < 3, 3, label.size)
-                data. <- dist.x.predecir(datos, '",variable,"', '",var.predecir,"')
-                ggplot(data., aes(fct_reorder(data.[['",variable,"']], count, .desc = T), prop, fill = data.[['",var.predecir,"']])) +
-                geom_bar(stat = 'identity') +
-                geom_text(aes(label = paste0(count, ' (', scales::percent(prop), ')'), y = prop), color = 'gray90',
-                position = position_stack(vjust = .5), size = label.size) +
-                theme_minimal() +
-                theme(text = element_text(size=15)) +
-                scale_fill_manual(values = colores) +
-                scale_y_continuous(labels = scales::percent)+
-                coord_flip() +
-                labs(title = 'Distribución relativa de la variable ",nom.variable," según la ",nom.predecir,"', x = '', y = '') +
-                guides(fill = guide_legend(reverse=T)) +
-                theme(legend.position = 'top', legend.title = element_blank())
-                "))
+label.size <- ",label.size," - length(unique(datos[,'",variable,"']))
+label.size <- ifelse(label.size < 3, 3, label.size)
+data. <- dist.x.predecir(datos, '",variable,"', '",var.predecir,"')
+ggplot(data., aes(fct_reorder(data.[['",variable,"']], count, .desc = T), prop, fill = data.[['",var.predecir,"']])) +
+geom_bar(stat = 'identity') +
+geom_text(aes(label = paste0(count, ' (', scales::percent(prop), ')'), y = prop), color = 'gray90',
+position = position_stack(vjust = .5), size = label.size) +
+theme_minimal() +
+theme(text = element_text(size=15)) +
+scale_fill_manual(values = colores) +
+scale_y_continuous(labels = scales::percent)+
+coord_flip() +
+labs(title = 'Distribución relativa de la variable ",nom.variable," según la ",nom.predecir,"', x = '', y = '') +
+guides(fill = guide_legend(reverse=T)) +
+theme(legend.position = 'top', legend.title = element_blank())
+"))
 }
 
 #Grafica el pairs
 pairs.poder <- function(){
   return(paste0("vars.p <- datos[,'",variable.predecir,"']
-                col <- rainbow( length(unique(vars.p)) + 1 )
-                col <- col[2:length(col)]
-                pairs.panels(var.numericas(datos),bg = col[datos[,'",variable.predecir,"']],
-                pch= 22, main='', hist.col = gg_color_hue(1), ellipses = FALSE)"))
+col <- rainbow( length(unique(vars.p)) + 1 )
+col <- col[2:length(col)]
+pairs.panels(var.numericas(datos),bg = col[datos[,'",variable.predecir,"']],
+pch= 22, main='', hist.col = gg_color_hue(1), ellipses = FALSE)"))
 }
 
 # Pagina de KNN -------------------------------------------------------------------------------------------------------------
@@ -416,11 +454,11 @@ svm.plot <- function(variables, resto){
 # -------------------  DT ------------------------ #
 
 #Crea el modelo DT
-dt.modelo <- function(variable.pr = NULL, predictoras = ".", minsplit =  20){
-  if(all(predictoras == ""))
-    predictoras <- "."
-  predictoras <- paste0(predictoras, collapse = "+")
-  codigo <- paste0("modelo.dt <<- rpart(",variable.pr,"~",predictoras,", data = datos.aprendizaje, control = rpart.control(minsplit = ",minsplit,"))")
+dt.modelo <- function(variable.pr = NULL, minsplit =  20){
+  if(is.na(minsplit)){
+    minsplit <- 1
+  }
+  codigo <- paste0("modelo.dt <<- rpart(",variable.pr,"~., data = datos.aprendizaje, control = rpart.control(minsplit = ",minsplit,"))")
   return(codigo)
 }
 
@@ -504,66 +542,114 @@ boosting.plot.import <- function(){
 
 # -------------------  Reporte ------------------------ #
 
-def.reporte <- function(){
+ordenar.reporte <- function(lista){
+  nombres <- names(lista)
+  orden <- c("resumen")
+  orden <- c(orden, nombres[grepl("normalidad.", nombres)])
+  orden <- c(orden, nombres[grepl("dispersion.", nombres)])
+  orden <- c(orden, nombres[grepl("dya.num.", nombres)])
+  orden <- c(orden, nombres[grepl("dya.cat.", nombres)])
+  orden <- c(orden,"correlacion", "poder.cat", "poder.num",
+             "modelo.knn","pred.knn","mc.knn","mc.knn.graf","ind.knn",
+             "modelo.svm","pred.svm","mc.svm","mc.svm.graf","ind.svm",
+             "modelo.dt","pred.dt","mc.dt","mc.dt.graf","ind.dt",
+             "modelo.rf","pred.rf","mc.rf","mc.rf.graf","ind.rf",
+             "modelo.b","pred.b","mc.b","mc.b.graf","ind.b",
+             "tabla.comparativa","roc")
+  orden <- c(orden,nombres[!(nombres %in% orden)])
+  lista <- lista[orden]
+  lista <- lista[!as.logical(lapply(lista, is.null))]
+  return(lista)
+}
+
+def.reporte <- function(titulo = "Sin Titulo", nombre = "PROMiDAT", entradas){
+  codigo.usuario <- ""
+  codigo.reporte <- ordenar.reporte(codigo.reporte)
+  for (codigo in codigo.reporte) {
+    codigo.usuario <- paste0(codigo.usuario, "\n\n#### Interpretación\n\n", codigo)
+  }
   return(paste0("---
-                title: 'Untitled'
-                author: 'PROMIDAT'
-                date: ", Sys.Date(), "
-                output:
-                html_document:
-                df_print: paged
-                ---
+title: '", titulo, "'
+author: '", nombre, "'
+date: ", Sys.Date(), "
+output:
+html_document:
+df_print: paged
+---
 
-                ```{r setup, include=FALSE}
-                knitr::opts_chunk$set(echo = TRUE)
-                ```
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,  fig.height = 10, fig.width = 15, error = TRUE)
+```
 
-                # Carga de Paquetes
-                ```{r message=FALSE, warning=FALSE}
-                library(promises)
-                library(ggplot2)
-                library(FactoMineR)
-                library(factoextra)
-                library(reshape)
-                library(corrplot)
-                library(dendextend)
-                library(scatterplot3d)
-                library(stringr)
-                ```
+```{r message=FALSE, warning=FALSE}
+library(promises)
+library(ggplot2)
+library(FactoMineR)
+library(factoextra)
+library(reshape)
+library(corrplot)
+library(dendextend)
+library(scatterplot3d)
+library(stringr)
+library(caret)
+library(kknn)
+library(e1071)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(ada)
+library(xgboost)
+library(nnet)
+library(dplyr)
+library(forcats)
+library(psych)
+library(ROCR)
+```
 
-                # Funciones
+```{r}
+var.numericas <- function(data){
+if(is.null(data)) return(NULL)
+res <- base::subset(data, select = sapply(data, class) %in% c('numeric', 'integer'))
+return(res)
+}
 
-                ```{r}
-                var.numericas <- function(data){
-                if(is.null(data)) return(NULL)
-                res <- subset(data, select = sapply(data, class) %in% c('numeric', 'integer'))
-                return(res)
-                }
+var.categoricas <- function(data){
+if(is.null(data)) return(NULL)
+res <- base::subset(data, select = !sapply(data, class) %in% c('numeric', 'integer'))
+return(res)
+}
 
-                var.categoricas <- function(data){
-                if(is.null(data)) return(NULL)
-                res <- base::subset(data, select = !sapply(data, class) %in% c('numeric', 'integer'))
-                return(res)
-                }
+datos.disyuntivos <- function(data, vars){
+if(is.null(data)) return(NULL)
+cualitativas <- base::subset(data, select = colnames(data) %in% c(vars))
+data <- data[, !colnames(data) %in% vars]
+for (variable in colnames(cualitativas)) {
+for (categoria in unique(cualitativas[, variable])) {
+nueva.var <- as.numeric(cualitativas[, variable] == categoria)
+data <- cbind(data, nueva.var)
+colnames(data)[length(colnames(data))] <- paste0(variable, '.', categoria)
+}
+}
+return(data)
+}
 
-                datos.disyuntivos <- function(data, vars){
-                if(is.null(data)) return(NULL)
-                cualitativas <- base::subset(data, select = colnames(data) %in% c(vars))
-                data <- data[, !colnames(data) %in% vars]
-                for (variable in colnames(cualitativas)) {
-                for (categoria in unique(cualitativas[, variable])) {
-                nueva.var <- as.numeric(cualitativas[, variable] == categoria)
-                data <- cbind(data, nueva.var)
-                colnames(data)[length(colnames(data))] <- paste0(variable, '.', categoria)
-                }
-                }
-                return(data)
-                }
+", default.func.num(), "
 
-                ", default.func.num(), "
+", default.func.cat(), "
+```
 
-                ", default.func.cat(), "
-                ```"))
+# Carga de Datos
+```{r}
+head(datos)
+```
+# Datos de Aprendizaje
+```{r}
+head(datos.aprendizaje)
+```
+# Datos de Prueba
+```{r}
+head(datos.prueba)
+```", codigo.usuario, ""))
 }
 
 plot.MC.code <- function(cm) {
@@ -573,39 +659,31 @@ plot.MC <<- function(cm){
        plot(c(1, 600), c(-100, 500), type = 'n', xlab='', ylab='', xaxt='n', yaxt='n')
        title('Matriz de Confusión', cex.main=2)
 
-       start <- 70
+       start <- 80
        len <- 500 - start
 
-       n.class <- ncol(cm) + 2
-       names.class <- c(colnames(cm),'Precisión', 'Error')
+       n.class <- ncol(cm)
+       names.class <- colnames(cm)
        prec.cat <- diag(cm)/rowSums(cm)
        error.cat <- 1 - prec.cat
 
        ancho <- len / n.class
-       alto  <- len / (n.class-2)
+       alto  <- len / (n.class)
        x2 <- (x1 <- start) + ancho
        y2 <- (y1 <- len) - alto
 
        text(310, 485, 'Predición', cex=1.3, font=2)
        text(start-55, 250, 'Real', cex=1.3, srt=90, font=2)
 
-       for (i in 0:(n.class-3)) {
+       for (i in 0:(n.class-1)) {
        for (j in 0:(n.class-1)) {
        x1.aux <- x1 + j*(ancho + 3)
        y1.aux <- y1 - i*(alto + 5)
        x2.aux <- x2 + j*(ancho + 3)
        y2.aux <- y2 - i*(alto + 5)
-       if(j < (n.class-2)){
+       if(j < (n.class)){
        rect(x1.aux, y1.aux, x2.aux, y2.aux, col=ifelse(i==j,'#3f72af','#11999e'))
        text(mean(c(x1.aux,x2.aux)) , mean(c(y1.aux,y2.aux)), cm[(i+1),(j+1)], cex=1.3, font=2, col='white')
-       }
-       if (j == (n.class-2)){
-       rect(x1.aux, y1.aux, x2.aux, y2.aux, col= '#e4f9f5' )
-       text(mean(c(x1.aux,x2.aux)) , mean(c(y1.aux,y2.aux)), paste0(round(prec.cat[i+1] * 100,2), '%'), cex=1.3, font=2, col='black')
-       }
-       if (j == (n.class-1)){
-       rect(x1.aux, y1.aux, x2.aux, y2.aux, col= '#e4f9f5' )
-       text(mean(c(x1.aux,x2.aux)) , mean(c(y1.aux,y2.aux)), paste0(round(error.cat[i+1] * 100,2), '%'), cex=1.3, font=2, col='black')
        }
        }
        text( mean( c((x2 + i*(ancho + 3)) , (x1 + i*(ancho + 3)) )), y1 + 20, names.class[i+1], cex=1.2)
@@ -654,6 +732,10 @@ indices.knn <<- rep(0,8)
 score.knn <<- NULL
 area.knn <<- NA
 
+cod.knn.modelo <<-  NULL
+cod.knn.pred <<-  NULL
+cod.knn.mc <<- NULL
+cod.knn.ind <<- NULL
 
 # -------------------  SVM ------------------------ #
 
@@ -664,6 +746,11 @@ indices.svm <<- rep(0,8)
 score.svm <<- NULL
 area.svm <<- NA
 
+cod.svm.modelo <<-  NULL
+cod.svm.pred <<-  NULL
+cod.svm.mc <<- NULL
+cod.svm.ind <<- NULL
+
 # -------------------  DT ------------------------ #
 
 modelo.dt <<- NULL
@@ -672,6 +759,11 @@ prediccion.dt <<- NULL
 indices.dt <<- rep(0,8)
 score.dt <<- NULL
 area.dt <<- NA
+
+cod.dt.modelo <<-  NULL
+cod.dt.pred <<-  NULL
+cod.dt.mc <<- NULL
+cod.dt.ind <<- NULL
 
 # -------------------  RF ------------------------ #
 
@@ -682,6 +774,11 @@ indices.rf <<- rep(0,8)
 score.rf <<- NULL
 area.rf <<- NA
 
+cod.rf.modelo <<-  NULL
+cod.rf.pred <<-  NULL
+cod.rf.mc <<- NULL
+cod.rf.ind <<- NULL
+
 # -------------------  BOOSTING ------------------------ #
 
 modelo.boosting <<- NULL
@@ -690,4 +787,9 @@ prediccion.boosting <<- NULL
 indices.boosting <<- rep(0,8)
 score.booting <<- NULL
 area.boosting <<- NA
+
+cod.b.modelo <<-  NULL
+cod.b.pred <<-  NULL
+cod.b.mc <<- NULL
+cod.b.ind <<- NULL
 

@@ -101,7 +101,7 @@ mi.head <- tags$head(
 panel.cargar.datos <- tabPanel(title = "Cargar", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
                                checkboxInput('header', 'Encabezado (Header)', TRUE),
                                checkboxInput('rowname', 'Incluir nombre de filas', TRUE),
-                               radioButtons('sep', 'Seperador', c(Coma=',', 'Punto y Coma'=';', Tab='\t'), selected = 'Coma'),
+                               radioButtons('sep', 'Separador', c(Coma=',', 'Punto y Coma'=';', Tab='\t'), selected = 'Coma'),
                                radioButtons('dec', 'Separador Decimal', c('Punto'='.', 'Coma'=","), selected = 'Punto'),
                                switchInput(inputId = "deleteNA", onStatus = "success", offStatus = "danger", value = T, width = "100%",
                                            label = "Eliminar NA", onLabel = "SI", offLabel = "NO", labelWidth = "100%"),
@@ -118,7 +118,7 @@ panel.tansformar.datos <- tabPanel(title = "Transformar", width = 12, solidHeade
                                    hr(),
                                    aceEditor("fieldCodeTrans", mode = "r", theme = "monokai", value = "", height = "10vh",  readOnly = T))
 
-panel.segmentar.datos <- tabPanel(title = "Prueba y Aprendizaje", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
+panel.segmentar.datos <- tabPanel(title = "Configuraciones", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
                                   fluidRow(column(width = 5, numericInput("semilla", "Semilla Aleatoria:", "NULL", width = "100%")), br(),
                                            column(width = 4, switchInput(inputId = "permitir.semilla", onStatus = "success", offStatus = "danger", value = F, width = "100%",
                                                                          label = "", onLabel = "Habilitada", offLabel = "Deshabilitada", labelWidth = "100%",
@@ -351,31 +351,25 @@ plot.svm <- tabPanel(title = "Gráfico Clasificación",
                      selectizeInput("select.var.svm.plot",NULL,label = "Variables Predictoras:", multiple = T, choices = c(""),
                                     options = list(maxItems = 2, placeholder = "Seleccione la(s) variable(s) predictoras"), width = "100%"),
                      aceEditor("fieldCodeSvmPlot", mode = "r", theme = "monokai",
-                               value = "", height = "3vh", readOnly = T, autoComplete = "enabled"))
+                               value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
 panel.prediccion.svm <- tabPanel(title = "Predicción del Modelo",
                                  DT::dataTableOutput("svmPrediTable"),
                                  hr(),
                                  aceEditor("fieldCodeSvmPred", mode = "r", theme = "monokai",
-                                           value = "", height = "3vh", readOnly = T, autoComplete = "enabled"))
+                                           value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
 panel.matriz.confucion.svm <- tabPanel(title = "Matriz de Confusión",
                                        plotOutput('plot.svm.mc', height = "45vh"),
                                        verbatimTextOutput("txtSvmMC"),
                                        aceEditor("fieldCodeSvmMC", mode = "r", theme = "monokai",
-                                                 value = "", height = "3vh", readOnly = T, autoComplete = "enabled"))
+                                                 value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
 panel.indices.generales.svm <- tabPanel(title = "Índices Generales",
                                         fluidRow(column(width = 6, gaugeOutput("svmPrecGlob", width = "100%")),
                                                  column(width = 6, gaugeOutput("svmErrorGlob", width = "100%"))),
-                                        fluidRow(column(width = 2, gaugeOutput("svmPrecP", width = "100%")),
-                                                 column(width = 2, gaugeOutput("svmPrecN", width = "100%")),
-                                                 column(width = 2, gaugeOutput("svmFalP", width = "100%")),
-                                                 column(width = 2, gaugeOutput("svmFalN", width = "100%")),
-                                                 column(width = 2, gaugeOutput("svmAserP", width = "100%")),
-                                                 column(width = 2, gaugeOutput("svmAserN", width = "100%"))),
                                         aceEditor("fieldCodeSvmIG", mode = "r", theme = "monokai",
-                                                  value = "", height = "37vh", readOnly = T, autoComplete = "enabled"))
+                                                  value = "", height = "37vh", readOnly = F, autoComplete = "enabled"))
 
 opciones.svm <- dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
                                tooltip = tooltipOptions(title = "Clic para ver opciones"),
@@ -405,35 +399,29 @@ plot.dt <- tabPanel(title = "Gráfico Árbol",
                      plotOutput('plot.dt', height = "55vh"),
                      hr(),
                      aceEditor("fieldCodeDtPlot", mode = "r", theme = "monokai",
-                               value = "", height = "6vh", readOnly = T, autoComplete = "enabled"))
+                               value = "", height = "6vh", readOnly = F, autoComplete = "enabled"))
 
 panel.prediccion.dt <- tabPanel(title = "Predicción del Modelo",
                                  DT::dataTableOutput("dtPrediTable"),
                                  hr(),
                                  aceEditor("fieldCodeDtPred", mode = "r", theme = "monokai",
-                                           value = "", height = "3vh", readOnly = T, autoComplete = "enabled"))
+                                           value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
 panel.matriz.confucion.dt <- tabPanel(title = "Matriz de Confusión",
                                        plotOutput('plot.dt.mc', height = "45vh"),
                                        verbatimTextOutput("txtDtMC"),
                                        aceEditor("fieldCodeDtMC", mode = "r", theme = "monokai",
-                                                 value = "", height = "3vh", readOnly = T, autoComplete = "enabled"))
+                                                 value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
 panel.indices.generales.dt <- tabPanel(title = "Índices Generales",
                                         fluidRow(column(width = 6, gaugeOutput("dtPrecGlob", width = "100%")),
                                                  column(width = 6, gaugeOutput("dtErrorGlob", width = "100%"))),
-                                        fluidRow(column(width = 2, gaugeOutput("dtPrecP", width = "100%")),
-                                                 column(width = 2, gaugeOutput("dtPrecN", width = "100%")),
-                                                 column(width = 2, gaugeOutput("dtFalP", width = "100%")),
-                                                 column(width = 2, gaugeOutput("dtFalN", width = "100%")),
-                                                 column(width = 2, gaugeOutput("dtAserP", width = "100%")),
-                                                 column(width = 2, gaugeOutput("dtAserN", width = "100%"))),
                                         aceEditor("fieldCodeDtIG", mode = "r", theme = "monokai",
-                                                  value = "", height = "37vh", readOnly = T, autoComplete = "enabled"))
+                                                  value = "", height = "37vh", readOnly = F, autoComplete = "enabled"))
 
 opciones.dt <- dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
                                tooltip = tooltipOptions(title = "Clic para ver opciones"),
-                               numericInput("minsplit.dt", "Mínimo para dividir un nodo:", 20, width = "100%"))
+                               numericInput("minsplit.dt", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1))
 
 
 titulo.dt <- fluidRow(column(width = 12, opciones.dt))
@@ -457,35 +445,29 @@ plot.rf <- tabPanel(title = "Importancia de Variables",
                      plotOutput('plot.rf', height = "55vh"),
                      hr(),
                      aceEditor("fieldCodeRfPlot", mode = "r", theme = "monokai",
-                               value = "", height = "3vh", readOnly = T, autoComplete = "enabled"))
+                               value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
 panel.prediccion.rf <- tabPanel(title = "Predicción del Modelo",
                                 DT::dataTableOutput("rfPrediTable"),
                                 hr(),
                                 aceEditor("fieldCodeRfPred", mode = "r", theme = "monokai",
-                                          value = "", height = "3vh", readOnly = T, autoComplete = "enabled"))
+                                          value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
 panel.matriz.confucion.rf <- tabPanel(title = "Matriz de Confusión",
                                       plotOutput('plot.rf.mc', height = "45vh"),
                                       verbatimTextOutput("txtRfMC"),
                                       aceEditor("fieldCodeRfMC", mode = "r", theme = "monokai",
-                                                value = "", height = "3vh", readOnly = T, autoComplete = "enabled"))
+                                                value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
 panel.indices.generales.rf <- tabPanel(title = "Índices Generales",
                                        fluidRow(column(width = 6, gaugeOutput("rfPrecGlob", width = "100%")),
                                                 column(width = 6, gaugeOutput("rfErrorGlob", width = "100%"))),
-                                       fluidRow(column(width = 2, gaugeOutput("rfPrecP", width = "100%")),
-                                                column(width = 2, gaugeOutput("rfPrecN", width = "100%")),
-                                                column(width = 2, gaugeOutput("rfFalP", width = "100%")),
-                                                column(width = 2, gaugeOutput("rfFalN", width = "100%")),
-                                                column(width = 2, gaugeOutput("rfAserP", width = "100%")),
-                                                column(width = 2, gaugeOutput("rfAserN", width = "100%"))),
                                        aceEditor("fieldCodeRfIG", mode = "r", theme = "monokai",
-                                                 value = "", height = "37vh", readOnly = T, autoComplete = "enabled"))
+                                                 value = "", height = "37vh", readOnly = F, autoComplete = "enabled"))
 
 opciones.rf <- dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
                               tooltip = tooltipOptions(title = "Clic para ver opciones"),
-                              numericInput("ntree.rf", "Número de Áboles:", 20, width = "100%"))
+                              numericInput("ntree.rf", "Número de Áboles:", 20, width = "100%"), min = 0)
 
 
 titulo.rf <- fluidRow(column(width = 12, opciones.rf))
@@ -509,37 +491,31 @@ plot.boosting <- tabPanel(title = "Evolución del Error",
                                  plotOutput('plot.boosting', height = "55vh"),
                                  hr(),
                                  aceEditor("fieldCodeBoostingPlot", mode = "r", theme = "monokai",
-                                           value = "", height = "3vh", readOnly = T, autoComplete = "enabled"))
+                                           value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
 plot.boosting.import <- tabPanel(title = "Importancia de Variables",
                     plotOutput('plot.boosting.import', height = "55vh"),
                     hr(),
                     aceEditor("fieldCodeBoostingPlotImport", mode = "r", theme = "monokai",
-                              value = "", height = "3vh", readOnly = T, autoComplete = "enabled"))
+                              value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
 panel.prediccion.boosting <- tabPanel(title = "Predicción del Modelo",
                                  DT::dataTableOutput("boostingPrediTable"),
                                  hr(),
                                  aceEditor("fieldCodeBoostingPred", mode = "r", theme = "monokai",
-                                           value = "", height = "3vh", readOnly = T, autoComplete = "enabled"))
+                                           value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
 panel.matriz.confucion.boosting <- tabPanel(title = "Matriz de Confusión",
                                        plotOutput('plot.boosting.mc', height = "45vh"),
                                        verbatimTextOutput("txtBoostingMC"),
                                        aceEditor("fieldCodeBoostingMC", mode = "r", theme = "monokai",
-                                                 value = "", height = "3vh", readOnly = T, autoComplete = "enabled"))
+                                                 value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
 panel.indices.generales.boosting <- tabPanel(title = "Índices Generales",
                                         fluidRow(column(width = 6, gaugeOutput("boostingPrecGlob", width = "100%")),
                                                  column(width = 6, gaugeOutput("boostingErrorGlob", width = "100%"))),
-                                        fluidRow(column(width = 2, gaugeOutput("boostingPrecP", width = "100%")),
-                                                 column(width = 2, gaugeOutput("boostingPrecN", width = "100%")),
-                                                 column(width = 2, gaugeOutput("boostingFalP", width = "100%")),
-                                                 column(width = 2, gaugeOutput("boostingFalN", width = "100%")),
-                                                 column(width = 2, gaugeOutput("boostingAserP", width = "100%")),
-                                                 column(width = 2, gaugeOutput("boostingAserN", width = "100%"))),
                                         aceEditor("fieldCodeBoostingIG", mode = "r", theme = "monokai",
-                                                  value = "", height = "37vh", readOnly = T, autoComplete = "enabled"))
+                                                  value = "", height = "37vh", readOnly = F, autoComplete = "enabled"))
 
 opciones.boosting <- dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
                                tooltip = tooltipOptions(title = "Clic para ver opciones"),
@@ -576,7 +552,7 @@ panel.comparacion.tabla <- tabPanel(title = "Tabla Comparativa",
                                                        selected = c("sel.knn","sel.svm","sel.dt","sel.rf","sel.boosting")))
 
 plot.comparacion.roc <- tabPanel(title = "Curva ROC",
-                          plotOutput('plot.roc', height = "55vh"),
+                          plotOutput('plot.roc', height = "65vh"),
                           hr(),
                           checkboxGroupInput("select.models.roc", "Mostrar Modelos:",
                                              c("KNN" = "sel.knn",
@@ -600,13 +576,17 @@ pagina.comparacion <- tabItem(tabName = "comparar",
 
 panel.reporte.codigo <- column(width = 5,
                                tabBox(width = 12, id = "tabReporte",
-                                      tabPanel(title = "Reporte", width = 12),
+                                      tabPanel(title = "Reporte", width = 12,
+                                               textInput("textTitulo", value = "Sin Titulo", width = "100%", label = "Digite el Titulo:"),
+                                               textInput("textNombre", value = "PROMiDAT", width = "100%", label = "Digite su Nombre:")),
                                       tabPanel(title = "Código", width = 12, aceEditor("fieldCodeReport", mode="markdown", value=''))),
-                               downloadButton("descargar", "Descargar", style = "position: relative; left: 40%") )
+                               column(width = 8, actionButton("btnReporte", "Actualizar Reporte")),
+                               column(width = 4, downloadButton("descargar", "Descargar")))
 
 vista.previa.reporte <- column(width = 7,
-                               box(title = "Vista Previa", width = 12, height = "90vh", status = "primary", solidHeader = TRUE, collapsible = TRUE,
-                                   div(style = 'overflow-x: scroll; overflow-y: scroll; height: 80vh;', htmlOutput("knitDoc"))) )
+                               box(title = "Vista Previa", width = 12, height = "90vh", status = "primary", solidHeader = TRUE,
+                                   collapsible = TRUE, div(style = 'overflow-x: scroll; overflow-y: scroll; height: 80vh;',
+                                                           withSpinner(htmlOutput("knitDoc"), type = 7, color = "#CBB051"))))
 
 pagina.generar.reporte <- tabItem(tabName = "reporte", panel.reporte.codigo , vista.previa.reporte )
 
