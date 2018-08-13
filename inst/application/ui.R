@@ -304,25 +304,19 @@ panel.prediccion.knn <- tabPanel(title = "Predicción del Modelo",
                                  DT::dataTableOutput("knnPrediTable"),
                                  hr(),
                                  aceEditor("fieldCodeKnnPred", mode = "r", theme = "monokai",
-                                           value = "", height = "3vh", readOnly = T, autoComplete = "enabled"))
+                                           value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
 panel.matriz.confucion.knn <- tabPanel(title = "Matriz de Confusión",
                                        plotOutput('plot.knn.mc', height = "45vh"),
                                        verbatimTextOutput("txtknnMC"),
                                        aceEditor("fieldCodeKnnMC", mode = "r", theme = "monokai",
-                                                 value = "", height = "3vh", readOnly = T, autoComplete = "enabled"))
+                                                 value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
 panel.indices.generales.knn <- tabPanel(title = "Índices Generales",
                                     fluidRow(column(width = 6, gaugeOutput("knnPrecGlob", width = "100%")),
                                              column(width = 6, gaugeOutput("knnErrorGlob", width = "100%"))),
-                                    fluidRow(column(width = 2, gaugeOutput("knnPrecP", width = "100%")),
-                                             column(width = 2, gaugeOutput("knnPrecN", width = "100%")),
-                                             column(width = 2, gaugeOutput("knnFalP", width = "100%")),
-                                             column(width = 2, gaugeOutput("knnFalN", width = "100%")),
-                                             column(width = 2, gaugeOutput("knnAserP", width = "100%")),
-                                             column(width = 2, gaugeOutput("knnAserN", width = "100%"))),
                                     aceEditor("fieldCodeKnnIG", mode = "r", theme = "monokai",
-                                              value = "", height = "37vh", readOnly = T, autoComplete = "enabled"))
+                                              value = "", height = "37vh", readOnly = F, autoComplete = "enabled"))
 
 opciones.knn <- dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
                                tooltip = tooltipOptions(title = "Clic para ver opciones"),
