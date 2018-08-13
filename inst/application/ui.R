@@ -304,13 +304,13 @@ panel.prediccion.knn <- tabPanel(title = "Predicción del Modelo",
                                  DT::dataTableOutput("knnPrediTable"),
                                  hr(),
                                  aceEditor("fieldCodeKnnPred", mode = "r", theme = "monokai",
-                                           value = "", height = "3vh", readOnly = T, autoComplete = "enabled"))
+                                           value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
 panel.matriz.confucion.knn <- tabPanel(title = "Matriz de Confusión",
                                        plotOutput('plot.knn.mc', height = "45vh"),
                                        verbatimTextOutput("txtknnMC"),
                                        aceEditor("fieldCodeKnnMC", mode = "r", theme = "monokai",
-                                                 value = "", height = "3vh", readOnly = T, autoComplete = "enabled"))
+                                                 value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
 panel.indices.generales.knn <- tabPanel(title = "Índices Generales",
                                     fluidRow(column(width = 6, gaugeOutput("knnPrecGlob", width = "100%")),

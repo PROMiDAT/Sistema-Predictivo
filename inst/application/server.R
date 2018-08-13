@@ -69,15 +69,15 @@ shinyServer(function(input, output, session) {
   }
 
   #Validacion comun para todos los modelos
-  validar.datos <- function(){
+  validar.datos <- function(print = TRUE){
     #Validaciones
-    if(is.null(variable.predecir)){
+    if(is.null(variable.predecir) & print){
       showNotification("Tiene que seleccionar una variable a predecir",duration = 10, type = "error")
     }
-    if(is.null(datos)){
+    if(is.null(datos) & print){
       showNotification("Tiene que ingresar datos",duration = 10, type = "error")
     }
-    if(is.null(datos.aprendizaje)){
+    if(is.null(datos.aprendizaje) & print){
       showNotification("Tiene que crear los datos de aprendizaje y de prueba",duration = 10, type = "error")
     }
     return(!is.null(datos) & !is.null(variable.predecir) & !is.null(datos.aprendizaje))
@@ -133,6 +133,13 @@ shinyServer(function(input, output, session) {
       shinyjs::hide(paste0(id,"FalN"))
       shinyjs::hide(paste0(id,"AserP"))
       shinyjs::hide(paste0(id,"AserN"))
+    }
+  }
+
+  #Genera los gauges
+  fill.gauges <- function(ids,titulos,indices){
+    for (i in 1:length(ids)) {
+      eval(parse(text = new.gauge(ids[i],indices[[i]],titulos[i])))
     }
   }
 
@@ -423,13 +430,17 @@ shinyServer(function(input, output, session) {
       segmentar.datos(codigo)
 
       acualizar.selecctores.seg()
+      borrar.modelos(FALSE)
 
       #Cambia los codigos de los modelos
+      load.page(T)
       default.codigo.knn()
+      knn.full()
       default.codigo.svm()
       default.codigo.dt()
       deafult.codigo.rf()
       deault.codigo.boosting()
+      load.page(F)
     }else{
       showNotification("Tiene que seleccionar una variable a predecir", duration = 15, type = "error")
     }
@@ -441,7 +452,6 @@ shinyServer(function(input, output, session) {
 
     #Cambia las tablas de aprendizaje y de prueba
     actualizar.tabla(c("datos.aprendizaje", "datos.prueba"))
-    borrar.modelos(FALSE)
   })
 
   #Habilitada o deshabilitada la semilla
@@ -726,37 +736,68 @@ shinyServer(function(input, output, session) {
 
   # Pagina de KNN -----------------------------------------------------------------------------------------------------------
 
+  # Cuando se genera el modelo knn
+  observeEvent(input$runKnn,{
+    if(validar.datos()){ #Si se tiene los datos entonces :
+
+      cod.knn.modelo <<-  input$fieldCodeKnn
+      cod.knn.pred <<- input$fieldCodeKnnPred
+      cod.knn.mc <<- input$fieldCodeKnnMC
+      cod.knn.ind <<- input$fieldCodeKnnIG
+
+      load.page(T)
+      knn.full()
+      load.page(F)
+    }
+  })
+
+  #Si las opciones cambian
+  observeEvent(c(input$switch.scale.knn, input$kmax.knn,input$kernel.knn),{
+    if(validar.datos(print = FALSE)){
+      default.codigo.knn()
+      knn.full()
+    }
+  })
+
   #Acualiza el codigo a la version por defecto
   default.codigo.knn <- function(){
     #Se acualiza el codigo del modelo
-    updateAceEditor(session, "fieldCodeKnn", value = kkn.modelo(variable.pr = variable.predecir,
-                                                                scale = input$switch.scale.knn,
-                                                                kmax = input$kmax.knn,
-                                                                kernel = input$kernel.knn))
-
-    codigo.reporte["modelo.knn"] <<- NULL
-    output$txtknn <-  renderPrint(invisible(NULL))
+    codigo <-  kkn.modelo(variable.pr = variable.predecir,
+                          scale = input$switch.scale.knn,
+                          kmax = input$kmax.knn,
+                          kernel = input$kernel.knn)
+    updateAceEditor(session, "fieldCodeKnn", value = codigo)
+    codigo.reporte["modelo.knn"] <<- codigo
+    # output$txtknn <-  renderPrint(invisible(""))
+    cod.knn.modelo <<-  codigo
 
     #Se genera el codigo de la prediccion
-    updateAceEditor(session, "fieldCodeKnnPred", value = kkn.prediccion())
-    codigo.reporte["pred.knn"] <<- NULL
-    output$knnPrediTable <- DT::renderDataTable(NULL)
+    codigo <- kkn.prediccion()
+    updateAceEditor(session, "fieldCodeKnnPred", value = codigo)
+    codigo.reporte["pred.knn"] <<- codigo
+    # output$knnPrediTable <- DT::renderDataTable(NULL)
+    cod.knn.pred <<-  codigo
 
     # Se genera el codigo de la matriz
-    updateAceEditor(session, "fieldCodeKnnMC", value = knn.MC(variable.predecir))
+    codigo <- knn.MC(variable.predecir)
+    updateAceEditor(session, "fieldCodeKnnMC", value = codigo)
     codigo.reporte["mc.knn"] <<- NULL
+    cod.knn.mc <<- codigo
+
     # Se genera el codigo de la indices
-    updateAceEditor(session, "fieldCodeKnnIG", value = cod.indices())
+    codigo <- cod.indices()
+    updateAceEditor(session, "fieldCodeKnnIG", value = codigo)
     codigo.reporte["ind.knn"] <<- NULL
+    cod.knn.ind <<- codigo
   }
 
   #Limpia los datos segun el proceso donde se genera el error
   limpia.knn <- function(capa = NULL){
-    for (i in 1:capa) {
+    for (i in capa:4) {
       switch( i,
               {
                 modelo.knn <<- NULL
-                output$txtknn <-  renderPrint(invisible(NULL))
+                output$txtknn <- renderPrint(invisible(""))
                 codigo.reporte[["modelo.knn"]] <<- NULL
               },
               {
@@ -777,29 +818,20 @@ shinyServer(function(input, output, session) {
     }
   }
 
-  # Cuando se genera el modelo knn
-  observeEvent(input$runKnn,{
-    if(validar.datos()){ #Si se tiene los datos entonces :
-      load.page(T)
-      ejecutar.knn()
-      ejecutar.knn.pred()
-      ejecutar.knn.mc()
-      ejecutar.knn.ind()
-      load.page(F)
-    }
-  })
-
-  #Si las opciones cambian
-  observeEvent(c(input$switch.scale.knn, input$kmax.knn,input$kernel.knn),{
-    default.codigo.knn()
-  })
+  knn.full <- function(){
+    ejecutar.knn()
+    ejecutar.knn.pred()
+    ejecutar.knn.mc()
+    ejecutar.knn.ind()
+  }
 
   #Genera el modelo
   ejecutar.knn <- function(){
-    tryCatch({ # Se corren los codigo
-      isolate(eval(parse(text = input$fieldCodeKnn)))
-      output$txtknn <- renderPrint(print(modelo.knn))
-      codigo.reporte[["modelo.knn"]] <<- paste0("## KNN \n```{r}\n", input$fieldCodeKnn, "\nmodelo.knn\n```")
+    tryCatch({
+      eval(parse(text = cod.knn.modelo))
+      updateAceEditor(session, "fieldCodeKnn", value = cod.knn.modelo)
+      codigo.reporte[["modelo.knn"]] <<- paste0("## KNN \n```{r}\n", cod.knn.modelo, "\nmodelo.knn\n```")
+      output$txtknn <- renderPrint(modelo.knn)
     },
     error = function(e) { #Regresamos al estado inicial y mostramos un error
       limpia.knn(1)
@@ -810,12 +842,12 @@ shinyServer(function(input, output, session) {
   #Genera la prediccion
   ejecutar.knn.pred <- function(){
     tryCatch({ #Se corren los codigo
-      isolate(eval(parse(text = input$fieldCodeKnnPred)))
+      eval(parse(text = cod.knn.pred))
       score.knn <<- predict(modelo.knn, datos.prueba, type = "prob")
 
       #Cambia la tabla con la prediccion de knn
       output$knnPrediTable <- DT::renderDataTable(obj.predic(prediccion.knn))
-      codigo.reporte[["pred.knn"]] <<- paste0("## KNN \n```{r}\n", input$fieldCodeKnn, "\nmodelo.knn\n```")
+      codigo.reporte[["pred.knn"]] <<- paste0("\n```{r}\n", cod.knn.pred, "\nprediccion.knn\n```")
     },
     error = function(e) { #Regresamos al estado inicial y mostramos un error
       limpia.knn(2)
@@ -826,11 +858,12 @@ shinyServer(function(input, output, session) {
   #Genera la matriz de confusion
   ejecutar.knn.mc <- function(){
     tryCatch({ #Se corren los codigo
-      isolate(eval(parse(text = input$fieldCodeKnnMC)))
+      eval(parse(text = cod.knn.mc))
       output$txtknnMC <- renderPrint(print(MC.knn))
 
-      isolate(eval(parse(text = plot.MC.code())))
+      eval(parse(text = plot.MC.code()))
       output$plot.knn.mc <- renderPlot(isolate(eval(parse(text = "plot.MC(MC.knn)" ))))
+      codigo.reporte[["mc.knn"]] <<- paste0("\n```{r}\n", cod.knn.mc, "\nMC.knn\n```")
     },
     error = function(e) { #Regresamos al estado inicial y mostramos un error
       limpia.knn(3)
@@ -841,72 +874,17 @@ shinyServer(function(input, output, session) {
   #Genera los indices
   ejecutar.knn.ind <- function(){
     tryCatch({ #Se corren los codigo
-      isolate(eval(parse(text = input$fieldCodeKnnIG)))
+      isolate(eval(parse(text = cod.knn.ind)))
 
       indices.knn <<- indices.generales(MC.knn)
       indices.g("knn",MC.knn)
 
-      output$knnPrecGlob <- renderGauge({
-        gauge(round(indices.knn[[1]],2),
-              min = 0, max = 100, symbol = '%',
-              label = "Precisión Global",
-              gaugeSectors(success = c(0, 100)))
-      })
+      codigo.reporte[["ind.knn"]] <<- paste0("\n```{r}\n", cod.knn.ind, "\nindices.knn\n```")
 
-      output$knnErrorGlob <- renderGauge({
-        gauge(round(indices.knn[[2]],2),
-              min = 0, max = 100, symbol = '%',
-              label = "Error Global",
-              gaugeSectors( danger = c(0, 100)))
-      })
+      nombres <- c("knnPrecGlob","knnErrorGlob")
+      titulos <- c("Precisión Global","Error Global")
 
-      output$knnPrecP <- renderGauge({
-        gauge(round(indices.knn[[3]],2) ,
-              min = 0, max = 100, symbol = '%',
-              label = "Precisión Positiva",
-              gaugeSectors(success = c(0, 100)))
-      })
-
-      output$knnPrecN <- renderGauge({
-        gauge(round(indices.knn[[4]],2), min = 0, max = 100,
-              symbol = '%',
-              label = "Precisión Negativa",
-              gaugeSectors(success = c(70, 100),
-                           warning = c(50, 69),
-                           danger = c(0, 49)))
-      })
-
-      output$knnFalP <- renderGauge({
-        gauge(round(indices.knn[[5]],2), min = 0, max = 100, symbol = '%',
-              label = "Falsos Positivos",
-              gaugeSectors( success = c(0, 30),
-                            warning = c(31, 45),
-                            danger = c(46, 100)))
-      })
-
-      output$knnFalN <- renderGauge({
-        gauge(round(indices.knn[[6]],2), min = 0, max = 100, symbol = '%',
-              label = "Falsos Negativos",
-              gaugeSectors( success = c(0, 30),
-                            warning = c(31, 45),
-                            danger = c(46, 100)))
-      })
-
-      output$knnAserP <- renderGauge({
-        gauge(round(indices.knn[[7]],2), min = 0, max = 100, symbol = '%',
-              label = "Asertividad Positiva",
-              gaugeSectors(success = c(70, 100),
-                           warning = c(50, 69),
-                           danger = c(0, 49)))
-      })
-
-      output$knnAserN <- renderGauge({
-        gauge(round(indices.knn[[8]],2), min = 0, max = 100, symbol = '%',
-              label = "Asertividad Negativa",
-              gaugeSectors(success = c(70, 100),
-                           warning = c(50, 69),
-                           danger = c(0, 49)))
-      })
+      fill.gauges(nombres,titulos,indices.knn)
 
     },
     error = function(e) { #Regresamos al estado inicial y mostramos un error
