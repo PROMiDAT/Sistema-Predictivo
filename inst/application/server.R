@@ -119,34 +119,11 @@ shinyServer(function(input, output, session) {
   # Mostar o ocultar los indices
   indices.g <- function(id = "knn", mc = NA) {
     if (!is.null(mc)) {
-      if (ncol(mc) > 2) {
-        shinyjs::show(paste0(id, "PrecGlob"))
-        shinyjs::show(paste0(id, "ErrorGlob"))
-        shinyjs::hide(paste0(id, "PrecP"))
-        shinyjs::hide(paste0(id, "PrecN"))
-        shinyjs::hide(paste0(id, "FalP"))
-        shinyjs::hide(paste0(id, "FalN"))
-        shinyjs::hide(paste0(id, "AserP"))
-        shinyjs::hide(paste0(id, "AserN"))
-      } else {
-        shinyjs::show(paste0(id, "PrecGlob"))
-        shinyjs::show(paste0(id, "ErrorGlob"))
-        shinyjs::show(paste0(id, "PrecP"))
-        shinyjs::show(paste0(id, "PrecN"))
-        shinyjs::show(paste0(id, "FalP"))
-        shinyjs::show(paste0(id, "FalN"))
-        shinyjs::show(paste0(id, "AserP"))
-        shinyjs::show(paste0(id, "AserN"))
-      }
+      shinyjs::show(paste0(id, "PrecGlob"))
+      shinyjs::show(paste0(id, "ErrorGlob"))
     } else {
       shinyjs::hide(paste0(id, "PrecGlob"))
       shinyjs::hide(paste0(id, "ErrorGlob"))
-      shinyjs::hide(paste0(id, "PrecP"))
-      shinyjs::hide(paste0(id, "PrecN"))
-      shinyjs::hide(paste0(id, "FalP"))
-      shinyjs::hide(paste0(id, "FalN"))
-      shinyjs::hide(paste0(id, "AserP"))
-      shinyjs::hide(paste0(id, "AserN"))
     }
   }
 
@@ -179,8 +156,7 @@ shinyServer(function(input, output, session) {
 
   updatePlot <- reactiveValues(
     calc.normal = default.calc.normal(), normal = NULL, disp = NULL,
-    cor = NULL, dya.num = NULL, dya.cat = NULL, poder.cat = NULL,
-    cod.modelo.knn = NULL
+    cor = NULL, dya.num = NULL, dya.cat = NULL,poder.pred = NULL, poder.cat = NULL, poder.num = NULL
   )
 
   # Pagina de Cargar y Transformar Datos ------------------------------------------------------------------------------------
@@ -442,6 +418,7 @@ shinyServer(function(input, output, session) {
     cat.sin.pred <- colnames.empty(var.categoricas(datos))
     cat.sin.pred <- cat.sin.pred[cat.sin.pred != input$sel.predic.var]
     updateSelectInput(session, "sel.distribucion.poder", choices = cat.sin.pred)
+    updateAceEditor(session, "fieldCodePoderPred", value = plot.code.poder.pred(variable.predecir))
   }
 
   # Segmenta los datos en aprendizaje y prueba
@@ -461,7 +438,7 @@ shinyServer(function(input, output, session) {
 
       # Cambia los codigos de los modelos
       load.page(T)
-      default.codigo.knn()
+      default.codigo.knn(k.def = TRUE)
       knn.full()
       default.codigo.svm()
       svm.full()
@@ -702,6 +679,29 @@ shinyServer(function(input, output, session) {
 
   # Pagina de Poder Predictivo ----------------------------------------------------------------------------------------------
 
+  # # Hace el grafico de poder predictivo categorico
+  # observeEvent(input$segmentButton, {
+  #   output$plot.pred.poder <- renderPlot({
+  #     tryCatch({
+  #       cod.poder<<- updatePlot$poder.pred
+  #       res <- isolate(eval(parse(text = cod.poder)))
+  #       updateAceEditor(session, "fieldCodePoderPred", value = cod.poder)
+  #       codigo.reporte[["poder.pred"]] <<- paste0("## Distribución Variable Discriminante \n```{r}\n", cod.poder, "\n```")
+  #       return(res)
+  #     }, error = function(e) {
+  #       output$plot.pred.poder <- renderPlot(NULL)
+  #       showNotification(paste0("Error en Poder Predictivo: ", e),
+  #                        duration = 10,
+  #                        type = "error")
+  #     })
+  #   })
+  # })
+  #
+  # # Ejecuta el codigo del grafico
+  # observeEvent(input$run.code.poder.pred, {
+  #   updatePlot$poder.pred <- input$fieldCodePoderPred
+  # })
+
   # Hace el grafico de poder predictivo categorico
   observeEvent(input$segmentButton, {
     output$plot.dist.poder <- renderPlot({
@@ -710,7 +710,7 @@ shinyServer(function(input, output, session) {
         res <- isolate(eval(parse(text = cod.poder.cat)))
         updateAceEditor(session, "fieldCodePoderCat", value = cod.poder.cat)
         if (ncol(var.categoricas(datos)) > 1) {
-          codigo.reporte[["poder.cat"]] <<- paste0("## Poder Predictivo Variables Categóricas \n```{r}\n", cod.poder.cat, "\n```")
+          codigo.reporte[[paste0("poder.cat.",input$sel.distribucion.poder)]] <<- paste0("## Distribución Según Variable Discriminante \n```{r}\n", cod.poder.cat, "\n```")
         }
         return(res)
       }, error = function(e) {
@@ -797,34 +797,37 @@ shinyServer(function(input, output, session) {
   })
 
   # Acualiza el codigo a la version por defecto
-  default.codigo.knn <- function() {
+  default.codigo.knn <- function(k.def = FALSE) {
+    if(!is.null(datos.aprendizaje)){
+      k.value <- ifelse(k.def, round(sqrt(nrow(datos.aprendizaje))), input$kmax.knn)
+      updateNumericInput(session,"kmax.knn",value = k.value)
+    }else{
+      k.value <- input$kmax.knn
+    }
+
     # Se acualiza el codigo del modelo
     codigo <- kkn.modelo(
       variable.pr = variable.predecir,
       scale = input$switch.scale.knn,
-      kmax = input$kmax.knn,
+      kmax = k.value,
       kernel = input$kernel.knn
     )
     updateAceEditor(session, "fieldCodeKnn", value = codigo)
-    codigo.reporte["modelo.knn"] <<- codigo
     cod.knn.modelo <<- codigo
 
     # Se genera el codigo de la prediccion
     codigo <- kkn.prediccion()
     updateAceEditor(session, "fieldCodeKnnPred", value = codigo)
-    codigo.reporte["pred.knn"] <<- codigo
     cod.knn.pred <<- codigo
 
     # Se genera el codigo de la matriz
     codigo <- knn.MC(variable.predecir)
     updateAceEditor(session, "fieldCodeKnnMC", value = codigo)
-    codigo.reporte["mc.knn"] <<- codigo
     cod.knn.mc <<- codigo
 
     # Se genera el codigo de la indices
     codigo <- cod.indices()
     updateAceEditor(session, "fieldCodeKnnIG", value = codigo)
-    codigo.reporte["ind.knn"] <<- codigo
     cod.knn.ind <<- codigo
   }
 
@@ -846,6 +849,7 @@ shinyServer(function(input, output, session) {
         output$txtknnMC <- renderPrint(invisible(NULL))
       }, {
         indices.knn <<- rep(0, 10)
+        codigo.reporte[["ind.knn"]] <<- NULL
       })
     }
   }
@@ -881,7 +885,8 @@ shinyServer(function(input, output, session) {
 
       # Cambia la tabla con la prediccion de knn
       output$knnPrediTable <- DT::renderDataTable(obj.predic(prediccion.knn))
-      codigo.reporte[["pred.knn"]] <<- paste0("## Predicción del Modelo KNN\n```{r}\n", cod.knn.pred, "\nprediccion.knn\n```")
+      codigo.reporte[["pred.knn"]] <<- paste0("## Predicción del Modelo KNN\n```{r}\n", cod.knn.pred,
+                                              "\ndt.to.data.frame.predict(obj.predic(prediccion.knn))\n```")
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.knn(2)
@@ -898,8 +903,8 @@ shinyServer(function(input, output, session) {
 
       eval(parse(text = plot.MC.code()))
       output$plot.knn.mc <- renderPlot(isolate(eval(parse(text = "plot.MC(MC.knn)"))))
-      codigo.reporte[["mc.knn"]] <<- paste0("## Matriz de confusión del Modelo KNN\n```{r}\n", cod.knn.mc, "\nMC.knn\n```")
-      codigo.reporte[["mc.knn.graf"]] <<- paste0("\n```{r}\nplot.MC(MC.knn)\n```")
+      codigo.reporte[["mc.knn"]] <<- paste0("## Matriz de confusión del Modelo KNN\n```{r}\n", cod.knn.mc,
+                                            "\nMC.knn\n```\n```{r}\nplot.MC(MC.knn)\n```")
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.knn(3)
@@ -916,12 +921,20 @@ shinyServer(function(input, output, session) {
       indices.knn <<- indices.generales(MC.knn)
       indices.g("knn", MC.knn)
 
-      codigo.reporte[["ind.knn"]] <<- paste0("\n```{r}\n", cod.knn.ind, "\nindices.knn\n```")
+      codigo.reporte[["ind.knn"]] <<- paste0("## Índices Generales \n```{r}\n", cod.knn.ind, "\nindices.knn\n```")
 
       nombres <- c("knnPrecGlob", "knnErrorGlob")
       titulos <- c("Precisión Global", "Error Global")
 
       fill.gauges(nombres, titulos, indices.knn)
+
+      # Cambia la tabla con la indices de knn
+      output$knnIndPrecTable <- shiny::renderTable(xtable(indices.prec.table(indices.knn,"KNN")),
+                                                  bordered = T, width = "100%", align = "c", digits = 2)
+
+      output$knnIndErrTable <- shiny::renderTable(xtable(indices.error.table(indices.knn,"KNN")),
+                                                  bordered = T, width = "100%", align = "c", digits = 2)
+
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.knn(4)
@@ -965,7 +978,6 @@ shinyServer(function(input, output, session) {
       kernel = input$kernel.svm
     )
     updateAceEditor(session, "fieldCodeSvm", value = codigo)
-    codigo.reporte["modelo.svm"] <<- codigo
     cod.svm.modelo <<- codigo
 
     # Acutaliza el codigo del grafico de clasificacion svm
@@ -974,19 +986,16 @@ shinyServer(function(input, output, session) {
     # Se genera el codigo de la prediccion
     codigo <- svm.prediccion()
     updateAceEditor(session, "fieldCodeSvmPred", value = codigo)
-    codigo.reporte["pred.svm"] <<- codigo
     cod.svm.pred <<- codigo
 
     # Se genera el codigo de la matriz
     codigo <- svm.MC(variable.predecir)
     updateAceEditor(session, "fieldCodeSvmMC", value = codigo)
-    codigo.reporte["mc.svm"] <<- codigo
     cod.svm.mc <<- codigo
 
     # Se genera el codigo de la indices
     codigo <- cod.indices()
     updateAceEditor(session, "fieldCodeSvmIG", value = codigo)
-    codigo.reporte["ind.svm"] <<- codigo
     cod.svm.ind <<- codigo
   }
 
@@ -996,8 +1005,9 @@ shinyServer(function(input, output, session) {
       switch(i, {
         modelo.svm <<- NULL
         output$txtSvm <- renderPrint(invisible(""))
-        # output$plot.svm <- renderPlot(NULL)
+        #output$plot.svm <- renderPlot(NULL)
         codigo.reporte[["modelo.svm"]] <<- NULL
+        codigo.reporte[grepl("svm.plot.", names(codigo.reporte))] <<- NULL
       }, {
         prediccion.svm <<- NULL
         codigo.reporte[["pred.svm"]] <<- NULL
@@ -1009,6 +1019,7 @@ shinyServer(function(input, output, session) {
         output$plot.svm.mc <- renderPlot(NULL)
       }, {
         indices.svm <<- rep(0, 10)
+        codigo.reporte["ind.svm"] <<- NULL
       })
     }
   }
@@ -1027,7 +1038,7 @@ shinyServer(function(input, output, session) {
       isolate(eval(parse(text = cod.svm.modelo)))
       output$txtSvm <- renderPrint(print(modelo.svm))
       updateAceEditor(session, "fieldCodeSvm", value = cod.svm.modelo)
-      codigo.reporte[["modelo.svm"]] <<- paste0("## Generación del modelo SVM \n```{r}\n", cod.svm.modelo, "\nmodelo.svm\n```")
+      codigo.reporte[["modelo.svm"]] <<- paste0("## Generación del modelo SVM\n```{r}\n", cod.svm.modelo, "\nmodelo.svm\n```")
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.svm(1)
@@ -1051,7 +1062,8 @@ shinyServer(function(input, output, session) {
 
       # Cambia la tabla con la prediccion de knn
       output$svmPrediTable <- DT::renderDataTable(obj.predic(prediccion.svm))
-      codigo.reporte[["pred.svm"]] <<- paste0("## Predicción del Modelo SVM\n```{r}\n", cod.knn.pred, "\nprediccion.svm\n```")
+      codigo.reporte[["pred.svm"]] <<- paste0("## Predicción del Modelo SVM\n```{r}\n", cod.knn.pred,
+                                              "\ndt.to.data.frame.predict(obj.predic(prediccion.svm))\n```")
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.svm(2)
@@ -1067,8 +1079,8 @@ shinyServer(function(input, output, session) {
       output$txtSvmMC <- renderPrint(print(MC.svm))
       isolate(eval(parse(text = plot.MC.code())))
       output$plot.svm.mc <- renderPlot(isolate(eval(parse(text = "plot.MC(MC.svm)"))))
-      codigo.reporte[["mc.svm"]] <<- paste0("\n```{r}\n", cod.svm.mc, "\nMC.svm\n```")
-      codigo.reporte[["mc.svm.graf"]] <<- paste0("\n```{r}\nplot.MC(MC.svm)\n```")
+      codigo.reporte[["mc.svm"]] <<- paste0("## Matriz de Confusión del Modelo SVM\n```{r}\n", cod.svm.mc,
+                                            "\nMC.svm\n```\n```{r}\nplot.MC(MC.svm)\n```")
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.svm(3)
@@ -1084,12 +1096,19 @@ shinyServer(function(input, output, session) {
       indices.svm <<- indices.generales(MC.svm)
       indices.g("svm", MC.svm)
 
-      codigo.reporte[["ind.svm"]] <<- paste0("\n```{r}\n", cod.svm.ind, "\nindices.svm\n```")
+      codigo.reporte[["ind.svm"]] <<- paste0("## Índices Generales \n```{r}\n", cod.svm.ind, "\nindices.svm\n```")
 
       nombres <- c("svmPrecGlob", "svmErrorGlob")
       titulos <- c("Precisión Global", "Error Global")
 
       fill.gauges(nombres, titulos, indices.svm)
+
+      # Cambia la tabla con la indices de svm
+      output$svmIndPrecTable <- shiny::renderTable(xtable(indices.prec.table(indices.svm,"SVM")),
+                                                   bordered = T, width = "100%", align = "c", digits = 2)
+
+      output$svmIndErrTable <- shiny::renderTable(xtable(indices.error.table(indices.svm,"SVM")),
+                                                  bordered = T, width = "100%", align = "c", digits = 2)
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.knn(4)
@@ -1108,15 +1127,14 @@ shinyServer(function(input, output, session) {
         v <- input$select.var.svm.plot
       }
       updateAceEditor(session, "fieldCodeSvmPlot", value = svm.plot(input$select.var.svm.plot, v))
+      codigo.reporte[[paste0("svm.plot.",paste0(input$select.var.svm.plot, collapse = "."))]] <<- paste0("\n```{r}\n", svm.plot(input$select.var.svm.plot,v), "\n```")
       return(eval(parse(text = input$fieldCodeSvmPlot)))
     } else {
       updateAceEditor(session, "fieldCodeSvmPlot", value = "")
       return(NULL)
     }
   })
-  output$plot.svm <- renderPlot({
-    svm.graf()
-  })
+  output$plot.svm <- renderPlot(svm.graf())
 
   # PAGINA DE DT ------------------------------------------------------------------------------------------------------------
 
@@ -1152,7 +1170,6 @@ shinyServer(function(input, output, session) {
                         minsplit = input$minsplit.dt)
     updateAceEditor(session, "fieldCodeDt", value = codigo)
     cod.dt.modelo <<- codigo
-    codigo.reporte[["modelo.dt"]] <<- codigo
 
     # Cambia el codigo del grafico del árbol
     updateAceEditor(session, "fieldCodeDtPlot", value = dt.plot())
@@ -1161,19 +1178,29 @@ shinyServer(function(input, output, session) {
     codigo <- dt.prediccion()
     updateAceEditor(session, "fieldCodeDtPred", value = codigo)
     cod.dt.pred <<- codigo
-    codigo.reporte[["pred.dt"]] <<- codigo
 
     # Se genera el codigo de la matriz
     codigo <- dt.MC(variable.predecir)
     updateAceEditor(session, "fieldCodeDtMC", value = codigo)
     cod.dt.mc <<- codigo
-    codigo.reporte[["mc.dt"]] <<- codigo
 
     # Se genera el codigo de la indices
     codigo <- cod.indices()
     updateAceEditor(session, "fieldCodeDtIG", value = codigo)
     cod.dt.ind <<- codigo
-    codigo.reporte[["ind.dt"]] <<- codigo
+  }
+
+  #Plotear el arbol
+  plotear.arbol <- function(){
+    tryCatch({
+      output$plot.dt <- renderPlot(isolate(eval(parse(text = input$fieldCodeDtPlot))))
+      cod <- ifelse(input$fieldCodeDtPlot == "", dt.plot(), input$fieldCodeDtPlot)
+      codigo.reporte[["modelo.dt.graf"]] <<- paste0("\n```{r}\n", cod, "\n```")
+    },
+    error = function(e){
+      output$plot.dt <- renderPlot(NULL)
+      codigo.reporte[["modelo.dt.graf"]] <<- NULL
+    })
   }
 
   # Limpia los datos segun el proceso donde se genera el error
@@ -1184,6 +1211,7 @@ shinyServer(function(input, output, session) {
         output$txtDt <- renderPrint(invisible(""))
         output$plot.dt <- renderPlot(NULL)
         codigo.reporte[["modelo.dt"]] <<- NULL
+        codigo.reporte[["modelo.dt.graf"]] <<- NULL
       }, {
         prediccion.dt <<- NULL
         codigo.reporte[["pred.dt"]] <<- NULL
@@ -1195,6 +1223,7 @@ shinyServer(function(input, output, session) {
         output$txtDtMC <- renderPrint(invisible(NULL))
       }, {
         indices.dt <<- rep(0, 10)
+        codigo.reporte[["ind.dt"]] <<- NULL
       })
     }
   }
@@ -1212,8 +1241,8 @@ shinyServer(function(input, output, session) {
     tryCatch({ # Se corren los codigo
       isolate(eval(parse(text = cod.dt.modelo)))
       output$txtDt <- renderPrint(print(modelo.dt))
-      output$plot.dt <- renderPlot(isolate(eval(parse(text = input$fieldCodeDtPlot))))
       codigo.reporte[["modelo.dt"]] <<- paste0("## Generación del modelo Árboles de Decisión\n```{r}\n", cod.dt.modelo, "\nmodelo.dt\n```")
+      plotear.arbol()
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.dt(1)
@@ -1229,7 +1258,8 @@ shinyServer(function(input, output, session) {
       score.dt <<- predict(modelo.dt, datos.prueba, type = "prob")
       # Cambia la tabla con la prediccion de dt
       output$dtPrediTable <- DT::renderDataTable(obj.predic(prediccion.dt))
-      codigo.reporte[["pred.dt"]] <<- paste0("## Predicción del Modelo Árboles de Decisión\n```{r}\n", cod.dt.pred, "\nprediccion.svm\n```")
+      codigo.reporte[["pred.dt"]] <<- paste0("## Predicción del Modelo Árboles de Decisión\n```{r}\n", cod.dt.pred,
+                                             "\ndt.to.data.frame.predict(obj.predic(prediccion.dt))\n```")
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.dt(2)
@@ -1245,8 +1275,8 @@ shinyServer(function(input, output, session) {
       output$txtDtMC <- renderPrint(print(MC.dt))
       isolate(eval(parse(text = plot.MC.code())))
       output$plot.dt.mc <- renderPlot(isolate(eval(parse(text = "plot.MC(MC.dt)"))))
-      codigo.reporte[["mc.dt"]] <<- paste0("\n```{r}\n", cod.dt.mc, "\nMC.dt\n```")
-      codigo.reporte[["mc.dt.graf"]] <<- paste0("\n```{r}\nplot.MC(MC.dt)\n```")
+      codigo.reporte[["mc.dt"]] <<- paste0("## Matriz de Confusión del Modelo Árboles de Decisión\n```{r}\n", cod.dt.mc,
+                                           "\nMC.dt\n```\n```{r}\nplot.MC(MC.dt)\n```")
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.dt(3)
@@ -1262,12 +1292,19 @@ shinyServer(function(input, output, session) {
       indices.dt <<- indices.generales(MC.dt)
       indices.g("dt", MC.dt)
 
-      codigo.reporte[["ind.dt"]] <<- paste0("\n```{r}\n", cod.dt.ind, "\nindices.dt\n```")
+      codigo.reporte[["ind.dt"]] <<- paste0("## Índices Generales \n```{r}\n", cod.dt.ind, "\nindices.dt\n```")
 
       nombres <- c("dtPrecGlob", "dtErrorGlob")
       titulos <- c("Precisión Global", "Error Global")
 
       fill.gauges(nombres, titulos, indices.dt)
+
+      # Cambia la tabla con la indices de dt
+      output$dtIndPrecTable <- shiny::renderTable(xtable(indices.prec.table(indices.dt,"Árboles de Decisión")),
+                                                   bordered = T, width = "100%", align = "c", digits = 2)
+
+      output$dtIndErrTable <- shiny::renderTable(xtable(indices.error.table(indices.dt,"Árboles de Decisión")),
+                                                  bordered = T, width = "100%", align = "c", digits = 2)
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.dt(4)
@@ -1312,13 +1349,11 @@ shinyServer(function(input, output, session) {
     )
     updateAceEditor(session, "fieldCodeRf", value = codigo)
     cod.rf.modelo <<- codigo
-    codigo.reporte[["modelo.rf"]] <<- codigo
 
     # Se genera el codigo de la prediccion
     codigo <- rf.prediccion(variable.predecir)
     updateAceEditor(session, "fieldCodeRfPred", value = codigo)
     cod.rf.pred <<- codigo
-    codigo.reporte[["pred.rf"]] <<- codigo
 
     # Cambia el codigo del grafico de rf
     updateAceEditor(session, "fieldCodeRfPlot", value = rf.plot())
@@ -1327,13 +1362,11 @@ shinyServer(function(input, output, session) {
     codigo <- rf.MC(variable.predecir)
     updateAceEditor(session, "fieldCodeRfMC", value = codigo)
     cod.rf.mc <<- codigo
-    codigo.reporte[["mc.rf"]] <<- codigo
 
     # Se genera el codigo de la indices
     codigo <- cod.indices()
     updateAceEditor(session, "fieldCodeRfIG", value = codigo)
     cod.rf.ind <<- codigo
-    codigo.reporte[["ind.rf"]] <<- codigo
   }
 
   # Limpia los datos segun el proceso donde se genera el error
@@ -1343,6 +1376,7 @@ shinyServer(function(input, output, session) {
         modelo.rf <<- NULL
         output$txtRf <- renderPrint(invisible(""))
         codigo.reporte[["modelo.rf"]] <<- NULL
+        codigo.reporte[["modelo.rf.graf"]] <<- NULL
       }, {
         prediccion.rf <<- NULL
         codigo.reporte[["pred.rf"]] <<- NULL
@@ -1354,8 +1388,21 @@ shinyServer(function(input, output, session) {
         output$txtRfMC <- renderPrint(invisible(NULL))
       }, {
         indices.rf <<- rep(0, 10)
+        codigo.reporte[["ind.rf"]] <<- NULL
       })
     }
+  }
+
+  # Grafico de importancia
+  plotear.rf.imp <- function() {
+    tryCatch({
+      output$plot.rf <- renderPlot(isolate(eval(parse(text = input$fieldCodeRfPlot))))
+      cod <- ifelse(input$fieldCodeRfPlot == "", rf.plot(), input$fieldCodeRfPlot)
+      codigo.reporte[["modelo.rf.graf"]] <<- paste0("## Importancia de las Variables\n```{r}\n", cod , "\n```")
+    }, error = function(e) {
+      output$plot.rf <- renderPlot(NULL)
+      codigo.reporte[["modelo.rf.graf"]] <<- NULL
+    })
   }
 
   # Ejecuta el modelo, prediccion, mc e indices de rf
@@ -1371,8 +1418,8 @@ shinyServer(function(input, output, session) {
     tryCatch({ # Se corren los codigo
       isolate(eval(parse(text = cod.rf.modelo)))
       output$txtRf <- renderPrint(print(modelo.rf))
-      output$plot.rf <- renderPlot(isolate(eval(parse(text = input$fieldCodeRfPlot))))
-      codigo.reporte[["modelo.rf"]] <<- paste0("## Generación del modelo Bosques Aleatorios\n```{r}\n", cod.rf.modelo, "\nmodelo.rf\n```")
+      codigo.reporte[["modelo.rf"]] <<- paste0("## Generación del Modelo Bosques Aleatorios\n```{r}\n", cod.rf.modelo, "\nmodelo.rf\n```")
+      plotear.rf.imp()
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.rf(1)
@@ -1388,7 +1435,8 @@ shinyServer(function(input, output, session) {
       score.rf <<- predict(modelo.rf, datos.prueba[, -which(colnames(datos.prueba) == variable.predecir)], type = "prob")
       # Cambia la tabla con la prediccion de rf
       output$rfPrediTable <- DT::renderDataTable(obj.predic(prediccion.rf))
-      codigo.reporte[["pred.rf"]] <<- paste0("## Predicción del Modelo Bosques Aleatorios\n```{r}\n", cod.rf.pred, "\nprediccion.rf\n```")
+      codigo.reporte[["pred.rf"]] <<- paste0("## Predicción del Modelo Bosques Aleatorios\n```{r}\n", cod.rf.pred,
+                                             "\ndt.to.data.frame.predict(obj.predic(prediccion.rf))\n```")
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.rf(2)
@@ -1404,8 +1452,8 @@ shinyServer(function(input, output, session) {
       output$txtRfMC <- renderPrint(print(MC.rf))
       isolate(eval(parse(text = plot.MC.code())))
       output$plot.rf.mc <- renderPlot(isolate(eval(parse(text = "plot.MC(MC.rf)"))))
-      codigo.reporte[["mc.rf"]] <<- paste0("\n```{r}\n", cod.rf.mc, "\nMC.rf\n```")
-      codigo.reporte[["mc.rf.graf"]] <<- paste0("\n```{r}\nplot.MC(MC.rf)\n```")
+      codigo.reporte[["mc.rf"]] <<- paste0("## Matriz de Confusión del Modelo Bosques Aleatorios\n```{r}\n", cod.rf.mc,
+                                           "\nMC.rf\n```\n```{r}\nplot.MC(MC.rf)\n```")
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.rf(3)
@@ -1421,12 +1469,20 @@ shinyServer(function(input, output, session) {
       indices.rf <<- indices.generales(MC.rf)
       indices.g("rf", MC.rf)
 
-      codigo.reporte[["ind.rf"]] <<- paste0("\n```{r}\n", cod.rf.ind, "\nindices.rf\n```")
+      codigo.reporte[["ind.rf"]] <<- paste0("## Índices Generales\n```{r}\n", cod.rf.ind, "\nindices.rf\n```")
 
       nombres <- c("rfPrecGlob", "rfErrorGlob")
       titulos <- c("Precisión Global", "Error Global")
 
       fill.gauges(nombres, titulos, indices.rf)
+
+      # Cambia la tabla con la indices de rf
+      output$rfIndPrecTable <- shiny::renderTable(xtable(indices.prec.table(indices.rf,"Bosques Aleatorios")),
+                                                  bordered = T, width = "100%", align = "c", digits = 2)
+
+      output$rfIndErrTable <- shiny::renderTable(xtable(indices.error.table(indices.rf,"Bosques Aleatorios")),
+                                                 bordered = T, width = "100%", align = "c", digits = 2)
+
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.rf(4)
@@ -1479,13 +1535,11 @@ shinyServer(function(input, output, session) {
     )
     updateAceEditor(session, "fieldCodeBoosting", value = codigo)
     cod.b.modelo <<- codigo
-    codigo.reporte[["modelo.b"]] <<- codigo
 
     # Se genera el codigo de la prediccion
     codigo <- boosting.prediccion(variable.predecir)
     updateAceEditor(session, "fieldCodeBoostingPred", value = codigo)
     cod.b.pred <<- codigo
-    codigo.reporte[["pred.b"]] <<- codigo
 
     # Cambia el codigo del grafico del modelo
     updateAceEditor(session, "fieldCodeBoostingPlot", value = boosting.plot())
@@ -1497,13 +1551,11 @@ shinyServer(function(input, output, session) {
     codigo <- boosting.MC(variable.predecir)
     updateAceEditor(session, "fieldCodeBoostingMC", value = codigo)
     cod.b.mc <<- codigo
-    codigo.reporte[["mc.b"]] <<- codigo
 
     # Se genera el codigo de la indices
     codigo <- cod.indices()
     updateAceEditor(session, "fieldCodeBoostingIG", value = codigo)
     cod.b.ind <<- codigo
-    codigo.reporte[["ind.b"]] <<- codigo
   }
 
   # Limpia los datos segun el proceso donde se genera el error
@@ -1515,6 +1567,8 @@ shinyServer(function(input, output, session) {
         output$plot.boosting <- renderPlot(NULL)
         output$plot.boosting.import <- renderPlot(NULL)
         codigo.reporte[["modelo.b"]] <<- NULL
+        codigo.reporte[["modelo.b.error"]] <<- NULL
+        codigo.reporte[["modelo.b.imp"]] <<- NULL
       }, {
         prediccion.boosting <<- NULL
         codigo.reporte[["pred.b"]] <<- NULL
@@ -1526,6 +1580,7 @@ shinyServer(function(input, output, session) {
         output$txtBoostingMC <- renderPrint(invisible(NULL))
       }, {
         indices.boosting <<- rep(0, 4)
+        codigo.reporte[["ind.b"]] <<- NULL
       })
     }
   }
@@ -1544,8 +1599,11 @@ shinyServer(function(input, output, session) {
   plotear.boosting <- function() {
     tryCatch({
       output$plot.boosting <- renderPlot(isolate(eval(parse(text = input$fieldCodeBoostingPlot))))
+      cod <- ifelse(input$fieldCodeBoostingPlot == "",boosting.plot(),input$fieldCodeBoostingPlot)
+      codigo.reporte[["modelo.b.error"]] <<- paste0("## Evolución del Error\n```{r}\n", cod, "\n```")
     }, error = function(e) {
       output$plot.boosting <- renderPlot(NULL)
+      codigo.reporte[["modelo.b.error"]] <<- NULL
     })
   }
 
@@ -1553,8 +1611,11 @@ shinyServer(function(input, output, session) {
   plotear.boosting.imp <- function() {
     tryCatch({
       output$plot.boosting.import <- renderPlot(isolate(eval(parse(text = input$fieldCodeBoostingPlotImport))))
+      cod <- ifelse(input$fieldCodeBoostingPlotImport == "",boosting.plot.import(),input$fieldCodeBoostingPlotImport)
+      codigo.reporte[["modelo.b.imp"]] <<- paste0("## Importancia de las Variables \n```{r}\n", cod , "\n```")
     }, error = function(e) {
       output$plot.boosting.import <- renderPlot(NULL)
+      codigo.reporte[["modelo.b.imp"]] <<- NULL
     })
   }
 
@@ -1565,7 +1626,7 @@ shinyServer(function(input, output, session) {
       output$txtBoosting <- renderPrint(print(modelo.boosting))
       plotear.boosting()
       plotear.boosting.imp()
-      codigo.reporte[["modelo.b"]] <<- paste0("## Generación del modelo ADA-BOOSTING\n```{r}\n", cod.b.modelo, "\nmodelo.boosting\n```")
+      codigo.reporte[["modelo.b"]] <<- paste0("## Generación del Modelo ADA-BOOSTING\n```{r}\n", cod.b.modelo, "\nmodelo.boosting\n```")
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.boosting(1)
@@ -1581,7 +1642,8 @@ shinyServer(function(input, output, session) {
       score.booting <<- predict(modelo.boosting, datos.prueba[, -which(colnames(datos.prueba) == variable.predecir)], type = "prob")
       # Cambia la tabla con la prediccion de boosting
       output$boostingPrediTable <- DT::renderDataTable(obj.predic(prediccion.boosting))
-      codigo.reporte[["pred.b"]] <<- paste0("## Predicción del Modelo ADA-BOOSTING\n```{r}\n", cod.b.pred, "\nprediccion.boosting\n```")
+      codigo.reporte[["pred.b"]] <<- paste0("## Predicción del Modelo ADA-BOOSTING\n```{r}\n", cod.b.pred,
+                                            "\ndt.to.data.frame.predict(obj.predic(prediccion.boosting))\n```")
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.boosting(2)
@@ -1597,8 +1659,8 @@ shinyServer(function(input, output, session) {
       output$txtBoostingMC <- renderPrint(print(MC.boosting))
       isolate(eval(parse(text = plot.MC.code())))
       output$plot.boosting.mc <- renderPlot(isolate(eval(parse(text = "plot.MC(MC.boosting)"))))
-      codigo.reporte[["mc.b"]] <<- paste0("\n```{r}\n", cod.b.mc, "\nMC.boosting\n```")
-      codigo.reporte[["mc.b.graf"]] <<- paste0("\n```{r}\nplot.MC(MC.boosting)\n```")
+      codigo.reporte[["mc.b"]] <<- paste0("## Matriz de Confusión del Modelo ADA-BOOSTING\n```{r}\n", cod.b.mc,
+                                          "\nMC.boosting\n```\n\n```{r}\nplot.MC(MC.boosting)\n```")
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.boosting(3)
@@ -1614,12 +1676,19 @@ shinyServer(function(input, output, session) {
       indices.boosting <<- indices.generales(MC.boosting)
       indices.g("boosting", MC.boosting)
 
-      codigo.reporte[["ind.b"]] <<- paste0("\n```{r}\n", cod.b.ind, "\nMC.boosting\n```")
+      codigo.reporte[["ind.b"]] <<- paste0("## Índices Generales\n```{r}\n", cod.b.ind, "\nMC.boosting\n```")
 
       nombres <- c("boostingPrecGlob", "boostingErrorGlob")
       titulos <- c("Precisión Global", "Error Global")
 
       fill.gauges(nombres, titulos, indices.boosting)
+
+      # Cambia la tabla con la indices de boosting
+      output$boostingIndPrecTable <- shiny::renderTable(xtable(indices.prec.table(indices.boosting,"ADA-BOOSTING")),
+                                                  bordered = T, width = "100%", align = "c", digits = 2)
+
+      output$boostingIndErrTable <- shiny::renderTable(xtable(indices.error.table(indices.boosting,"ADA-BOOSTING")),
+                                                 bordered = T, width = "100%", align = "c", digits = 2)
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.boosting(4)
@@ -1628,7 +1697,7 @@ shinyServer(function(input, output, session) {
     )
   }
 
-  # Tabala Comparativa ------------------------------------------------------------------------------------------------------
+  # TABLA COMPARATIVA -------------------------------------------------------------------------------------------------------
 
   tabla.comparativa <- function() {
     tryCatch({
@@ -1656,7 +1725,6 @@ shinyServer(function(input, output, session) {
         }
       }
       colnames(df) <- c("Modelo", "Precisión Global", names.class, "Área de ROC")
-      df[,2:ncol(df)] <- apply(df[,2:ncol(df)], 2, as.numeric)
       return(df)
     }, error = function() {
       return(data.frame())
@@ -1685,7 +1753,7 @@ shinyServer(function(input, output, session) {
   }
 
   observeEvent(c(input$select.models.roc, input$roc.sel), {
-    if (!is.null(datos.prueba)) {
+    if (!is.null(datos.prueba) & length(levels(datos[,variable.predecir])) == 2 ) {
       calcular.areas()
       output$plot.roc <- renderPlot(plotROC(input$select.models.roc))
       codigo.reporte[["roc"]] <<- paste0("## Curva ROC \n```{r}\nplotROC(input$select.models.roc)\n```")
@@ -1700,7 +1768,8 @@ shinyServer(function(input, output, session) {
       calcular.areas()
       output$TablaComp <- DT::renderDataTable(DT::datatable(tabla.comparativa(),
         selection = "none",
-        editable = FALSE, extensions = c("Responsive"),
+        editable = FALSE,
+        extensions = c("Responsive"),
         options = list(
           dom = "frtip",
           pageLength = 10,
@@ -1754,4 +1823,5 @@ shinyServer(function(input, output, session) {
     rm(envir = .GlobalEnv, list = ls(envir = .GlobalEnv))
     stopApp()
   })
+
 })

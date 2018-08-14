@@ -29,6 +29,16 @@ var.categoricas <- function(data){
   return(res)
 }
 
+#Genera un gauge
+new.gauge <- function(id, val, lab){
+  return(paste0("output$",id," <- renderGauge({
+                gauge(round(",val,",2),
+                min = 0, max = 100, symbol = '%',
+                label = '",lab,"',
+                gaugeSectors( success = c(0, 100)))
+})"))
+}
+
 #Codigo del calculo de los indices
 cod.indices <- function(){
   return('indices.generales <- function(MC) {
@@ -62,75 +72,75 @@ cod.indices <- function(){
 }')
 }
 
-#Hace el grafico de la curba de roc
-plotROCInd <- function(prediccion,real,adicionar=FALSE,color="red") {
-  pred <- prediction(prediccion,real)
-  perf <- performance(pred,"tpr","fpr")
-  plot(perf, col=color, add=adicionar, main="Curva ROC")
-  segments(0,0,1,1, col='black')
-  grid()
+#Convierte una tabla de prediccion html a data.frame
+dt.to.data.frame.predict <- function(datos){
+  datos <- datos$x$data
+  datos[,3] <- ifelse(datos[,1] == datos[,2], rep("Acertó",nrow(datos)), rep("Falló",nrow(datos)))
+  return(datos)
 }
 
-plotROC <- function(sel) {
-  modelos <- list("KNN" = score.knn, "SVM" = score.svm, "ÁRBOLES" = score.dt,
-                  "BOSQUES" = score.rf, "ADA-BOOSTING" = score.booting)
-  clase <- datos.prueba[,variable.predecir]
-  col <- gg_color_hue(5)
-  nombres <- c()
-  colores <- c()
-  adicionar <- FALSE
-
-  if(is.numeric(modelos[[1]]) & "sel.knn" %in% sel){
-    plotROCInd(score.knn[,input$roc.sel],clase, adicionar,col[1])
-    nombres <- c("KNN")
-    colores <- c(colores,col[1])
-    adicionar <- TRUE
-  }
-  if(is.factor(modelos[[2]]) & "sel.svm" %in% sel){
-    plotROCInd(attributes(score.svm)$probabilities[,input$roc.sel],clase,adicionar,col[2])
-    nombres <- c(nombres, "SVM")
-    colores <- c(colores,col[2])
-    adicionar <- TRUE
-  }
-  if(is.numeric(modelos[[3]]) & "sel.dt" %in% sel){
-    plotROCInd(score.dt[,input$roc.sel],clase,adicionar,col[3])
-    nombres <- c(nombres, "ÁRBOLES")
-    colores <- c(colores,col[3])
-    adicionar <- TRUE
-  }
-  if(is.numeric(modelos[[4]]) & "sel.rf" %in% sel){
-    plotROCInd(score.rf[,input$roc.sel],clase,adicionar,col[4])
-    nombres <- c(nombres, "BOSQUES")
-    colores <- c(colores,col[4])
-    adicionar <- TRUE
-  }
-  if(is.numeric(modelos[[5]]) & "sel.boosting" %in% sel){
-    plotROCInd(score.booting[,which(levels(clase) == input$roc.sel)],clase,adicionar,col[5])
-    nombres <- c(nombres, "ADA-BOOSTING")
-    colores <- c(colores,col[5])
-    adicionar <- TRUE
-  }
-  legend(x=0.88, y=0.25, legend = nombres, bty = "n", pch=20 ,
-          col = colores , text.col = "grey", cex=1.2, pt.cex=1.5)
+#Crea la tabla de errores que se grafica en los indices de todos los modelos
+indices.error.table <- function(indices, nombre = ""){
+  err <- rbind(indices[[4]])
+  colnames(err) <- paste0(c("Error."), colnames(err))
+  row.names(err) <- nombre
+  return(err)
 }
 
-#Calcula el area de la curva ROC
-areaROC <- function(prediccion,real) {
-  pred <- ROCR::prediction(prediccion,real)
-  auc <- ROCR::performance(pred,"auc")
-  return(attributes(auc)$y.values[[1]])
+#Crea la tabla de precisiones que se grafica en los indices de todos los modelos
+indices.prec.table <- function(indices, nombre = ""){
+  prec <- rbind(indices[[3]])
+  colnames(prec) <- paste0(c("Precisión."),colnames(prec))
+  row.names(prec) <- nombre
+  return(prec)
 }
 
-#Genera un gauge
-new.gauge <- function(id, val, lab){
-return(paste0("output$",id," <- renderGauge({
-        gauge(round(",val,",2),
-              min = 0, max = 100, symbol = '%',
-              label = '",lab,"',
-              gaugeSectors( success = c(0, 100)))
-      })"))
-}
+# Hace el grafico de la matriz de confusion
+plot.MC.code <- function(cm) {
+  return("
+         plot.MC <<- function(cm) {
+         par(mar = c(2, 2, 2, 2))
+         plot(c(1, 600), c(-100, 500), type = 'n', xlab = '', ylab = '', xaxt = 'n', yaxt = 'n')
+         title('Matriz de Confusión', cex.main = 2)
 
+         start <- 80
+         len <- 500 - start
+
+         n.class <- ncol(cm)
+         names.class <- colnames(cm)
+         prec.cat <- diag(cm) / rowSums(cm)
+         error.cat <- 1 - prec.cat
+
+         ancho <- len / n.class
+         alto <- len / (n.class)
+         x2 <- (x1 <- start) + ancho
+         y2 <- (y1 <- len) - alto
+
+         text(310, 485, 'Predición', cex = 1.3, font = 2)
+         text(start - 55, 250, 'Real', cex = 1.3, srt = 90, font = 2)
+
+         for (i in 0:(n.class - 1)) {
+         for (j in 0:(n.class - 1)) {
+         x1.aux <- x1 + j * (ancho + 3)
+         y1.aux <- y1 - i * (alto + 5)
+         x2.aux <- x2 + j * (ancho + 3)
+         y2.aux <- y2 - i * (alto + 5)
+         if (j < (n.class)) {
+         rect(x1.aux, y1.aux, x2.aux, y2.aux, col = ifelse(i == j, '#3f72af', '#11999e'))
+         text(mean(c(x1.aux, x2.aux)),
+         mean(c(y1.aux, y2.aux)),
+         paste0(cm[(i + 1), (j + 1)],'(',round(cm[(i + 1), (j + 1)]/sum(cm[(i + 1),]),2) * 100,'%)'),
+         cex = 1.3, font = 2, col = 'white')
+         }
+         }
+         text(mean(c((x2 + i * (ancho + 3)), (x1 + i * (ancho + 3)))), y1 + 20, names.class[i + 1], cex = 1.2)
+         text(x1 - 20, mean(c((y1 - i * (alto + 5)), (y2 - i * (alto + 5)))), names.class[i + 1], cex = 1.2)
+         }
+         text(mean(c((x2 + (i + 1) * (ancho + 3)), (x1 + (i + 1) * (ancho + 3)))), y1 + 20, names.class[i + 2], cex = 1.2)
+         text(mean(c((x2 + (i + 2) * (ancho + 3)), (x1 + (i + 2) * (ancho + 3)))), y1 + 20, names.class[i + 3], cex = 1.2)
+         text(mean(c((x2 + (i + 3) * (ancho + 3)), (x1 + (i + 3) * (ancho + 3)))), y1 + 20, names.class[i + 4], cex = 1.2)
+         }")
+}
 
 # Pagina de Cargar y Transformar Datos --------------------------------------------------------------------------------------
 
@@ -207,7 +217,6 @@ particion.code <- function(data = "datos", p = "0.5", variable = NULL, semilla =
 datos.prueba <<- datos[-particion,]\ndatos.aprendizaje <<- datos[particion,]"))
 }
 
-
 # Pagina de Resumen ---------------------------------------------------------------------------------------------------------
 
 #Resumen Completo
@@ -262,7 +271,6 @@ resumen.categorico <- function(data, variable){
   }
   return(salida)
 }
-
 
 # Pagina del Test de Normalidad ---------------------------------------------------------------------------------------------
 
@@ -394,6 +402,26 @@ theme(legend.position = 'top', legend.title = element_blank())
 "))
 }
 
+plot.code.poder.pred <- function(var.predecir, colores = NA, label.size = 9.5){
+  return(paste0("colores <- gg_color_hue(length(unique(datos[,'",var.predecir,"'])))
+label.size <- ",label.size," - length(unique(datos[,'",var.predecir,"']))
+label.size <- ifelse(label.size < 3, 3, label.size)
+data. <- dist.x.predecir(datos, '",var.predecir,"','",var.predecir,"')
+ggplot(data., aes(x='', y=prop, fill= data.[['",var.predecir,"']]))+
+geom_bar(width = 1, stat = 'identity')+
+geom_text(aes(label = paste0(count, ' (', scales::percent(prop), ')'), y = prop ), color = 'gray90',
+position = position_stack(vjust = .5), size = label.size)+
+theme_minimal() +
+theme(text = element_text(size=15)) +
+scale_fill_manual(values = colores) +
+scale_y_continuous(labels = scales::percent)+
+coord_flip()+
+labs(title = 'Distribución relativa de la variable ",var.predecir,"', x = '', y = '') +
+guides(fill = guide_legend(reverse=T)) +
+theme(legend.position = 'top', legend.title = element_blank())
+"))
+}
+
 #Grafica el pairs
 pairs.poder <- function(){
   return(paste0("vars.p <- datos[,'",variable.predecir,"']
@@ -420,7 +448,7 @@ knn.MC <- function(variable.p){
   return(paste0("MC.knn <<- table(datos.prueba$",variable.p,", prediccion.knn)"))
 }
 
-# -------------------  SVM ------------------------ #
+# Pagina de SVM -------------------------------------------------------------------------------------------------------------
 
 #Crea el modelo SVM
 svm.modelo <- function(variable.pr = NULL, scale = TRUE, kernel = "linear"){
@@ -451,7 +479,7 @@ svm.plot <- function(variables, resto){
 }
 
 
-# -------------------  DT ------------------------ #
+# Pagina de DT --------------------------------------------------------------------------------------------------------------
 
 #Crea el modelo DT
 dt.modelo <- function(variable.pr = NULL, minsplit =  20){
@@ -475,12 +503,12 @@ dt.MC <- function(variable.p){
 #Codigo del grafico de dt
 dt.plot <- function(){
   num <- length(levels(datos[,variable.predecir]))
-  return(paste0("prp(modelo.dt, type = 2, extra = 104, nn = T, varlen = 0, faclen = 0,
+  return(paste0("prp(modelo.dt, type = 2, extra = 108, nn = T, varlen = 0, faclen = 0,
 fallen.leaves = TRUE, branch.lty = 6, shadow.col = 'gray82',
 box.col = gg_color_hue(",num,")[modelo.dt$frame$yval])"))
 }
 
-# -------------------  RF ------------------------ #
+# Pagina de RF --------------------------------------------------------------------------------------------------------------
 
 #Crea el modelo RF
 rf.modelo <- function(variable.pr = NULL, predictoras = ".", ntree = 500){
@@ -507,7 +535,7 @@ rf.plot <- function(){
   return(paste0("varImpPlot(modelo.rf)"))
 }
 
-# -------------------  BOOSTING ------------------------ #
+# Pagina de BOOSTING --------------------------------------------------------------------------------------------------------
 
 #Crea el modelo BOOSTING
 boosting.modelo <- function(variable.pr = NULL, predictoras = ".", iter = 50, nu = 1, type = "discrete"){
@@ -540,36 +568,102 @@ boosting.plot.import <- function(){
   return(paste0("varplot(modelo.boosting)"))
 }
 
-# -------------------  Reporte ------------------------ #
+# Pagina de TABLA COMPARATIVA -----------------------------------------------------------------------------------------------
 
+#Hace el grafico de una curba de roc
+plotROCInd <- function(prediccion,real,adicionar=FALSE,color="red") {
+  pred <- prediction(prediccion,real)
+  perf <- performance(pred,"tpr","fpr")
+  plot(perf, col=color, add=adicionar, main="Curva ROC")
+  segments(0,0,1,1, col='black')
+  grid()
+}
+
+#Hace el grafico de la curba de roc de los modelos
+plotROC <- function(sel) {
+  modelos <- list("KNN" = score.knn, "SVM" = score.svm, "ÁRBOLES" = score.dt,
+                  "BOSQUES" = score.rf, "ADA-BOOSTING" = score.booting)
+  clase <- datos.prueba[,variable.predecir]
+  col <- gg_color_hue(5)
+  nombres <- c()
+  colores <- c()
+  adicionar <- FALSE
+
+  if(is.numeric(modelos[[1]]) & "sel.knn" %in% sel){
+    plotROCInd(score.knn[,input$roc.sel],clase, adicionar,col[1])
+    nombres <- c("KNN")
+    colores <- c(colores,col[1])
+    adicionar <- TRUE
+  }
+  if(is.factor(modelos[[2]]) & "sel.svm" %in% sel){
+    plotROCInd(attributes(score.svm)$probabilities[,input$roc.sel],clase,adicionar,col[2])
+    nombres <- c(nombres, "SVM")
+    colores <- c(colores,col[2])
+    adicionar <- TRUE
+  }
+  if(is.numeric(modelos[[3]]) & "sel.dt" %in% sel){
+    plotROCInd(score.dt[,input$roc.sel],clase,adicionar,col[3])
+    nombres <- c(nombres, "ÁRBOLES")
+    colores <- c(colores,col[3])
+    adicionar <- TRUE
+  }
+  if(is.numeric(modelos[[4]]) & "sel.rf" %in% sel){
+    plotROCInd(score.rf[,input$roc.sel],clase,adicionar,col[4])
+    nombres <- c(nombres, "BOSQUES")
+    colores <- c(colores,col[4])
+    adicionar <- TRUE
+  }
+  if(is.numeric(modelos[[5]]) & "sel.boosting" %in% sel){
+    plotROCInd(score.booting[,which(levels(clase) == input$roc.sel)],clase,adicionar,col[5])
+    nombres <- c(nombres, "ADA-BOOSTING")
+    colores <- c(colores,col[5])
+    adicionar <- TRUE
+  }
+  legend(x=0.88, y=0.25, legend = nombres, bty = "n", pch=20 ,
+         col = colores , text.col = "grey", cex=1.2, pt.cex=1.5)
+}
+
+#Calcula el area de la curva ROC
+areaROC <- function(prediccion,real) {
+  pred <- ROCR::prediction(prediccion,real)
+  auc <- ROCR::performance(pred,"auc")
+  return(attributes(auc)$y.values[[1]])
+}
+
+# Pagina de REPORTE ---------------------------------------------------------------------------------------------------------
+
+#Ordena el reporte
 ordenar.reporte <- function(lista){
   nombres <- names(lista)
-  orden <- c("resumen")
-  orden <- c(orden, nombres[grepl("normalidad.", nombres)])
-  orden <- c(orden, nombres[grepl("dispersion.", nombres)])
-  orden <- c(orden, nombres[grepl("dya.num.", nombres)])
-  orden <- c(orden, nombres[grepl("dya.cat.", nombres)])
-  orden <- c(orden,"correlacion", "poder.cat", "poder.num",
-             "modelo.knn","pred.knn","mc.knn","mc.knn.graf","ind.knn",
-             "modelo.svm","pred.svm","mc.svm","mc.svm.graf","ind.svm",
-             "modelo.dt","pred.dt","mc.dt","mc.dt.graf","ind.dt",
-             "modelo.rf","pred.rf","mc.rf","mc.rf.graf","ind.rf",
-             "modelo.b","pred.b","mc.b","mc.b.graf","ind.b",
-             "tabla.comparativa","roc")
-  orden <- c(orden,nombres[!(nombres %in% orden)])
+  orden <- c("resumen", nombres[grepl("normalidad.", nombres)],
+             nombres[grepl("dispersion.", nombres)],
+             nombres[grepl("dya.num.", nombres)],
+             nombres[grepl("dya.cat.", nombres)],
+             "correlacion", nombres[grepl("poder.cat.", nombres)],
+             "poder.num", "modelo.knn","pred.knn",
+             "mc.knn","ind.knn", "modelo.svm",
+             nombres[grepl("svm.plot.", nombres)],
+             "pred.svm","mc.svm","ind.svm",
+             "modelo.dt","modelo.dt.graf","pred.dt",
+             "mc.dt","ind.dt","modelo.rf","modelo.rf.graf",
+             "pred.rf","mc.rf","ind.rf","modelo.b",
+             "modelo.b.error","modelo.b.imp","pred.b",
+             "mc.b","ind.b", "tabla.comparativa", "roc")
+  orden <- c(orden, nombres[!(nombres %in% orden)])
   lista <- lista[orden]
   lista <- lista[!as.logical(lapply(lista, is.null))]
   return(lista)
 }
 
+#Crea el codigo del reporte rmd
 def.reporte <- function(titulo = "Sin Titulo", nombre = "PROMiDAT", entradas){
   codigo.usuario <- ""
   codigo.reporte <- ordenar.reporte(codigo.reporte)
   for (codigo in codigo.reporte) {
     codigo.usuario <- paste0(codigo.usuario, "\n\n#### Interpretación\n\n", codigo)
   }
-  return(paste0("---
-title: '", titulo, "'
+  return(
+paste0("---\ntitle: '", titulo, "'
 author: '", nombre, "'
 date: ", Sys.Date(), "
 output:
@@ -605,7 +699,6 @@ library(forcats)
 library(psych)
 library(ROCR)
 ```
-
 ```{r}
 var.numericas <- function(data){
 if(is.null(data)) return(NULL)
@@ -652,66 +745,18 @@ head(datos.prueba)
 ```", codigo.usuario, ""))
 }
 
-plot.MC.code <- function(cm) {
-return("
-plot.MC <<- function(cm){
-  par(mar=c(2,2,2,2))
-       plot(c(1, 600), c(-100, 500), type = 'n', xlab='', ylab='', xaxt='n', yaxt='n')
-       title('Matriz de Confusión', cex.main=2)
+# VARIABLES GLOBALES --------------------------------------------------------------------------------------------------------
 
-       start <- 80
-       len <- 500 - start
-
-       n.class <- ncol(cm)
-       names.class <- colnames(cm)
-       prec.cat <- diag(cm)/rowSums(cm)
-       error.cat <- 1 - prec.cat
-
-       ancho <- len / n.class
-       alto  <- len / (n.class)
-       x2 <- (x1 <- start) + ancho
-       y2 <- (y1 <- len) - alto
-
-       text(310, 485, 'Predición', cex=1.3, font=2)
-       text(start-55, 250, 'Real', cex=1.3, srt=90, font=2)
-
-       for (i in 0:(n.class-1)) {
-       for (j in 0:(n.class-1)) {
-       x1.aux <- x1 + j*(ancho + 3)
-       y1.aux <- y1 - i*(alto + 5)
-       x2.aux <- x2 + j*(ancho + 3)
-       y2.aux <- y2 - i*(alto + 5)
-       if(j < (n.class)){
-       rect(x1.aux, y1.aux, x2.aux, y2.aux, col=ifelse(i==j,'#3f72af','#11999e'))
-       text(mean(c(x1.aux,x2.aux)) , mean(c(y1.aux,y2.aux)), cm[(i+1),(j+1)], cex=1.3, font=2, col='white')
-       }
-       }
-       text( mean( c((x2 + i*(ancho + 3)) , (x1 + i*(ancho + 3)) )), y1 + 20, names.class[i+1], cex=1.2)
-       text( x1-20,mean(c((y1 - i*(alto + 5)) , (y2 - i*(alto + 5))  )), names.class[i+1], cex=1.2)
-       }
-       text( mean( c((x2 + (i+1)*(ancho + 3)) , (x1 + (i+1)*(ancho + 3)) )), y1 + 20, names.class[i+2], cex=1.2)
-       text( mean( c((x2 + (i+2)*(ancho + 3)) , (x1 + (i+2)*(ancho + 3)) )), y1 + 20, names.class[i+3], cex=1.2)
-       text( mean( c((x2 + (i+3)*(ancho + 3)) , (x1 + (i+3)*(ancho + 3)) )), y1 + 20, names.class[i+4], cex=1.2)
-}")
-}
-
-###########################################################################################################################
-##### VARIABLES GLOBALES
-###########################################################################################################################
-
-# -------------------  Datos ------------------------ #
+# -------------------  Datos
 codigo.reporte <<- list()
-
-
-datos <<- NULL  # Los datos cargados pueden estar transformados
-datos.originales <<- NULL # Los datos cargados originales
+datos <<- NULL
+datos.originales <<- NULL
 datos.prueba <<- NULL
 datos.aprendizaje <<- NULL
 variable.predecir <<- NULL
-
 contador <<- 0
 
-# -------------------  Estadisticas Basicas ------------------------ #
+# -------------------  Estadisticas Basicas
 
 
 correlacion <<- NULL
@@ -723,7 +768,7 @@ cod.dya.num <- def.code.num()
 cod.poder.cat <- NULL
 cod.poder.num <- NULL
 
-# -------------------  KNN ------------------------ #
+# -------------------  KNN
 
 modelo.knn <<- NULL
 MC.knn <<- NULL
@@ -737,7 +782,7 @@ cod.knn.pred <<-  NULL
 cod.knn.mc <<- NULL
 cod.knn.ind <<- NULL
 
-# -------------------  SVM ------------------------ #
+# -------------------  SVM
 
 modelo.svm <<- NULL
 MC.svm <<- NULL
@@ -751,7 +796,7 @@ cod.svm.pred <<-  NULL
 cod.svm.mc <<- NULL
 cod.svm.ind <<- NULL
 
-# -------------------  DT ------------------------ #
+# -------------------  DT
 
 modelo.dt <<- NULL
 MC.dt <<- NULL
@@ -765,7 +810,7 @@ cod.dt.pred <<-  NULL
 cod.dt.mc <<- NULL
 cod.dt.ind <<- NULL
 
-# -------------------  RF ------------------------ #
+# -------------------  RF
 
 modelo.rf <<- NULL
 MC.rf <<- NULL
@@ -779,7 +824,7 @@ cod.rf.pred <<-  NULL
 cod.rf.mc <<- NULL
 cod.rf.ind <<- NULL
 
-# -------------------  BOOSTING ------------------------ #
+# -------------------  BOOSTING
 
 modelo.boosting <<- NULL
 MC.boosting <<- NULL

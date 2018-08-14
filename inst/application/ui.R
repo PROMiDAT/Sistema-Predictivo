@@ -33,7 +33,7 @@ library(dplyr)
 library(forcats)
 library(psych)
 library(ROCR)
-
+library(xtable)
 
 #  FUNCIONES --------------------------------------------------------------------------------------------------------------
 
@@ -145,7 +145,7 @@ pagina.cargar.datos <- tabItem(tabName = "cargar",
                                fluidRow(column(width = 5, tabBox(id ="tabs", title = NULL, width = 12, panel.cargar.datos, panel.tansformar.datos, panel.segmentar.datos)),
                                column(width = 7, muestra.datos)),
                                conditionalPanel(
-                                 condition = "input.tabs == 'Prueba y Aprendizaje'",
+                                 condition = "input.tabs == 'Configuraciones'",
                                  fluidRow(column(width = 6, muestra.datos.aprend ),
                                           column(width = 6, muestra.datos.prueba ))) )
 
@@ -241,7 +241,7 @@ pagina.correlaciones <- tabItem(tabName = "correlacion",
                                                           tab.correlacion,
                                                           tab.codigo.correlaciones)))
 
-#PAGINA DE DISTRIBUCIONES -------------------------------------------------------------------------------------------------
+# PAGINA DE DISTRIBUCIONES -------------------------------------------------------------------------------------------------
 
 boton.codigo.distribuciones <- dropdownButton(h4("Código"),
                                               h5("Grafico de la Distribución (Numéricas)"),
@@ -282,7 +282,11 @@ pagina.distribuciones <- tabItem(tabName = "distribucion",
 
 # PAGINA DE PODER PREDICTIVO ----------------------------------------------------------------------------------------------
 
-plot.dist.poder <- tabPanel(title = 'Variables Categóricas',
+plot.pred.poder <- tabPanel(title = 'Distribución Variable Discriminante',
+                            plotOutput('plot.pred.poder', height = "55vh"),
+                            campo.codigo(runid = "run.code.poder.pred", fieldid = "fieldCodePoderPred", height = "16vh"))
+
+plot.dist.poder <- tabPanel(title = 'Distribución Según Variable Discriminante',
                             plotOutput('plot.dist.poder', height = "55vh"),
                             selectInput(inputId = "sel.distribucion.poder", label = NULL, choices =  "", width = "100%"),
                             campo.codigo(runid = "run.code.poder.cat", fieldid = "fieldCodePoderCat", height = "16vh"))
@@ -292,7 +296,7 @@ plot.pairs.poder <- tabPanel(title = 'Variables Numéricas',
                              campo.codigo(runid = "run.code.poder.num", fieldid = "fieldCodePoderNum", height = "16vh"))
 
 
-pagina.poder <- tabItem(tabName = "poderPred", column(width = 12, tabBox(width = 12, plot.dist.poder, plot.pairs.poder)) )
+pagina.poder <- tabItem(tabName = "poderPred", column(width = 12, tabBox(width = 12, plot.pred.poder, plot.dist.poder, plot.pairs.poder)) )
 
 # PAGINA DE KNN -----------------------------------------------------------------------------------------------------------
 
@@ -315,6 +319,8 @@ panel.matriz.confucion.knn <- tabPanel(title = "Matriz de Confusión",
 panel.indices.generales.knn <- tabPanel(title = "Índices Generales",
                                     fluidRow(column(width = 6, gaugeOutput("knnPrecGlob", width = "100%")),
                                              column(width = 6, gaugeOutput("knnErrorGlob", width = "100%"))),
+                                    fluidRow(column(width = 12, shiny::tableOutput("knnIndPrecTable"))),
+                                    fluidRow(column(width = 12, shiny::tableOutput("knnIndErrTable"))),
                                     aceEditor("fieldCodeKnnIG", mode = "r", theme = "monokai",
                                               value = "", height = "37vh", readOnly = F, autoComplete = "enabled"))
 
@@ -322,7 +328,7 @@ opciones.knn <- dropdownButton(h4("Opciones"),circle = F, status = "danger", ico
                                tooltip = tooltipOptions(title = "Clic para ver opciones"),
                                switchInput(inputId = "switch.scale.knn", onStatus = "success", offStatus = "danger", value = T,
                                            label = "Escalar datos", onLabel = "SI", offLabel = "NO", labelWidth = "100%"),
-                               sliderInput("kmax.knn", "K Máximo: ", min = 1, max = 100, value = 7),
+                               numericInput("kmax.knn", "K Máximo: ", min = 1,step = 1, value = 7),
                                selectInput(inputId = "kernel.knn", label = "Seleccionar un Kernel",selected = 1,
                                            choices =  c("optimal", "rectangular", "triangular", "epanechnikov", "biweight",
                                                         "triweight", "cos","inv","gaussian","optimal")))
@@ -368,6 +374,8 @@ panel.matriz.confucion.svm <- tabPanel(title = "Matriz de Confusión",
 panel.indices.generales.svm <- tabPanel(title = "Índices Generales",
                                         fluidRow(column(width = 6, gaugeOutput("svmPrecGlob", width = "100%")),
                                                  column(width = 6, gaugeOutput("svmErrorGlob", width = "100%"))),
+                                        fluidRow(column(width = 12, shiny::tableOutput("svmIndPrecTable"))),
+                                        fluidRow(column(width = 12, shiny::tableOutput("svmIndErrTable"))),
                                         aceEditor("fieldCodeSvmIG", mode = "r", theme = "monokai",
                                                   value = "", height = "37vh", readOnly = F, autoComplete = "enabled"))
 
@@ -416,6 +424,8 @@ panel.matriz.confucion.dt <- tabPanel(title = "Matriz de Confusión",
 panel.indices.generales.dt <- tabPanel(title = "Índices Generales",
                                         fluidRow(column(width = 6, gaugeOutput("dtPrecGlob", width = "100%")),
                                                  column(width = 6, gaugeOutput("dtErrorGlob", width = "100%"))),
+                                       fluidRow(column(width = 12, shiny::tableOutput("dtIndPrecTable"))),
+                                       fluidRow(column(width = 12, shiny::tableOutput("dtIndErrTable"))),
                                         aceEditor("fieldCodeDtIG", mode = "r", theme = "monokai",
                                                   value = "", height = "37vh", readOnly = F, autoComplete = "enabled"))
 
@@ -462,6 +472,8 @@ panel.matriz.confucion.rf <- tabPanel(title = "Matriz de Confusión",
 panel.indices.generales.rf <- tabPanel(title = "Índices Generales",
                                        fluidRow(column(width = 6, gaugeOutput("rfPrecGlob", width = "100%")),
                                                 column(width = 6, gaugeOutput("rfErrorGlob", width = "100%"))),
+                                       fluidRow(column(width = 12, shiny::tableOutput("rfIndPrecTable"))),
+                                       fluidRow(column(width = 12, shiny::tableOutput("rfIndErrTable"))),
                                        aceEditor("fieldCodeRfIG", mode = "r", theme = "monokai",
                                                  value = "", height = "37vh", readOnly = F, autoComplete = "enabled"))
 
@@ -514,6 +526,8 @@ panel.matriz.confucion.boosting <- tabPanel(title = "Matriz de Confusión",
 panel.indices.generales.boosting <- tabPanel(title = "Índices Generales",
                                         fluidRow(column(width = 6, gaugeOutput("boostingPrecGlob", width = "100%")),
                                                  column(width = 6, gaugeOutput("boostingErrorGlob", width = "100%"))),
+                                        fluidRow(column(width = 12, shiny::tableOutput("boostingIndPrecTable"))),
+                                        fluidRow(column(width = 12, shiny::tableOutput("boostingIndErrTable"))),
                                         aceEditor("fieldCodeBoostingIG", mode = "r", theme = "monokai",
                                                   value = "", height = "37vh", readOnly = F, autoComplete = "enabled"))
 
