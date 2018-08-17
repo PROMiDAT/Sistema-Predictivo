@@ -51,21 +51,8 @@ cod.indices <- function(){
   precision.clase <- diag(MC)/rowSums(MC) * 100
   error.clase <- 100 - precision.clase
 
-  # precision.positiva <- ifelse(ncol(MC) == 2, MC[2, 2] / sum(MC[2,]),0) * 100
-  # precision.negativa <- ifelse(ncol(MC) == 2, MC[1, 1] / sum(MC[1,]),0) * 100
-  # falsos.positivos   <- ifelse(ncol(MC) == 2, MC[1, 2] / sum(MC[1,]),0) * 100
-  # falsos.negativos   <- ifelse(ncol(MC) == 2, MC[2, 1] / sum(MC[2,]),0) * 100
-  # asertividad.positiva <- ifelse(ncol(MC) == 2,  MC[2, 2] / sum(MC[,2]),0) * 100
-  # asertividad.negativa <- ifelse(ncol(MC) == 2, MC[1, 1] / sum(MC[,1]),0) * 100
-
   res <- list( precision.global = precision.global,
                error.global = error.global,
-               # precision.positiva = precision.positiva,
-               # precision.negativa = precision.negativa,
-               # falsos.positivos = falsos.positivos,
-               # falsos.negativos = falsos.negativos,
-               # asertividad.positiva = asertividad.positiva,
-               # asertividad.negativa = asertividad.negativa,
                precision.clase = precision.clase,
                error.clase = error.clase)
   return(res)

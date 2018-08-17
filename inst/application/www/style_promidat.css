@@ -184,4 +184,7 @@ input[type="checkbox"]:hover:before {
   transform: translateY(4px);
 }
 
-#action-button
+.bg-promidat{
+  background-color: #CBB051;
+  color: #fff
+}

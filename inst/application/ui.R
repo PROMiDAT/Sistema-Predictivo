@@ -53,6 +53,14 @@ campo.codigo <- function(runid, refid, fieldid, ...){
                     aceEditor(fieldid, mode = "r", theme = "monokai", value = "", ...)))
 }
 
+infoBoxPROMiDAT <- function(titulo, valor, icono){
+  tags$div(class = "info-box bg-promidat",
+           tags$span(class = "info-box-icon", icono),
+           tags$div(class = "info-box-content",
+                    tags$span(class = "info-box-text", titulo),
+                    tags$span(class = "info-box-number", valor)))
+}
+
 # MENU --------------------------------------------------------------------------------------------------------------------
 
 menu.cargar <- menuItem("Datos", tabName = "cargar", icon = icon("dashboard"))
@@ -495,9 +503,9 @@ panel.indices.generales.rf <- tabPanel(title = "Índices Generales",
                                                  value = "", height = "37vh", readOnly = F, autoComplete = "enabled"))
 
 opciones.rf <- fluidRow(column(width = 6,actionButton("runRf",label = "Ejecutar", icon = icon("play"))),
-                        column(width = 6,dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
+                        column(width = 6, dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
                                                         tooltip = tooltipOptions(title = "Clic para ver opciones"),
-                                                        numericInput("ntree.rf", "Número de Áboles:", 20, width = "100%"), min = 0)))
+                                                        numericInput("ntree.rf", "Número de Áboles:", 20, width = "100%", min = 0))))
 
 titulo.rf <- fluidRow(column(width = 12, opciones.rf))
 
@@ -625,9 +633,9 @@ pagina.generar.reporte <- tabItem(tabName = "reporte", panel.reporte.codigo , vi
 # PAGINA DE INFORMACION ---------------------------------------------------------------------------------------------------
 
 pagina.info <- tabItem(tabName = "acercaDe",
-                img(src="Logo.png", style="padding-bottom:20px;margin-left: auto;margin-right: auto;display: block;width: 50%;"),
-                infoBox("Todos los derechos reservados a", "PROMiDAT S.A", icon = icon("copyright"), fill = T, color = "yellow", width = "100%"),
-                infoBox("Versión del Sistema", "1.0.1", icon = icon("file-code-o"), fill = T, color = "yellow", width = "100%"))
+                       img(src="Logo.png", style="padding-bottom:20px;margin-left: auto;margin-right: auto;display: block;width: 50%;"),
+                       infoBoxPROMiDAT("Todos los derechos reservados a", "PROMiDAT S.A.", icono = icon("copyright")),
+                       infoBoxPROMiDAT("Versión del Sistema", "1.2.7", icono = icon("file-code-o")))
 
 # PAGINA COMPLETA ---------------------------------------------------------------------------------------------------------
 
