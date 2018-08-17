@@ -1846,7 +1846,7 @@ shinyServer(function(input, output, session) {
       files <- c(namermd, files)
 
       src <- normalizePath(namermd)
-      out <- rmarkdown::render(src,  params = NULL, rmarkdown::word_document(), encoding = "native.enc")
+      out <- rmarkdown::render(src,  params = NULL, rmarkdown::word_document(), envir = new.env(parent = globalenv()))
       file.rename(out, paste('data-', Sys.Date(), '.docx', sep=''))
       files <- c(paste('data-', Sys.Date(), '.docx', sep=''), files)
 
