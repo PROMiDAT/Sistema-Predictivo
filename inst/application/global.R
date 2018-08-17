@@ -666,9 +666,7 @@ def.reporte <- function(titulo = "Sin Titulo", nombre = "PROMiDAT", entradas) {
 title: '", titulo, "'
 author: '", nombre, "'
 date: ", Sys.Date(), "
-output:
-html_document:
-df_print: paged
+output: word_document
 ---
 
 ```{r setup, include=FALSE}
