@@ -431,6 +431,17 @@ pairs.panels(var.numericas(datos),bg = col[datos[,'",variable.predecir,"']],
 pch= 22, main='', hist.col = gg_color_hue(1), ellipses = FALSE)"))
 }
 
+#Grafica la densidad de las variables numericas
+plot.numerico.dens <- function(variable){
+  return(paste0("ggplot(datos, aes_string('",variable,"', fill = '",variable.predecir,"')) +
+geom_density( alpha = .85) +
+theme_minimal() +
+theme(text = element_text(size=15)) +
+scale_fill_manual(values = gg_color_hue(length(levels(datos[,'",variable.predecir,"'])))) +
+labs(title = 'Densidad de la variable ",variable," según ",variable.predecir,"', y = '', x = '') +
+theme(legend.position = 'top', legend.title = element_blank(), text = element_text(size = 15))"))
+}
+
 # Pagina de KNN -------------------------------------------------------------------------------------------------------------
 
 #Crea el modelo KNN
@@ -639,8 +650,10 @@ ordenar.reporte <- function(lista){
              nombres[grepl("dispersion.", nombres)],
              nombres[grepl("dya.num.", nombres)],
              nombres[grepl("dya.cat.", nombres)],
-             "correlacion", nombres[grepl("poder.cat.", nombres)],
-             "poder.num", "modelo.knn","pred.knn",
+             "correlacion","poder.pred",
+             nombres[grepl("poder.cat.", nombres)],
+             "poder.num",nombres[grepl("poder.den.", nombres)],
+             "modelo.knn","pred.knn",
              "mc.knn","ind.knn", "modelo.svm",
              nombres[grepl("svm.plot.", nombres)],
              "pred.svm","mc.svm","ind.svm",
@@ -655,15 +668,15 @@ ordenar.reporte <- function(lista){
   return(lista)
 }
 
-#Crea el codigo del reporte rmd
-def.reporte <- function(titulo = "Sin Titulo", nombre = "PROMiDAT", entradas){
+# Crea el codigo del reporte rmd
+def.reporte <- function(titulo = "Sin Titulo", nombre = "PROMiDAT", entradas) {
   codigo.usuario <- ""
   codigo.reporte <- ordenar.reporte(codigo.reporte)
   for (codigo in codigo.reporte) {
     codigo.usuario <- paste0(codigo.usuario, "\n\n#### Interpretación\n\n", codigo)
   }
-  return(
-paste0("---\ntitle: '", titulo, "'
+  return(paste0("---
+title: '", titulo, "'
 author: '", nombre, "'
 date: ", Sys.Date(), "
 output:
@@ -699,38 +712,32 @@ library(forcats)
 library(psych)
 library(ROCR)
 ```
+
 ```{r}
-var.numericas <- function(data){
+var.numericas <- function(data) {
 if(is.null(data)) return(NULL)
 res <- base::subset(data, select = sapply(data, class) %in% c('numeric', 'integer'))
 return(res)
 }
 
-var.categoricas <- function(data){
+var.categoricas <- function(data) {
 if(is.null(data)) return(NULL)
-res <- base::subset(data, select = !sapply(data, class) %in% c('numeric', 'integer'))
+res <- base::subset(data, select =! sapply(data, class) %in% c('numeric', 'integer'))
 return(res)
-}
-
-datos.disyuntivos <- function(data, vars){
-if(is.null(data)) return(NULL)
-cualitativas <- base::subset(data, select = colnames(data) %in% c(vars))
-data <- data[, !colnames(data) %in% vars]
-for (variable in colnames(cualitativas)) {
-for (categoria in unique(cualitativas[, variable])) {
-nueva.var <- as.numeric(cualitativas[, variable] == categoria)
-data <- cbind(data, nueva.var)
-colnames(data)[length(colnames(data))] <- paste0(variable, '.', categoria)
-}
-}
-return(data)
-}
-
-", default.func.num(), "
-
-", default.func.cat(), "
+}\ndatos.disyuntivos <- function(data, vars) {
+  if (is.null(data)) return(NULL)
+  cualitativas <- base::subset(data, select = colnames(data) %in% c(vars))
+  data <- data[, !colnames(data) %in% vars]
+  for (variable in colnames(cualitativas)) {
+    for (categoria in unique(cualitativas[, variable])) {
+      nueva.var <- as.numeric(cualitativas[, variable] == categoria)
+      data <- cbind(data, nueva.var)
+      colnames(data)[length(colnames(data))] <- paste0(variable, '.', categoria)
+    }
+  }
+  return(data)
+}\n", default.func.num(), "\n", default.func.cat(), "
 ```
-
 # Carga de Datos
 ```{r}
 head(datos)
@@ -742,7 +749,7 @@ head(datos.aprendizaje)
 # Datos de Prueba
 ```{r}
 head(datos.prueba)
-```", codigo.usuario, ""))
+```\n", codigo.usuario, ""))
 }
 
 # VARIABLES GLOBALES --------------------------------------------------------------------------------------------------------
@@ -781,6 +788,8 @@ cod.knn.modelo <<-  NULL
 cod.knn.pred <<-  NULL
 cod.knn.mc <<- NULL
 cod.knn.ind <<- NULL
+
+knn.stop.excu <<- FALSE
 
 # -------------------  SVM
 

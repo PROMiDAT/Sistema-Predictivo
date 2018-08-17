@@ -156,7 +156,8 @@ shinyServer(function(input, output, session) {
 
   updatePlot <- reactiveValues(
     calc.normal = default.calc.normal(), normal = NULL, disp = NULL,
-    cor = NULL, dya.num = NULL, dya.cat = NULL,poder.pred = NULL, poder.cat = NULL, poder.num = NULL
+    cor = NULL, dya.num = NULL, dya.cat = NULL, poder.pred = NULL,
+    poder.cat = NULL, poder.num = NULL, poder.dens = NULL
   )
 
   # Pagina de Cargar y Transformar Datos ------------------------------------------------------------------------------------
@@ -418,7 +419,9 @@ shinyServer(function(input, output, session) {
     cat.sin.pred <- colnames.empty(var.categoricas(datos))
     cat.sin.pred <- cat.sin.pred[cat.sin.pred != input$sel.predic.var]
     updateSelectInput(session, "sel.distribucion.poder", choices = cat.sin.pred)
+    updateSelectInput(session, "sel.density.poder", choices = nombres)
     updateAceEditor(session, "fieldCodePoderPred", value = plot.code.poder.pred(variable.predecir))
+    updatePlot$poder.pred <<- plot.code.poder.pred(variable.predecir)
   }
 
   # Segmenta los datos en aprendizaje y prueba
@@ -430,6 +433,7 @@ shinyServer(function(input, output, session) {
         input$semilla,
         input$permitir.semilla
       )
+      knn.stop.excu <<- FALSE
 
       segmentar.datos(codigo)
 
@@ -457,7 +461,6 @@ shinyServer(function(input, output, session) {
     close.menu("parte2", is.null(datos.aprendizaje))
     close.menu("comparar", is.null(datos.aprendizaje))
     close.menu("poderPred", is.null(datos.aprendizaje))
-
     # Cambia las tablas de aprendizaje y de prueba
     actualizar.tabla(c("datos.aprendizaje", "datos.prueba"))
   })
@@ -514,6 +517,7 @@ shinyServer(function(input, output, session) {
         return(res)
       }, error = function(e) {
         showNotification(paste0("ERROR AL GENERAR TEST DE NORMALIDAD: ", e), duration = 10, type = "error")
+        return(NULL)
       })
     })
   })
@@ -538,6 +542,7 @@ shinyServer(function(input, output, session) {
         return(res)
       }, error = function(e) {
         showNotification(paste0("ERROR AL CALCULAR TEST DE NORMALIDAD: ", e), duration = 10, type = "error")
+        return(NULL)
       })
     })
   })
@@ -563,6 +568,7 @@ shinyServer(function(input, output, session) {
         return(res)
       }, error = function(e) {
         showNotification(paste0("ERROR AL GENERAR DISPERSIÓN: ", e), duration = 10, type = "error")
+        return(NULL)
       })
     })
   })
@@ -661,8 +667,8 @@ shinyServer(function(input, output, session) {
       }, error = function(e) {
         showNotification(paste0("ERROR EN Correlacion: ", e),
           duration = 10,
-          type = "error"
-        )
+          type = "error")
+        return(NULL)
       })
     })
   })
@@ -679,28 +685,28 @@ shinyServer(function(input, output, session) {
 
   # Pagina de Poder Predictivo ----------------------------------------------------------------------------------------------
 
-  # # Hace el grafico de poder predictivo categorico
-  # observeEvent(input$segmentButton, {
-  #   output$plot.pred.poder <- renderPlot({
-  #     tryCatch({
-  #       cod.poder<<- updatePlot$poder.pred
-  #       res <- isolate(eval(parse(text = cod.poder)))
-  #       updateAceEditor(session, "fieldCodePoderPred", value = cod.poder)
-  #       codigo.reporte[["poder.pred"]] <<- paste0("## Distribución Variable Discriminante \n```{r}\n", cod.poder, "\n```")
-  #       return(res)
-  #     }, error = function(e) {
-  #       output$plot.pred.poder <- renderPlot(NULL)
-  #       showNotification(paste0("Error en Poder Predictivo: ", e),
-  #                        duration = 10,
-  #                        type = "error")
-  #     })
-  #   })
-  # })
-  #
-  # # Ejecuta el codigo del grafico
-  # observeEvent(input$run.code.poder.pred, {
-  #   updatePlot$poder.pred <- input$fieldCodePoderPred
-  # })
+  # Hace el grafico de poder predictivo distribucion de la variable predictora
+  observeEvent(input$segmentButton, {
+    output$plot.pred.poder <- renderPlot({
+      tryCatch({
+        cod.poder <<- updatePlot$poder.pred
+        res <- isolate(eval(parse(text = cod.poder)))
+        updateAceEditor(session, "fieldCodePoderPred", value = cod.poder)
+        codigo.reporte[["poder.pred"]] <<- paste0("## Distribución Variable Discriminante \n```{r}\n", cod.poder, "\n```")
+        return(res)
+      }, error = function(e) {
+        showNotification(paste0("Error en Poder Predictivo: ", e),
+                         duration = 10,
+                         type = "error")
+        return(NULL)
+      })
+    })
+  })
+
+  # Ejecuta el codigo del grafico
+  observeEvent(input$run.code.poder.pred, {
+    updatePlot$poder.pred <- input$fieldCodePoderPred
+  })
 
   # Hace el grafico de poder predictivo categorico
   observeEvent(input$segmentButton, {
@@ -714,11 +720,8 @@ shinyServer(function(input, output, session) {
         }
         return(res)
       }, error = function(e) {
-        output$plot.dist.poder <- renderPlot(NULL)
-        showNotification(paste0("Error en Poder Predictivo: ", e),
-          duration = 10,
-          type = "error"
-        )
+        showNotification(paste0("Error en Poder Predictivo: ", e), duration = 10,type = "error")
+        return(NULL)
       })
     })
   })
@@ -742,30 +745,65 @@ shinyServer(function(input, output, session) {
   })
 
   # Hace el grafico de poder predictivo numerico
-  output$plot.pairs.poder <- renderPlot({
-    tryCatch({
-      cod.poder.num <<- updatePlot$poder.num
-      res <- isolate(eval(parse(text = cod.poder.num)))
-      updateAceEditor(session, "fieldCodePoderNum", value = cod.poder.num)
-      if (ncol(var.numericas(datos)) >= 1) {
-        codigo.reporte[["poder.num"]] <<- paste0("## Poder Predictivo Variables Numéricas \n```{r}\n", cod.poder.num, "\n```")
-      }
-      return(res)
-    }, error = function(e) {
-      output$plot.pairs.poder <- renderPlot(NULL)
-      showNotification(paste0("Error en Poder Predictivo: ", e),
-        duration = 10,
-        type = "error"
-      )
+  observeEvent(input$segmentButton,{
+    output$plot.pairs.poder <- renderPlot({
+      tryCatch({
+        cod.poder.num <<- updatePlot$poder.num
+        res <- isolate(eval(parse(text = cod.poder.num)))
+        updateAceEditor(session, "fieldCodePoderNum", value = cod.poder.num)
+        if (ncol(var.numericas(datos)) >= 1) {
+          codigo.reporte[["poder.num"]] <<- paste0("## Poder Predictivo Variables Numéricas \n```{r}\n", cod.poder.num, "\n```")
+        }
+        return(res)
+      }, error = function(e) {
+        showNotification(paste0("Error en Poder Predictivo: ", e),
+          duration = 10,
+          type = "error")
+        return(NULL)
+      })
     })
   })
 
   # Ejecuta el codigo del grafico
-  observeEvent(c(input$run.code.poder.num, input$segmentButton), {
+  observeEvent(c(input$run.code.poder.num,input$segmentButton), {
     if (input$fieldCodePoderNum != "") {
       updatePlot$poder.num <- input$fieldCodePoderNum
     } else {
       updatePlot$poder.num <- pairs.poder()
+    }
+  })
+
+  # Hace el grafico de poder predictivo densidad de variables numericas
+  observeEvent(input$segmentButton, {
+    output$plot.density.poder <- renderPlot({
+      tryCatch({
+        cod.poder.den <<- updatePlot$poder.dens
+        res <- isolate(eval(parse(text = cod.poder.den)))
+        updateAceEditor(session, "fieldCodePoderDens", value = cod.poder.den)
+        if (ncol(var.numericas(datos)) > 1) {
+          codigo.reporte[[paste0("poder.den.",input$sel.density.poder)]] <<- paste0("## Densidad Según Variable Discriminante\n```{r}\n", cod.poder.den, "\n```")
+        }
+        return(res)
+      }, error = function(e) {
+        showNotification(paste0("Error en Poder Predictivo: ", e),
+                         duration = 10,
+                         type = "error")
+        return(NULL)
+      })
+    })
+  })
+
+  # Ejecuta el codigo del grafico
+  observeEvent(input$run.code.poder.dens,{
+    updatePlot$poder.dens <- input$fieldCodePoderDens
+  })
+
+  # Ejecuta el codigo cuando cambian los parametros
+  observeEvent(input$sel.density.poder, {
+    if (input$sel.density.poder != "") {
+      updatePlot$poder.dens <- plot.numerico.dens( input$sel.density.poder)
+    } else {
+      updatePlot$poder.dens <- ""
     }
   })
 
@@ -788,17 +826,19 @@ shinyServer(function(input, output, session) {
 
   # Si las opciones cambian
   observeEvent(c(input$switch.scale.knn, input$kmax.knn, input$kernel.knn), {
-    if (validar.datos(print = FALSE)) {
+    if (validar.datos(print = FALSE) & knn.stop.excu) {
       load.page(T)
       default.codigo.knn()
       knn.full()
       load.page(F)
+    }else{
+      knn.stop.excu <<- TRUE
     }
   })
 
   # Acualiza el codigo a la version por defecto
   default.codigo.knn <- function(k.def = FALSE) {
-    if(!is.null(datos.aprendizaje)){
+    if(!is.null(datos.aprendizaje) & k.def){
       k.value <- ifelse(k.def, round(sqrt(nrow(datos.aprendizaje))), input$kmax.knn)
       updateNumericInput(session,"kmax.knn",value = k.value)
     }else{
@@ -1322,7 +1362,6 @@ shinyServer(function(input, output, session) {
       cod.rf.pred <<- input$fieldCodeRfPred
       cod.rf.mc <<- input$fieldCodeRfMC
       cod.rf.ind <<- input$fieldCodeRfIG
-
       load.page(T)
       rf.full()
       load.page(F)
@@ -1501,7 +1540,6 @@ shinyServer(function(input, output, session) {
         cod.b.pred <<- input$fieldCodeBoostingPred
         cod.b.mc <<- input$fieldCodeBoostingMC
         cod.b.ind <<- input$fieldCodeBoostingIG
-
         load.page(T)
         boosting.full()
         load.page(F)

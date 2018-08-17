@@ -35,7 +35,7 @@ library(psych)
 library(ROCR)
 library(xtable)
 
-#  FUNCIONES --------------------------------------------------------------------------------------------------------------
+# FUNCIONES --------------------------------------------------------------------------------------------------------------
 
 # Crea un campo de codigo con boton de ejecutar y cargar
 campo.codigo <- function(runid, refid, fieldid, ...){
@@ -66,11 +66,11 @@ menu.estadisticas <- menuItem("Estadísticas Básicas", tabName = "parte1", icon
                               menuItem("Poder Predictivo", tabName = "poderPred", icon = icon("rocket")))
 
 menu.aprendizaje.supervisado <- menuItem("Aprendizaje Supervisado", tabName = "parte2", icon = icon("th-list"),
-                                         menuSubItem("K Vecinos Más Cercanos",tabName = "knn",icon = icon("bar-chart-o")),
-                                         menuSubItem("Soporte Vectorial",tabName = "svm",icon = icon("bar-chart-o")),
-                                         menuSubItem("Árboles de Decisión",tabName = "dt",icon = icon("bar-chart-o")),
-                                         menuSubItem("Bosques Aleatorios",tabName = "rf",icon = icon("bar-chart-o")),
-                                         menuSubItem("ADA - Boosting",tabName = "boosting",icon = icon("bar-chart-o")) )
+                                         menuSubItem("K Vecinos Más Cercanos",tabName = "knn",icon = icon("dot-circle-o")),
+                                         menuSubItem("Soporte Vectorial",tabName = "svm",icon = icon("line-chart")),
+                                         menuSubItem("Árboles de Decisión",tabName = "dt",icon = icon("tree")),
+                                         menuSubItem("Bosques Aleatorios",tabName = "rf",icon = icon("sitemap")),
+                                         menuSubItem("ADA - Boosting",tabName = "boosting",icon = icon("superscript")) )
 
 menu.reporte <- menuItem("Generar Reporte", tabName = "reporte", icon = icon("save-file",lib = "glyphicon"))
 
@@ -295,14 +295,23 @@ plot.pairs.poder <- tabPanel(title = 'Variables Numéricas',
                              plotOutput('plot.pairs.poder', height = "55vh"),
                              campo.codigo(runid = "run.code.poder.num", fieldid = "fieldCodePoderNum", height = "16vh"))
 
+plot.dens.poder <- tabPanel(title = 'Densidad Según Variable Discriminante',
+                             plotOutput('plot.density.poder', height = "55vh"),
+                             selectInput(inputId = "sel.density.poder", label = NULL, choices =  "", width = "100%"),
+                             campo.codigo(runid = "run.code.poder.dens", fieldid = "fieldCodePoderDens", height = "16vh"))
 
-pagina.poder <- tabItem(tabName = "poderPred", column(width = 12, tabBox(width = 12, plot.pred.poder, plot.dist.poder, plot.pairs.poder)) )
+
+pagina.poder <- tabItem(tabName = "poderPred", column(width = 12, tabBox(width = 12,
+                                                                         plot.pred.poder,
+                                                                         plot.dist.poder,
+                                                                         plot.pairs.poder,
+                                                                         plot.dens.poder)) )
 
 # PAGINA DE KNN -----------------------------------------------------------------------------------------------------------
 
 panel.generar.knn <- tabPanel(title = "Generación del Modelo",
                              verbatimTextOutput("txtknn"),
-                             campo.codigo(runid = "runKnn",fieldid = "fieldCodeKnn",height = "4vh", readOnly = F))
+                             aceEditor("fieldCodeKnn", mode = "r", theme = "monokai", value = "", height = "4vh", readOnly = F))
 
 panel.prediccion.knn <- tabPanel(title = "Predicción del Modelo",
                                  DT::dataTableOutput("knnPrediTable"),
@@ -324,17 +333,18 @@ panel.indices.generales.knn <- tabPanel(title = "Índices Generales",
                                     aceEditor("fieldCodeKnnIG", mode = "r", theme = "monokai",
                                               value = "", height = "37vh", readOnly = F, autoComplete = "enabled"))
 
-opciones.knn <- dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
+opciones.knn <- fluidRow(column(width = 6, actionButton("runKnn", label = "Ejecutar", icon = icon("play"))),
+                         column(width = 6, dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
                                tooltip = tooltipOptions(title = "Clic para ver opciones"),
                                switchInput(inputId = "switch.scale.knn", onStatus = "success", offStatus = "danger", value = T,
                                            label = "Escalar datos", onLabel = "SI", offLabel = "NO", labelWidth = "100%"),
                                numericInput("kmax.knn", "K Máximo: ", min = 1,step = 1, value = 7),
                                selectInput(inputId = "kernel.knn", label = "Seleccionar un Kernel",selected = 1,
                                            choices =  c("optimal", "rectangular", "triangular", "epanechnikov", "biweight",
-                                                        "triweight", "cos","inv","gaussian","optimal")))
+                                                        "triweight", "cos","inv","gaussian","optimal")))))
 
 
-titulo.knn <- fluidRow(column(width = 12,opciones.knn))
+titulo.knn <- fluidRow(column(width = 12, opciones.knn))
 
 pagina.knn <- tabItem(tabName = "knn",
                       column(width = 12,
@@ -349,7 +359,8 @@ pagina.knn <- tabItem(tabName = "knn",
 
 panel.generar.svm <- tabPanel(title = "Generación del Modelo",
                               verbatimTextOutput("txtSvm"),
-                              campo.codigo(runid = "runSvm",fieldid = "fieldCodeSvm",height = "4vh", readOnly = F))
+                              aceEditor("fieldCodeSvm", mode = "r", theme = "monokai",
+                                        value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
 plot.svm <- tabPanel(title = "Gráfico Clasificación",
                      plotOutput('plot.svm', height = "55vh"),
@@ -379,12 +390,14 @@ panel.indices.generales.svm <- tabPanel(title = "Índices Generales",
                                         aceEditor("fieldCodeSvmIG", mode = "r", theme = "monokai",
                                                   value = "", height = "37vh", readOnly = F, autoComplete = "enabled"))
 
-opciones.svm <- dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
-                               tooltip = tooltipOptions(title = "Clic para ver opciones"),
-                               switchInput(inputId = "switch.scale.svm", onStatus = "success", offStatus = "danger", value = T,
-                                           label = "Escalar datos", onLabel = "SI", offLabel = "NO", labelWidth = "100%"),
-                               selectInput(inputId = "kernel.svm", label = "Seleccionar un Kernel", selected = 1,
-                                           choices =  c("linear", "polynomial", "radial", "sigmoid")))
+opciones.svm <- fluidRow(column(width = 6, actionButton("runSvm", label = "Ejecutar", icon = icon("play"))),
+                         column(width = 6,
+                                dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
+                                               tooltip = tooltipOptions(title = "Clic para ver opciones"),
+                                               switchInput(inputId = "switch.scale.svm", onStatus = "success", offStatus = "danger", value = T,
+                                                           label = "Escalar datos", onLabel = "SI", offLabel = "NO", labelWidth = "100%"),
+                                               selectInput(inputId = "kernel.svm", label = "Seleccionar un Kernel", selected = 1,
+                                                           choices =  c("linear", "polynomial", "radial", "sigmoid")))))
 
 titulo.svm <- fluidRow(column(width = 12, opciones.svm))
 
@@ -401,7 +414,8 @@ pagina.svm <- tabItem(tabName = "svm",
 
 panel.generar.dt <- tabPanel(title = "Generación del Modelo",
                               verbatimTextOutput("txtDt"),
-                              campo.codigo(runid = "runDt",fieldid = "fieldCodeDt",height = "4vh", readOnly = F))
+                              aceEditor("fieldCodeDt", mode = "r", theme = "monokai",
+                                        value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
 plot.dt <- tabPanel(title = "Gráfico Árbol",
                      plotOutput('plot.dt', height = "55vh"),
@@ -429,9 +443,11 @@ panel.indices.generales.dt <- tabPanel(title = "Índices Generales",
                                         aceEditor("fieldCodeDtIG", mode = "r", theme = "monokai",
                                                   value = "", height = "37vh", readOnly = F, autoComplete = "enabled"))
 
-opciones.dt <- dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
-                               tooltip = tooltipOptions(title = "Clic para ver opciones"),
-                               numericInput("minsplit.dt", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1))
+opciones.dt <- fluidRow(column(width = 6, actionButton("runDt", label = "Ejecutar", icon = icon("play"))),
+                        column(width = 6,
+                               dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
+                                             tooltip = tooltipOptions(title = "Clic para ver opciones"),
+                                             numericInput("minsplit.dt", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1))))
 
 
 titulo.dt <- fluidRow(column(width = 12, opciones.dt))
@@ -449,7 +465,8 @@ pagina.dt <- tabItem(tabName = "dt",
 
 panel.generar.rf <- tabPanel(title = "Generación del Modelo",
                              verbatimTextOutput("txtRf"),
-                             campo.codigo(runid = "runRf",fieldid = "fieldCodeRf",height = "4vh", readOnly = F))
+                             aceEditor("fieldCodeRf", mode = "r", theme = "monokai",
+                                       value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
 plot.rf <- tabPanel(title = "Importancia de Variables",
                      plotOutput('plot.rf', height = "55vh"),
@@ -477,10 +494,10 @@ panel.indices.generales.rf <- tabPanel(title = "Índices Generales",
                                        aceEditor("fieldCodeRfIG", mode = "r", theme = "monokai",
                                                  value = "", height = "37vh", readOnly = F, autoComplete = "enabled"))
 
-opciones.rf <- dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
-                              tooltip = tooltipOptions(title = "Clic para ver opciones"),
-                              numericInput("ntree.rf", "Número de Áboles:", 20, width = "100%"), min = 0)
-
+opciones.rf <- fluidRow(column(width = 6,actionButton("runRf",label = "Ejecutar", icon = icon("play"))),
+                        column(width = 6,dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
+                                                        tooltip = tooltipOptions(title = "Clic para ver opciones"),
+                                                        numericInput("ntree.rf", "Número de Áboles:", 20, width = "100%"), min = 0)))
 
 titulo.rf <- fluidRow(column(width = 12, opciones.rf))
 
@@ -497,7 +514,8 @@ pagina.rf <- tabItem(tabName = "rf",
 
 panel.generar.boosting <- tabPanel(title = "Generación del Modelo",
                               verbatimTextOutput("txtBoosting"),
-                              campo.codigo(runid = "runBoosting",fieldid = "fieldCodeBoosting",height = "4vh", readOnly = F))
+                              aceEditor("fieldCodeBoosting", mode = "r", theme = "monokai",
+                                        value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
 plot.boosting <- tabPanel(title = "Evolución del Error",
                                  plotOutput('plot.boosting', height = "55vh"),
@@ -531,13 +549,13 @@ panel.indices.generales.boosting <- tabPanel(title = "Índices Generales",
                                         aceEditor("fieldCodeBoostingIG", mode = "r", theme = "monokai",
                                                   value = "", height = "37vh", readOnly = F, autoComplete = "enabled"))
 
-opciones.boosting <- dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
-                               tooltip = tooltipOptions(title = "Clic para ver opciones"),
-                               numericInput("iter.boosting", "Número de áboles:", 50, width = "100%",min = 1),
-                               numericInput("nu.boosting", "Valor de nu:", 1, width = "100%",min = 0, max = 1),
-                               selectInput(inputId = "tipo.boosting", label = "Seleccionar un tipo",selected = 1,
-                                           choices =  c("discrete", "real", "gentle")))
-
+opciones.boosting <- fluidRow(column(width = 6, actionButton("runBoosting",label = "Ejecutar", icon = icon("play"))),
+                              column(width = 6, dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
+                                                               tooltip = tooltipOptions(title = "Clic para ver opciones"),
+                                                               numericInput("iter.boosting", "Número de áboles:", 50, width = "100%",min = 1),
+                                                               numericInput("nu.boosting", "Valor de nu:", 1, width = "100%",min = 0, max = 1),
+                                                               selectInput(inputId = "tipo.boosting", label = "Seleccionar un tipo",selected = 1,
+                                                                           choices =  c("discrete", "real", "gentle")))))
 
 titulo.boosting <- fluidRow(column(width = 12,opciones.boosting))
 
