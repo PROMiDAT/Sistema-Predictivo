@@ -3,6 +3,11 @@ shinyServer(function(input, output, session) {
 
   # Funciones Utilitarias ---------------------------------------------------------------------------------------------------
 
+  if (!require("zip",character.only = TRUE))
+  {
+    install.packages("zip",dep=TRUE)
+  }
+
   # Mostar o ocultar la paginina de cargado
   load.page <- function(value = NA) {
     if (value) {
@@ -32,8 +37,8 @@ shinyServer(function(input, output, session) {
     ))
 
     return(DT::datatable(data,
-      selection = "none", editable = editable, container = sketch, extensions = extensions,
-      options = list(dom = dom, pageLength = pageLength, buttons = buttons, scrollY = T)
+                         selection = "none", editable = editable, container = sketch, extensions = extensions,
+                         options = list(dom = dom, pageLength = pageLength, buttons = buttons, scrollY = T)
     ))
   }
 
@@ -41,28 +46,28 @@ shinyServer(function(input, output, session) {
   actualizar.tabla <- function(x = c("datos", "datos.aprendizaje", "datos.prueba")) {
     if (any("datos" %in% x)) { # Cambia la tabla de datos
       output$contents <- DT::renderDT(renderizar.tabla.datos(datos,
-        editable = T,
-        pageLength = 10,
-        buttons = T,
-        filename = "datos"
+                                                             editable = T,
+                                                             pageLength = 10,
+                                                             buttons = T,
+                                                             filename = "datos"
       ), server = F)
     }
 
     if (any("datos.aprendizaje" %in% x)) { # Cambia la tabla de datos de aprendizaje
       output$contentsAprend <- DT::renderDT(renderizar.tabla.datos(datos.aprendizaje,
-        editable = T,
-        pageLength = 5,
-        buttons = T,
-        filename = "datos.aprendizaje"
+                                                                   editable = T,
+                                                                   pageLength = 5,
+                                                                   buttons = T,
+                                                                   filename = "datos.aprendizaje"
       ), server = F)
     }
 
     if (any("datos.prueba" %in% x)) { # Cambia la tabla de datos de prueba
       output$contentsPrueba <- DT::renderDT(renderizar.tabla.datos(datos.prueba,
-        editable = T,
-        pageLength = 5,
-        buttons = T,
-        filename = "datos.prueba"
+                                                                   editable = T,
+                                                                   pageLength = 5,
+                                                                   buttons = T,
+                                                                   filename = "datos.prueba"
       ), server = F)
     }
   }
@@ -99,20 +104,20 @@ shinyServer(function(input, output, session) {
     real <- as.character(datos.prueba[, variable.predecir])
     predi <- as.character(predic.var)
     df <- cbind(real, predi, ifelse(real == predi,
-      rep("<span style='color:green'><b>Acertó</b></span>", length(real)),
-      rep("<span style='color:red'><b>Falló</b></span>", length(real))
+                                    rep("<span style='color:green'><b>Acertó</b></span>", length(real)),
+                                    rep("<span style='color:red'><b>Falló</b></span>", length(real))
     ))
     colnames(df) <- c("Datos Reales", "Predicción", " ")
     sketch <- htmltools::withTags(table(
       tableHeader(c("Datos Reales", "Predicción", " "))
     ))
     return(DT::datatable(df,
-      selection = "none",
-      editable = FALSE,
-      escape = FALSE,
-      container = sketch,
-      extensions = c("Responsive"),
-      options = list(dom = "frtip", pageLength = 10)
+                         selection = "none",
+                         editable = FALSE,
+                         escape = FALSE,
+                         container = sketch,
+                         extensions = c("Responsive"),
+                         options = list(dom = "frtip", pageLength = 10)
     ))
   }
 
@@ -371,12 +376,12 @@ shinyServer(function(input, output, session) {
     if (!is.null(datos) && ncol(datos) > 0) {
       res <- data.frame(Variables = colnames(datos), Tipo = c(1:ncol(datos)), Activa = c(1:ncol(datos)))
       res$Tipo <- sapply(colnames(datos), function(i) paste0(
-          '<select id="sel', i, contador, '"> <option value="categorico">Categórico</option>
-                                                             <option value="numerico" ', ifelse(class(datos[, i]) %in% c("numeric", "integer"),
-            ' selected="selected"', ""
-          ),
-          '>Numérico</option> <option value="disyuntivo">Disyuntivo</option> </select>'
-        ))
+        '<select id="sel', i, contador, '"> <option value="categorico">Categórico</option>
+        <option value="numerico" ', ifelse(class(datos[, i]) %in% c("numeric", "integer"),
+                                           ' selected="selected"', ""
+      ),
+      '>Numérico</option> <option value="disyuntivo">Disyuntivo</option> </select>'
+      ))
       res$Activa <- sapply(colnames(datos), function(i) paste0('<input type="checkbox" id="box', i, contador, '" checked/>'))
     } else {
       res <- as.data.frame(NULL)
@@ -387,9 +392,9 @@ shinyServer(function(input, output, session) {
 
   # Cambia la tabla de con las opciones del panel de transformar
   output$transData <- DT::renderDataTable(update.trans(),
-    escape = FALSE, selection = "none", server = FALSE,
-    options = list(dom = "t", paging = FALSE, ordering = FALSE), rownames = F,
-    callback = JS("table.rows().every(function(i, tab, row) {
+                                          escape = FALSE, selection = "none", server = FALSE,
+                                          options = list(dom = "t", paging = FALSE, ordering = FALSE), rownames = F,
+                                          callback = JS("table.rows().every(function(i, tab, row) {
                                                         var $this = $(this.node());
                                                         $this.attr('id', this.data()[0]);
                                                         $this.addClass('shiny-input-checkbox');});
@@ -666,8 +671,8 @@ shinyServer(function(input, output, session) {
         return(res)
       }, error = function(e) {
         showNotification(paste0("ERROR EN Correlacion: ", e),
-          duration = 10,
-          type = "error")
+                         duration = 10,
+                         type = "error")
         return(NULL)
       })
     })
@@ -757,8 +762,8 @@ shinyServer(function(input, output, session) {
         return(res)
       }, error = function(e) {
         showNotification(paste0("Error en Poder Predictivo: ", e),
-          duration = 10,
-          type = "error")
+                         duration = 10,
+                         type = "error")
         return(NULL)
       })
     })
@@ -970,7 +975,7 @@ shinyServer(function(input, output, session) {
 
       # Cambia la tabla con la indices de knn
       output$knnIndPrecTable <- shiny::renderTable(xtable(indices.prec.table(indices.knn,"KNN")),
-                                                  bordered = T, width = "100%", align = "c", digits = 2)
+                                                   bordered = T, width = "100%", align = "c", digits = 2)
 
       output$knnIndErrTable <- shiny::renderTable(xtable(indices.error.table(indices.knn,"KNN")),
                                                   bordered = T, width = "100%", align = "c", digits = 2)
@@ -1093,10 +1098,10 @@ shinyServer(function(input, output, session) {
       isolate(eval(parse(text = cod.svm.pred)))
 
       modelo.svm.roc <- svm(as.formula(paste0(variable.predecir, "~.")),
-        data = datos.aprendizaje,
-        scale = T,
-        kernel = input$kernel.svm,
-        probability = T
+                            data = datos.aprendizaje,
+                            scale = T,
+                            kernel = input$kernel.svm,
+                            probability = T
       )
       score.svm <<- predict(modelo.svm.roc, datos.prueba, probability = T)
 
@@ -1343,10 +1348,10 @@ shinyServer(function(input, output, session) {
 
       # Cambia la tabla con la indices de dt
       output$dtIndPrecTable <- shiny::renderTable(xtable(indices.prec.table(indices.dt,"Árboles de Decisión")),
-                                                   bordered = T, width = "100%", align = "c", digits = 2)
+                                                  bordered = T, width = "100%", align = "c", digits = 2)
 
       output$dtIndErrTable <- shiny::renderTable(xtable(indices.error.table(indices.dt,"Árboles de Decisión")),
-                                                  bordered = T, width = "100%", align = "c", digits = 2)
+                                                 bordered = T, width = "100%", align = "c", digits = 2)
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.dt(4)
@@ -1727,10 +1732,10 @@ shinyServer(function(input, output, session) {
 
       # Cambia la tabla con la indices de boosting
       output$boostingIndPrecTable <- shiny::renderTable(xtable(indices.prec.table(indices.boosting,"ADA-BOOSTING")),
-                                                  bordered = T, width = "100%", align = "c", digits = 2)
+                                                        bordered = T, width = "100%", align = "c", digits = 2)
 
       output$boostingIndErrTable <- shiny::renderTable(xtable(indices.error.table(indices.boosting,"ADA-BOOSTING")),
-                                                 bordered = T, width = "100%", align = "c", digits = 2)
+                                                       bordered = T, width = "100%", align = "c", digits = 2)
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.boosting(4)
@@ -1810,15 +1815,15 @@ shinyServer(function(input, output, session) {
     if (!is.null(datos.prueba)) {
       calcular.areas()
       output$TablaComp <- DT::renderDataTable(DT::datatable(tabla.comparativa(),
-        selection = "none",
-        editable = FALSE,
-        extensions = c("Responsive"),
-        options = list(
-          dom = "frtip",
-          pageLength = 10,
-          buttons = NULL,
-          scrollY = T
-        )
+                                                            selection = "none",
+                                                            editable = FALSE,
+                                                            extensions = c("Responsive"),
+                                                            options = list(
+                                                              dom = "frtip",
+                                                              pageLength = 10,
+                                                              buttons = NULL,
+                                                              scrollY = T
+                                                            )
       ))
       codigo.reporte[["tabla.comparativa"]] <<- paste0("## Tabla Comparativa \n```{r}\ncalcular.areas()\ntabla.comparativa()\n```")
     }
@@ -1842,21 +1847,21 @@ shinyServer(function(input, output, session) {
       paste('data-', Sys.Date(), '.zip', sep='')
     },
     content = function(file) {
+      load.page(T)
       owd <- setwd(tempdir())
       on.exit(setwd(owd))
       files <- NULL;
-
       namermd <- paste('data-', Sys.Date(), '.rmd', sep='')
       writeLines(input$fieldCodeReport, namermd)
       files <- c(namermd, files)
 
       src <- normalizePath(namermd)
-      enc <- as.list(devtools::session_info("rmarkdown"))$platform$collate
-      out <- rmarkdown::render(src,  params = NULL, rmarkdown::word_document(), encoding = "mac")
+      out <- rmarkdown::render(src,  params = NULL, "word_document")
       file.rename(out, paste('data-', Sys.Date(), '.docx', sep=''))
       files <- c(paste('data-', Sys.Date(), '.docx', sep=''), files)
 
       zip::zip(file, files)
+      load.page(F)
     }
   )
 
@@ -1868,4 +1873,4 @@ shinyServer(function(input, output, session) {
     stopApp()
   })
 
-})
+  })

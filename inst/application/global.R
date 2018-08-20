@@ -42,20 +42,20 @@ new.gauge <- function(id, val, lab){
 #Codigo del calculo de los indices
 cod.indices <- function(){
   return('indices.generales <- function(MC) {
-  if (1 == dim(MC)[2]) {
-    MC <- cbind(MC, 0)
-  }
+         if (1 == dim(MC)[2]) {
+         MC <- cbind(MC, 0)
+         }
 
-  precision.global <- (sum(diag(MC)) / sum(MC)) * 100
-  error.global <- (1 - (sum(diag(MC)) / sum(MC))) * 100
-  precision.clase <- diag(MC)/rowSums(MC) * 100
-  error.clase <- 100 - precision.clase
+         precision.global <- (sum(diag(MC)) / sum(MC)) * 100
+         error.global <- (1 - (sum(diag(MC)) / sum(MC))) * 100
+         precision.clase <- diag(MC)/rowSums(MC) * 100
+         error.clase <- 100 - precision.clase
 
-  res <- list( precision.global = precision.global,
-               error.global = error.global,
-               precision.clase = precision.clase,
-               error.clase = error.clase)
-  return(res)
+         res <- list( precision.global = precision.global,
+         error.global = error.global,
+         precision.clase = precision.clase,
+         error.clase = error.clase)
+         return(res)
 }')
 }
 
@@ -201,7 +201,7 @@ particion.code <- function(data = "datos", p = "0.5", variable = NULL, semilla =
   semilla <- ifelse(is.numeric(semilla), semilla, 5)
   semilla <- ifelse(perm.semilla, paste0("set.seed(",semilla,")"), "rm(.Random.seed, envir = globalenv())")
   return(paste0(semilla,"\nparticion <- createDataPartition(datos$",variable,", p = ",p/100,", list = FALSE)\n
-datos.prueba <<- datos[-particion,]\ndatos.aprendizaje <<- datos[particion,]"))
+                datos.prueba <<- datos[-particion,]\ndatos.aprendizaje <<- datos[particion,]"))
 }
 
 # Pagina de Resumen ---------------------------------------------------------------------------------------------------------
@@ -319,28 +319,28 @@ def.code.cat <- function(data = "datos", variable = "input$sel.distribucion", co
 #Hace el grafico de la distribucion numerica
 default.func.num <- function(){
   return(paste0("distribucion.numerico <<- function(var, nombre.var, color){
-        nf <- graphics::layout(mat = matrix(c(1, 2), 2, 1, byrow=TRUE),  height = c(3,1))
-        par(mar=c(3.1, 3.1, 1.1, 2.1))
-        hist(var, col = color, border=F, main = paste0('Distribución y atipicidad de la variable ', nombre.var), axes=F)
-        axis(1, col=par('bg'), col.ticks='grey81', lwd.ticks=1, tck=-0.025)
-        axis(2, col=par('bg'), col.ticks='grey81', lwd.ticks=1, tck=-0.025)
-        boxplot(var, col = color, boxcol = color, boxlty = 1, boxlwd = 3, boxwex = 1.5,
-        edcol = color, medlty = 1, medlwd = 8, medcol = color, whiskcol = color, whisklty = 3,
-        staplecol = color, staplelty = 1, staplelwd = 3, horizontal=TRUE, outline=TRUE,
-        frame=F, whisklwd = 2.5, outpch = 20, outcex = 1.5, outcol = 'red', axes=F)
+                nf <- graphics::layout(mat = matrix(c(1, 2), 2, 1, byrow=TRUE),  height = c(3,1))
+                par(mar=c(3.1, 3.1, 1.1, 2.1))
+                hist(var, col = color, border=F, main = paste0('Distribución y atipicidad de la variable ', nombre.var), axes=F)
+                axis(1, col=par('bg'), col.ticks='grey81', lwd.ticks=1, tck=-0.025)
+                axis(2, col=par('bg'), col.ticks='grey81', lwd.ticks=1, tck=-0.025)
+                boxplot(var, col = color, boxcol = color, boxlty = 1, boxlwd = 3, boxwex = 1.5,
+                edcol = color, medlty = 1, medlwd = 8, medcol = color, whiskcol = color, whisklty = 3,
+                staplecol = color, staplelty = 1, staplelwd = 3, horizontal=TRUE, outline=TRUE,
+                frame=F, whisklwd = 2.5, outpch = 20, outcex = 1.5, outcol = 'red', axes=F)
 }"))
 }
 
 #Hace el grafico de la distribucion categorica
 default.func.cat <- function(){
   return(paste0("distribucion.categorico <<- function(var, color = 'input$col.dist'){
-        colores <- sapply(c(1:length(levels(var))), function(i) rgb(sample(0:255, 1), sample(0:255, 1), sample(0:255, 1), 180, maxColorValue = 255))
-        data <- data.frame(label = levels(var), value = summary(var))
-        plot(ggplot(data, aes(label, value)) +
-        geom_bar(stat = 'identity', fill = colores) +
-        geom_text(aes(label = value, y = value), vjust = -0.5, size = 4) +
-        theme_minimal() +
-        labs(title = 'Distribución', y = 'Cantidad de casos', x = 'Categorias'))
+                colores <- sapply(c(1:length(levels(var))), function(i) rgb(sample(0:255, 1), sample(0:255, 1), sample(0:255, 1), 180, maxColorValue = 255))
+                data <- data.frame(label = levels(var), value = summary(var))
+                plot(ggplot(data, aes(label, value)) +
+                geom_bar(stat = 'identity', fill = colores) +
+                geom_text(aes(label = value, y = value), vjust = -0.5, size = 4) +
+                theme_minimal() +
+                labs(title = 'Distribución', y = 'Cantidad de casos', x = 'Categorias'))
 }"))
 }
 
@@ -371,62 +371,62 @@ dist.x.predecir <- function(data, variable, variable.predecir) {
 #Hace la grafica de proporciones segun la variable predictiva
 plot.code.dist.porc <- function(variable, nom.variable, var.predecir, nom.predecir, colores = NA, label.size = 9.5){
   return(paste0("colores <- gg_color_hue(length(unique(datos[,'",var.predecir,"'])))
-label.size <- ",label.size," - length(unique(datos[,'",variable,"']))
-label.size <- ifelse(label.size < 3, 3, label.size)
-data. <- dist.x.predecir(datos, '",variable,"', '",var.predecir,"')
-ggplot(data., aes(fct_reorder(data.[['",variable,"']], count, .desc = T), prop, fill = data.[['",var.predecir,"']])) +
-geom_bar(stat = 'identity') +
-geom_text(aes(label = paste0(count, ' (', scales::percent(prop), ')'), y = prop), color = 'gray90',
-position = position_stack(vjust = .5), size = label.size) +
-theme_minimal() +
-theme(text = element_text(size=15)) +
-scale_fill_manual(values = colores) +
-scale_y_continuous(labels = scales::percent)+
-coord_flip() +
-labs(title = 'Distribución relativa de la variable ",nom.variable," según la ",nom.predecir,"', x = '', y = '') +
-guides(fill = guide_legend(reverse=T)) +
-theme(legend.position = 'top', legend.title = element_blank())
-"))
+                label.size <- ",label.size," - length(unique(datos[,'",variable,"']))
+                label.size <- ifelse(label.size < 3, 3, label.size)
+                data. <- dist.x.predecir(datos, '",variable,"', '",var.predecir,"')
+                ggplot(data., aes(fct_reorder(data.[['",variable,"']], count, .desc = T), prop, fill = data.[['",var.predecir,"']])) +
+                geom_bar(stat = 'identity') +
+                geom_text(aes(label = paste0(count, ' (', scales::percent(prop), ')'), y = prop), color = 'gray90',
+                position = position_stack(vjust = .5), size = label.size) +
+                theme_minimal() +
+                theme(text = element_text(size=15)) +
+                scale_fill_manual(values = colores) +
+                scale_y_continuous(labels = scales::percent)+
+                coord_flip() +
+                labs(title = 'Distribución relativa de la variable ",nom.variable," según la ",nom.predecir,"', x = '', y = '') +
+                guides(fill = guide_legend(reverse=T)) +
+                theme(legend.position = 'top', legend.title = element_blank())
+                "))
 }
 
 plot.code.poder.pred <- function(var.predecir, colores = NA, label.size = 9.5){
   return(paste0("colores <- gg_color_hue(length(unique(datos[,'",var.predecir,"'])))
-label.size <- ",label.size," - length(unique(datos[,'",var.predecir,"']))
-label.size <- ifelse(label.size < 3, 3, label.size)
-data. <- dist.x.predecir(datos, '",var.predecir,"','",var.predecir,"')
-ggplot(data., aes(x='', y=prop, fill= data.[['",var.predecir,"']]))+
-geom_bar(width = 1, stat = 'identity')+
-geom_text(aes(label = paste0(count, ' (', scales::percent(prop), ')'), y = prop ), color = 'gray90',
-position = position_stack(vjust = .5), size = label.size)+
-theme_minimal() +
-theme(text = element_text(size=15)) +
-scale_fill_manual(values = colores) +
-scale_y_continuous(labels = scales::percent)+
-coord_flip()+
-labs(title = 'Distribución relativa de la variable ",var.predecir,"', x = '', y = '') +
-guides(fill = guide_legend(reverse=T)) +
-theme(legend.position = 'top', legend.title = element_blank())
-"))
+                label.size <- ",label.size," - length(unique(datos[,'",var.predecir,"']))
+                label.size <- ifelse(label.size < 3, 3, label.size)
+                data. <- dist.x.predecir(datos, '",var.predecir,"','",var.predecir,"')
+                ggplot(data., aes(x='', y=prop, fill= data.[['",var.predecir,"']]))+
+                geom_bar(width = 1, stat = 'identity')+
+                geom_text(aes(label = paste0(count, ' (', scales::percent(prop), ')'), y = prop ), color = 'gray90',
+                position = position_stack(vjust = .5), size = label.size)+
+                theme_minimal() +
+                theme(text = element_text(size=15)) +
+                scale_fill_manual(values = colores) +
+                scale_y_continuous(labels = scales::percent)+
+                coord_flip()+
+                labs(title = 'Distribución relativa de la variable ",var.predecir,"', x = '', y = '') +
+                guides(fill = guide_legend(reverse=T)) +
+                theme(legend.position = 'top', legend.title = element_blank())
+                "))
 }
 
 #Grafica el pairs
 pairs.poder <- function(){
   return(paste0("vars.p <- datos[,'",variable.predecir,"']
-col <- rainbow( length(unique(vars.p)) + 1 )
-col <- col[2:length(col)]
-pairs.panels(var.numericas(datos),bg = col[datos[,'",variable.predecir,"']],
-pch= 22, main='', hist.col = gg_color_hue(1), ellipses = FALSE)"))
+                col <- rainbow( length(unique(vars.p)) + 1 )
+                col <- col[2:length(col)]
+                pairs.panels(var.numericas(datos),bg = col[datos[,'",variable.predecir,"']],
+                pch= 22, main='', hist.col = gg_color_hue(1), ellipses = FALSE)"))
 }
 
 #Grafica la densidad de las variables numericas
 plot.numerico.dens <- function(variable){
   return(paste0("ggplot(datos, aes_string('",variable,"', fill = '",variable.predecir,"')) +
-geom_density( alpha = .85) +
-theme_minimal() +
-theme(text = element_text(size=15)) +
-scale_fill_manual(values = gg_color_hue(length(levels(datos[,'",variable.predecir,"'])))) +
-labs(title = 'Densidad de la variable ",variable," según ",variable.predecir,"', y = '', x = '') +
-theme(legend.position = 'top', legend.title = element_blank(), text = element_text(size = 15))"))
+                geom_density( alpha = .85) +
+                theme_minimal() +
+                theme(text = element_text(size=15)) +
+                scale_fill_manual(values = gg_color_hue(length(levels(datos[,'",variable.predecir,"'])))) +
+                labs(title = 'Densidad de la variable ",variable," según ",variable.predecir,"', y = '', x = '') +
+                theme(legend.position = 'top', legend.title = element_blank(), text = element_text(size = 15))"))
 }
 
 # Pagina de KNN -------------------------------------------------------------------------------------------------------------
@@ -506,8 +506,8 @@ dt.MC <- function(variable.p){
 dt.plot <- function(){
   num <- length(levels(datos[,variable.predecir]))
   return(paste0("prp(modelo.dt, type = 2, extra = 108, nn = T, varlen = 0, faclen = 0,
-fallen.leaves = TRUE, branch.lty = 6, shadow.col = 'gray82',
-box.col = gg_color_hue(",num,")[modelo.dt$frame$yval])"))
+                fallen.leaves = TRUE, branch.lty = 6, shadow.col = 'gray82',
+                box.col = gg_color_hue(",num,")[modelo.dt$frame$yval])"))
 }
 
 # Pagina de RF --------------------------------------------------------------------------------------------------------------
@@ -714,17 +714,17 @@ if(is.null(data)) return(NULL)
 res <- base::subset(data, select =! sapply(data, class) %in% c('numeric', 'integer'))
 return(res)
 }\ndatos.disyuntivos <- function(data, vars) {
-  if (is.null(data)) return(NULL)
-  cualitativas <- base::subset(data, select = colnames(data) %in% c(vars))
-  data <- data[, !colnames(data) %in% vars]
-  for (variable in colnames(cualitativas)) {
-    for (categoria in unique(cualitativas[, variable])) {
-      nueva.var <- as.numeric(cualitativas[, variable] == categoria)
-      data <- cbind(data, nueva.var)
-      colnames(data)[length(colnames(data))] <- paste0(variable, '.', categoria)
-    }
-  }
-  return(data)
+if (is.null(data)) return(NULL)
+cualitativas <- base::subset(data, select = colnames(data) %in% c(vars))
+data <- data[, !colnames(data) %in% vars]
+for (variable in colnames(cualitativas)) {
+for (categoria in unique(cualitativas[, variable])) {
+nueva.var <- as.numeric(cualitativas[, variable] == categoria)
+data <- cbind(data, nueva.var)
+colnames(data)[length(colnames(data))] <- paste0(variable, '.', categoria)
+}
+}
+return(data)
 }\n", default.func.num(), "\n", default.func.cat(), "
 ```
 # Carga de Datos
