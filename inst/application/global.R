@@ -480,11 +480,15 @@ svm.plot <- function(variables, resto){
 # Pagina de DT --------------------------------------------------------------------------------------------------------------
 
 #Crea el modelo DT
-dt.modelo <- function(variable.pr = NULL, minsplit =  20){
+dt.modelo <- function(variable.pr = NULL, minsplit =  20, cp = 0.01){
   if(is.na(minsplit)){
     minsplit <- 1
   }
-  codigo <- paste0("modelo.dt <<- rpart(",variable.pr,"~., data = datos.aprendizaje, control = rpart.control(minsplit = ",minsplit,"))")
+  if(!is.numeric(cp)){
+    cp <- 0.01
+  }
+  codigo <- paste0("modelo.dt <<- rpart(",variable.pr,"~., data = datos.aprendizaje,
+                   control = rpart.control(minsplit = ",minsplit,", cp = ",cp,"))")
   return(codigo)
 }
 
@@ -536,13 +540,13 @@ rf.plot <- function(){
 # Pagina de BOOSTING --------------------------------------------------------------------------------------------------------
 
 #Crea el modelo BOOSTING
-boosting.modelo <- function(variable.pr = NULL, predictoras = ".", iter = 50, nu = 1, type = "discrete"){
-  if(all(predictoras == ""))
-    predictoras <- "."
-  predictoras <- paste0(predictoras, collapse = "+")
+boosting.modelo <- function(variable.pr = NULL, iter = 50, nu = 1, type = "discrete", minsplit = 1,cp = 0.01){
   iter <- ifelse(!is.numeric(iter), 50, iter)
   nu <- ifelse(!is.numeric(nu), 1, nu)
-  codigo <- paste0("modelo.boosting <<- ada(",variable.pr,"~",predictoras,", data = datos.aprendizaje, iter = ",iter,", nu = ",nu,", type = '",type,"')")
+  minsplit <- ifelse(!is.numeric(minsplit), 1, minsplit)
+  cp <- ifelse(!is.numeric(cp), 0.01, cp)
+  codigo <- paste0("modelo.boosting <<- ada(",variable.pr,"~., data = datos.aprendizaje, iter = ",iter,", nu = ",nu,", type = '",type,"',
+                   control = rpart.control(minsplit = ",minsplit,", cp = ",cp,"))")
   return(codigo)
 }
 

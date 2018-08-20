@@ -1193,7 +1193,7 @@ shinyServer(function(input, output, session) {
   })
 
   # Si las opciones cambian
-  observeEvent(c(input$minsplit.dt), {
+  observeEvent(c(input$minsplit.dt, input$cp.dt), {
     if (validar.datos(print = FALSE)) {
       load.page(T)
       default.codigo.dt()
@@ -1207,7 +1207,9 @@ shinyServer(function(input, output, session) {
 
     # Se acualiza el codigo del modelo
     codigo <- dt.modelo(variable.pr = variable.predecir,
-                        minsplit = input$minsplit.dt)
+                        minsplit = input$minsplit.dt,
+                        cp = input$cp.dt)
+
     updateAceEditor(session, "fieldCodeDt", value = codigo)
     cod.dt.modelo <<- codigo
 
@@ -1286,7 +1288,7 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.dt(1)
-      showNotification("Error al ejecutar el modelo, intente nuevamente", duration = 15, type = "error")
+      showNotification(paste0("Error al ejecutar el modelo, intente nuevamente:",e), duration = 15, type = "error")
     }
     )
   }
@@ -1553,7 +1555,7 @@ shinyServer(function(input, output, session) {
   })
 
   # Si las opciones cambian o actualizar el codigo
-  observeEvent(c(input$iter.boosting, input$nu.boosting, input$tipo.boosting), {
+  observeEvent(c(input$iter.boosting, input$nu.boosting, input$tipo.boosting, input$cp.boosting, input$minsplit.boosting), {
     if (validar.datos(print = FALSE) & length(levels(datos[, variable.predecir])) == 2) {
       load.page(T)
       deault.codigo.boosting()
@@ -1569,7 +1571,9 @@ shinyServer(function(input, output, session) {
       variable.pr = variable.predecir,
       iter = input$iter.boosting,
       nu = input$nu.boosting,
-      type = input$tipo.boosting
+      type = input$tipo.boosting,
+      minsplit = input$minsplit.boosting,
+      cp = input$cp.boosting
     )
     updateAceEditor(session, "fieldCodeBoosting", value = codigo)
     cod.b.modelo <<- codigo
@@ -1760,6 +1764,7 @@ shinyServer(function(input, output, session) {
             diag(matrices[[i]]) / rowSums(matrices[[i]]) * 100,
             areas[[i]]
           ), 2)))
+          names.class <- colnames(matrices[[i]])
         }
       }
       colnames(df) <- c("Modelo", "Precisión Global", names.class, "Área de ROC")
@@ -1846,7 +1851,8 @@ shinyServer(function(input, output, session) {
       files <- c(namermd, files)
 
       src <- normalizePath(namermd)
-      out <- rmarkdown::render(src,  params = NULL, rmarkdown::word_document(), envir = new.env(parent = globalenv()))
+      enc <- as.list(devtools::session_info("rmarkdown"))$platform$collate
+      out <- rmarkdown::render(src,  params = NULL, rmarkdown::word_document(), encoding = "mac")
       file.rename(out, paste('data-', Sys.Date(), '.docx', sep=''))
       files <- c(paste('data-', Sys.Date(), '.docx', sep=''), files)
 

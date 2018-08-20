@@ -423,7 +423,7 @@ pagina.svm <- tabItem(tabName = "svm",
 panel.generar.dt <- tabPanel(title = "Generación del Modelo",
                               verbatimTextOutput("txtDt"),
                               aceEditor("fieldCodeDt", mode = "r", theme = "monokai",
-                                        value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
+                                        value = "", height = "4vh", readOnly = F, autoComplete = "enabled"))
 
 plot.dt <- tabPanel(title = "Gráfico Árbol",
                      plotOutput('plot.dt', height = "55vh"),
@@ -455,7 +455,9 @@ opciones.dt <- fluidRow(column(width = 6, actionButton("runDt", label = "Ejecuta
                         column(width = 6,
                                dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
                                              tooltip = tooltipOptions(title = "Clic para ver opciones"),
-                                             numericInput("minsplit.dt", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1))))
+                                             numericInput("minsplit.dt", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1),
+                                             numericInput("cp.dt", "Complejidad:", 0.01, width = "100%",min = 0,max = 1, step = 0.01))
+                               ))
 
 
 titulo.dt <- fluidRow(column(width = 12, opciones.dt))
@@ -562,8 +564,11 @@ opciones.boosting <- fluidRow(column(width = 6, actionButton("runBoosting",label
                                                                tooltip = tooltipOptions(title = "Clic para ver opciones"),
                                                                numericInput("iter.boosting", "Número de áboles:", 50, width = "100%",min = 1),
                                                                numericInput("nu.boosting", "Valor de nu:", 1, width = "100%",min = 0, max = 1),
+                                                               numericInput("minsplit.boosting", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1),
+                                                               numericInput("cp.boosting", "Complejidad:", 0.01, width = "100%",min = 0,max = 1, step = 0.01),
                                                                selectInput(inputId = "tipo.boosting", label = "Seleccionar un tipo",selected = 1,
-                                                                           choices =  c("discrete", "real", "gentle")))))
+                                                                           choices =  c("discrete", "real", "gentle")))
+                                     ))
 
 titulo.boosting <- fluidRow(column(width = 12,opciones.boosting))
 
