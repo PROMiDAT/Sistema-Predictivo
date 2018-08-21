@@ -34,6 +34,7 @@ library(forcats)
 library(psych)
 library(ROCR)
 library(xtable)
+library(raster)
 
 # FUNCIONES --------------------------------------------------------------------------------------------------------------
 
