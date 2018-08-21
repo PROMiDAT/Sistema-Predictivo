@@ -765,14 +765,14 @@ shinyServer(function(input, output, session) {
     output$plot.pairs.poder <- renderPlot({
       tryCatch({
         cod.poder.num <<- updatePlot$poder.num
-        res <- isolate(eval(parse(text = cod.poder.num)))
-        updateAceEditor(session, "fieldCodePoderNum", value = cod.poder.num)
         if (ncol(var.numericas(datos)) >= 1) {
+          res <- isolate(eval(parse(text = cod.poder.num)))
+          updateAceEditor(session, "fieldCodePoderNum", value = cod.poder.num)
           codigo.reporte[["poder.num"]] <<- paste0("## Poder Predictivo Variables Numéricas \n```{r}\n", cod.poder.num, "\n```")
+          return(res)
         }else{
           error.plot.tipos.variables(num = T)
         }
-        return(res)
       }, error = function(e) {
         showNotification(paste0("Error en Poder Predictivo: ", e),
                          duration = 10,

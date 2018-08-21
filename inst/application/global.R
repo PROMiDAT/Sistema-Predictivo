@@ -116,7 +116,7 @@ plot.MC <<- function(cm) {
         rect(x1.aux, y1.aux, x2.aux, y2.aux, col = ifelse(i == j, '#3f72af', '#11999e'))
         text(mean(c(x1.aux, x2.aux)),
           mean(c(y1.aux, y2.aux)),
-          paste0(cm[(i + 1), (j + 1)], '(', round(cm[(i + 1), (j + 1)] / sum(cm[(i + 1), ]), 2) * 100, '%)'),
+          paste0(cm[(i + 1), (j + 1)], ' (', round(cm[(i + 1), (j + 1)] / sum(cm[(i + 1), ]), 2) * 100, '%)'),
           cex = 1.3, font = 2, col = 'white')
       }
     }
