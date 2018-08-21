@@ -290,20 +290,20 @@ pagina.distribuciones <- tabItem(tabName = "distribucion",
 
 # PAGINA DE PODER PREDICTIVO ----------------------------------------------------------------------------------------------
 
-plot.pred.poder <- tabPanel(title = 'Distribución Variable Discriminante',
+plot.pred.poder <- tabPanel(title = 'Distribución Variable a Predecir',
                             plotOutput('plot.pred.poder', height = "55vh"),
                             campo.codigo(runid = "run.code.poder.pred", fieldid = "fieldCodePoderPred", height = "16vh"))
 
-plot.dist.poder <- tabPanel(title = 'Distribución Según Variable Discriminante',
+plot.dist.poder <- tabPanel(title = 'Distribución Variables Categóricas Según Variable a Predecir',
                             plotOutput('plot.dist.poder', height = "55vh"),
                             selectInput(inputId = "sel.distribucion.poder", label = NULL, choices =  "", width = "100%"),
                             campo.codigo(runid = "run.code.poder.cat", fieldid = "fieldCodePoderCat", height = "16vh"))
 
-plot.pairs.poder <- tabPanel(title = 'Variables Numéricas',
+plot.pairs.poder <- tabPanel(title = 'Gráfico de Pares',
                              plotOutput('plot.pairs.poder', height = "55vh"),
                              campo.codigo(runid = "run.code.poder.num", fieldid = "fieldCodePoderNum", height = "16vh"))
 
-plot.dens.poder <- tabPanel(title = 'Densidad Según Variable Discriminante',
+plot.dens.poder <- tabPanel(title = 'Densidad Variables Numéricas Según Variable a Predecir',
                              plotOutput('plot.density.poder', height = "55vh"),
                              selectInput(inputId = "sel.density.poder", label = NULL, choices =  "", width = "100%"),
                              campo.codigo(runid = "run.code.poder.dens", fieldid = "fieldCodePoderDens", height = "16vh"))
@@ -311,8 +311,8 @@ plot.dens.poder <- tabPanel(title = 'Densidad Según Variable Discriminante',
 
 pagina.poder <- tabItem(tabName = "poderPred", column(width = 12, tabBox(width = 12,
                                                                          plot.pred.poder,
-                                                                         plot.dist.poder,
                                                                          plot.pairs.poder,
+                                                                         plot.dist.poder,
                                                                          plot.dens.poder)) )
 
 # PAGINA DE KNN -----------------------------------------------------------------------------------------------------------
@@ -640,7 +640,7 @@ pagina.generar.reporte <- tabItem(tabName = "reporte", panel.reporte.codigo , vi
 pagina.info <- tabItem(tabName = "acercaDe",
                        img(src="Logo.png", style="padding-bottom:20px;margin-left: auto;margin-right: auto;display: block;width: 50%;"),
                        infoBoxPROMiDAT("Todos los derechos reservados a", "PROMiDAT S.A.", icono = icon("copyright")),
-                       infoBoxPROMiDAT("Versión del Sistema", "1.2.7", icono = icon("file-code-o")))
+                       infoBoxPROMiDAT("Versión del Sistema", "1.0.0", icono = icon("file-code-o")))
 
 # PAGINA COMPLETA ---------------------------------------------------------------------------------------------------------
 

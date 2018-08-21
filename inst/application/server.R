@@ -139,6 +139,15 @@ shinyServer(function(input, output, session) {
     }
   }
 
+  error.plot.tipos.variables <- function(num = T){
+    if(num){
+      img <- raster::stack("www/errorNumericas.png")
+    }else{
+      img <- raster::stack("www/errorCategoricas.png")
+    }
+    raster::plotRGB(img)
+  }
+
   # Configuraciones iniciales -----------------------------------------------------------------------------------------------
 
   source("global.R", local = T)
@@ -468,7 +477,7 @@ shinyServer(function(input, output, session) {
     close.menu("poderPred", is.null(datos.aprendizaje))
     # Cambia las tablas de aprendizaje y de prueba
     actualizar.tabla(c("datos.aprendizaje", "datos.prueba"))
-  })
+  },priority = 5)
 
   # Habilitada o deshabilitada la semilla
   observeEvent(input$permitir.semilla, {
@@ -722,6 +731,8 @@ shinyServer(function(input, output, session) {
         updateAceEditor(session, "fieldCodePoderCat", value = cod.poder.cat)
         if (ncol(var.categoricas(datos)) > 1) {
           codigo.reporte[[paste0("poder.cat.",input$sel.distribucion.poder)]] <<- paste0("## Distribución Según Variable Discriminante \n```{r}\n", cod.poder.cat, "\n```")
+        }else{
+          error.plot.tipos.variables(num = F)
         }
         return(res)
       }, error = function(e) {
@@ -758,6 +769,8 @@ shinyServer(function(input, output, session) {
         updateAceEditor(session, "fieldCodePoderNum", value = cod.poder.num)
         if (ncol(var.numericas(datos)) >= 1) {
           codigo.reporte[["poder.num"]] <<- paste0("## Poder Predictivo Variables Numéricas \n```{r}\n", cod.poder.num, "\n```")
+        }else{
+          error.plot.tipos.variables(num = T)
         }
         return(res)
       }, error = function(e) {
@@ -770,13 +783,17 @@ shinyServer(function(input, output, session) {
   })
 
   # Ejecuta el codigo del grafico
-  observeEvent(c(input$run.code.poder.num,input$segmentButton), {
-    if (input$fieldCodePoderNum != "") {
+  observeEvent(input$run.code.poder.num, {
+    if(input$fieldCodePoderNum != "") {
       updatePlot$poder.num <- input$fieldCodePoderNum
     } else {
       updatePlot$poder.num <- pairs.poder()
     }
   })
+
+  observeEvent(input$segmentButton,{
+    updatePlot$poder.num <- pairs.poder()
+  }, priority = 3)
 
   # Hace el grafico de poder predictivo densidad de variables numericas
   observeEvent(input$segmentButton, {
@@ -787,6 +804,8 @@ shinyServer(function(input, output, session) {
         updateAceEditor(session, "fieldCodePoderDens", value = cod.poder.den)
         if (ncol(var.numericas(datos)) > 1) {
           codigo.reporte[[paste0("poder.den.",input$sel.density.poder)]] <<- paste0("## Densidad Según Variable Discriminante\n```{r}\n", cod.poder.den, "\n```")
+        }else{
+          error.plot.tipos.variables(num = T)
         }
         return(res)
       }, error = function(e) {
@@ -1175,6 +1194,9 @@ shinyServer(function(input, output, session) {
       codigo.reporte[[paste0("svm.plot.",paste0(input$select.var.svm.plot, collapse = "."))]] <<- paste0("\n```{r}\n", svm.plot(input$select.var.svm.plot,v), "\n```")
       return(eval(parse(text = input$fieldCodeSvmPlot)))
     } else {
+      if (!(ncol(var.numericas(datos)) >= 2)) {
+        error.plot.tipos.variables(num = T)
+      }
       updateAceEditor(session, "fieldCodeSvmPlot", value = "")
       return(NULL)
     }
