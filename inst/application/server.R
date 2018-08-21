@@ -765,7 +765,7 @@ shinyServer(function(input, output, session) {
     output$plot.pairs.poder <- renderPlot({
       tryCatch({
         cod.poder.num <<- updatePlot$poder.num
-        if (ncol(var.numericas(datos)) >= 1) {
+        if (ncol(var.numericas(datos)) >= 2) {
           res <- isolate(eval(parse(text = cod.poder.num)))
           updateAceEditor(session, "fieldCodePoderNum", value = cod.poder.num)
           codigo.reporte[["poder.num"]] <<- paste0("## Poder Predictivo Variables Numéricas \n```{r}\n", cod.poder.num, "\n```")
