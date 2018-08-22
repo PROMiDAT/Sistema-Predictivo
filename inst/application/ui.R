@@ -105,6 +105,11 @@ mi.head <- tags$head(
   useShinyjs()
 )
 
+mi.titulo <- tags$script(HTML(
+  '$(document).ready(function() {
+  $("header").find("nav").append(\'<span class="header-title"> PredictoR </span>\');
+  })'))
+
 # PAGINA DE CARGA Y  TRANSFORMACION DE DATOS -----------------------------------------------------------------------------
 
 panel.cargar.datos <- tabPanel(title = "Cargar", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
@@ -350,7 +355,7 @@ opciones.knn <- fluidRow(column(width = 6, actionButton("runKnn", label = "Ejecu
                                numericInput("kmax.knn", "K Máximo: ", min = 1,step = 1, value = 7),
                                selectInput(inputId = "kernel.knn", label = "Seleccionar un Kernel",selected = 1,
                                            choices =  c("optimal", "rectangular", "triangular", "epanechnikov", "biweight",
-                                                        "triweight", "cos","inv","gaussian","optimal")))))
+                                                        "triweight", "cos","inv","gaussian")))))
 
 
 titulo.knn <- fluidRow(column(width = 12, opciones.knn))
@@ -645,11 +650,12 @@ pagina.info <- tabItem(tabName = "acercaDe",
 
 # PAGINA COMPLETA ---------------------------------------------------------------------------------------------------------
 
-shinyUI(dashboardPage(title="PROMiDAT",
+shinyUI(dashboardPage(title="PROMiDAT - PredictoR",
                       dashboardHeader(title = tags$a(href="http://promidat.com",
                                                      img(src="Logo2.png", height=55, width="100%", style="padding-top:2px; padding-bottom:6px;"))),
                       dashboardSidebar(mi.menu),
                       dashboardBody(mi.head,
+                                    mi.titulo,
                                     div(id = "loaderWrapper", div(id="loader")),
                                     tabItems( pagina.cargar.datos,
                                               pagina.resumen.numerico,

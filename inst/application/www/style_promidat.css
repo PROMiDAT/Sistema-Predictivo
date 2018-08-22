@@ -7,6 +7,14 @@
   background-color: #777777
 }
 
+.header-title{
+  position: absolute;
+  margin-top: 7px;
+  font-size: 24px;
+  color: white;
+  margin-left: 45%;
+}
+
 .disabled {
   background: #eee;
   cursor: default;

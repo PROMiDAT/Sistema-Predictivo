@@ -435,17 +435,17 @@ theme(legend.position = 'top', legend.title = element_blank(), text = element_te
 #Crea el modelo KNN
 kkn.modelo <- function(variable.pr = NULL, scale = TRUE,kmax = 7, kernel = "optimal"){
   kmax <- ifelse(!is.numeric(kmax), round(sqrt(nrow(datos.aprendizaje))), kmax)
-  return(paste0("modelo.knn <<- train.kknn(",variable.pr,"~., data = datos.aprendizaje, scale =",scale,", kmax=",kmax,", kernel = '",kernel,"')"))
+  return(paste0("modelo.knn.",kernel," <<- train.kknn(",variable.pr,"~., data = datos.aprendizaje, scale =",scale,", kmax=",kmax,", kernel = '",kernel,"')"))
 }
 
 #Codigo de la prediccion de knn
-kkn.prediccion <- function() {
-  return("prediccion.knn <<- predict(modelo.knn, datos.prueba)")
+kkn.prediccion <- function(kernel = "optimal") {
+  return(paste0("prediccion.knn.",kernel," <<- predict(modelo.knn.",kernel,", datos.prueba)"))
 }
 
 #Codigo de la matriz de confucion de knn
-knn.MC <- function(variable.p){
-  return(paste0("MC.knn <<- table(datos.prueba$",variable.p,", prediccion.knn)"))
+knn.MC <- function(variable.p, kernel = "optimal"){
+  return(paste0("MC.knn.",kernel," <<- table(datos.prueba$",variable.p,", prediccion.knn.",kernel,")"))
 }
 
 # Pagina de SVM -------------------------------------------------------------------------------------------------------------
@@ -636,6 +636,16 @@ areaROC <- function(prediccion,real) {
 
 # Pagina de REPORTE ---------------------------------------------------------------------------------------------------------
 
+combinar.nombres <- function(n.modelos, n.modos){
+  res <- c()
+  for (modo in n.modos) {
+    for (modelo in n.modelos) {
+      res <- c(res,paste0(modelo,".",modo))
+    }
+  }
+  return(res)
+}
+
 #Ordena el reporte
 ordenar.reporte <- function(lista){
   nombres <- names(lista)
@@ -646,8 +656,10 @@ ordenar.reporte <- function(lista){
              "correlacion","poder.pred",
              nombres[grepl("poder.cat.", nombres)],
              "poder.num",nombres[grepl("poder.den.", nombres)],
-             "modelo.knn","pred.knn",
-             "mc.knn","ind.knn", "modelo.svm",
+             combinar.nombres(c("modelo.knn","pred.knn","mc.knn","ind.knn"),
+                              c("optimal", "rectangular", "triangular","epanechnikov",
+                                "biweight","triweight", "cos","inv","gaussian")),
+             "modelo.svm",
              nombres[grepl("svm.plot.", nombres)],
              "pred.svm","mc.svm","ind.svm",
              "modelo.dt","modelo.dt.graf","pred.dt",
@@ -768,12 +780,12 @@ cod.poder.num <- NULL
 
 # -------------------  KNN
 
-modelo.knn <<- NULL
-MC.knn <<- NULL
-prediccion.knn <<- NULL
-indices.knn <<- rep(0,8)
-score.knn <<- NULL
-area.knn <<- NA
+# modelo.knn <<- NULL
+# MC.knn <<- NULL
+# prediccion.knn <<- NULL
+# indices.knn <<- rep(0,8)
+# score.knn <<- NULL
+# area.knn <<- NA
 
 cod.knn.modelo <<-  NULL
 cod.knn.pred <<-  NULL

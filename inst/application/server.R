@@ -148,6 +148,10 @@ shinyServer(function(input, output, session) {
     raster::plotRGB(img)
   }
 
+  exe <- function(...){
+    eval(parse(text = paste0(...)))
+  }
+
   # Configuraciones iniciales -----------------------------------------------------------------------------------------------
 
   source("global.R", local = T)
@@ -274,12 +278,12 @@ shinyServer(function(input, output, session) {
 
     # -------------------  KNN ------------------------ #
 
-    modelo.knn <<- NULL
-    MC.knn <<- NULL
-    prediccion.knn <<- NULL
-    indices.knn <<- rep(0, 8)
-    score.knn <<- NULL
-    area.knn <<- NA
+    # modelo.knn <<- NULL
+    # MC.knn <<- NULL
+    # prediccion.knn <<- NULL
+    # indices.knn <<- rep(0, 8)
+    # score.knn <<- NULL
+    # area.knn <<- NA
 
     # -------------------  SVM ------------------------ #
 
@@ -881,12 +885,12 @@ shinyServer(function(input, output, session) {
     cod.knn.modelo <<- codigo
 
     # Se genera el codigo de la prediccion
-    codigo <- kkn.prediccion()
+    codigo <- kkn.prediccion(kernel = input$kernel.knn)
     updateAceEditor(session, "fieldCodeKnnPred", value = codigo)
     cod.knn.pred <<- codigo
 
     # Se genera el codigo de la matriz
-    codigo <- knn.MC(variable.predecir)
+    codigo <- knn.MC(variable.predecir, kernel = input$kernel.knn)
     updateAceEditor(session, "fieldCodeKnnMC", value = codigo)
     cod.knn.mc <<- codigo
 
@@ -900,21 +904,21 @@ shinyServer(function(input, output, session) {
   limpia.knn <- function(capa = NULL) {
     for (i in capa:4) {
       switch(i, {
-        modelo.knn <<- NULL
+        exe("modelo.knn.",input$kernel.knn," <<- NULL")
         output$txtknn <- renderPrint(invisible(""))
-        codigo.reporte[["modelo.knn"]] <<- NULL
+        codigo.reporte[[paste0("modelo.knn.",input$kernel.knn)]] <<- NULL
       }, {
-        prediccion.knn <<- NULL
-        codigo.reporte[["pred.knn"]] <<- NULL
+        exe("prediccion.knn.",input$kernel.knn," <<- NULL")
+        codigo.reporte[[paste0("pred.knn.",input$kernel.knn)]] <<- NULL
         output$knnPrediTable <- DT::renderDataTable(NULL)
       }, {
-        MC.knn <<- NULL
-        codigo.reporte["mc.knn"] <<- NULL
+        exe("MC.knn.",input$kernel.knn," <<- NULL")
+        codigo.reporte[[paste0("mc.knn.",input$kernel.knn)]] <<- NULL
         output$plot.knn.mc <- renderPlot(NULL)
         output$txtknnMC <- renderPrint(invisible(NULL))
       }, {
-        indices.knn <<- rep(0, 10)
-        codigo.reporte[["ind.knn"]] <<- NULL
+        exe("indices.knn.",input$kernel.knn," <<- NULL")
+        codigo.reporte[[paste0("ind.knn.",input$kernel.knn)]] <<- NULL
       })
     }
   }
@@ -932,8 +936,9 @@ shinyServer(function(input, output, session) {
     tryCatch({
       eval(parse(text = cod.knn.modelo))
       updateAceEditor(session, "fieldCodeKnn", value = cod.knn.modelo)
-      output$txtknn <- renderPrint(modelo.knn)
-      codigo.reporte[["modelo.knn"]] <<- paste0("## Generación del modelo KNN\n```{r}\n", cod.knn.modelo, "\nmodelo.knn\n```")
+      output$txtknn <- renderPrint(exe("modelo.knn.",input$kernel.knn))
+      codigo.reporte[[paste0("modelo.knn.",input$kernel.knn)]] <<- paste0("## Generación del modelo KNN - ",input$kernel.knn,"\n```{r}\n",
+                                                                          cod.knn.modelo, "\nmodelo.knn.",input$kernel.knn,"\n```")
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.knn(1)
@@ -946,12 +951,12 @@ shinyServer(function(input, output, session) {
   ejecutar.knn.pred <- function() {
     tryCatch({ # Se corren los codigo
       eval(parse(text = cod.knn.pred))
-      score.knn <<- predict(modelo.knn, datos.prueba, type = "prob")
+      score.knn <<- predict(exe("modelo.knn.",input$kernel.knn), datos.prueba, type = "prob")
 
       # Cambia la tabla con la prediccion de knn
-      output$knnPrediTable <- DT::renderDataTable(obj.predic(prediccion.knn))
-      codigo.reporte[["pred.knn"]] <<- paste0("## Predicción del Modelo KNN\n```{r}\n", cod.knn.pred,
-                                              "\ndt.to.data.frame.predict(obj.predic(prediccion.knn))\n```")
+      output$knnPrediTable <- DT::renderDataTable(obj.predic(exe("prediccion.knn.",input$kernel.knn)))
+      codigo.reporte[[paste0("pred.knn.",input$kernel.knn)]] <<- paste0("## Predicción del Modelo KNN - ",input$kernel.knn,"\n```{r}\n", cod.knn.pred,
+                                              "\ndt.to.data.frame.predict(obj.predic(prediccion.knn.",input$kernel.knn,"))\n```")
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.knn(2)
@@ -964,12 +969,14 @@ shinyServer(function(input, output, session) {
   ejecutar.knn.mc <- function() {
     tryCatch({ # Se corren los codigo
       eval(parse(text = cod.knn.mc))
-      output$txtknnMC <- renderPrint(print(MC.knn))
+      output$txtknnMC <- renderPrint(print(exe("MC.knn.",input$kernel.knn)))
 
       eval(parse(text = plot.MC.code()))
-      output$plot.knn.mc <- renderPlot(isolate(eval(parse(text = "plot.MC(MC.knn)"))))
-      codigo.reporte[["mc.knn"]] <<- paste0("## Matriz de confusión del Modelo KNN\n```{r}\n", cod.knn.mc,
-                                            "\nMC.knn\n```\n```{r}\nplot.MC(MC.knn)\n```")
+      output$plot.knn.mc <- renderPlot(exe("plot.MC(MC.knn.",input$kernel.knn,")"))
+      codigo.reporte[[paste0("mc.knn.",input$kernel.knn)]] <<- paste0("## Matriz de confusión del Modelo KNN - ",
+                                                                      input$kernel.knn,"\n```{r}\n", cod.knn.mc,
+                                                                      "\nMC.knn.",input$kernel.knn,
+                                                                      "\n```\n```{r}\nplot.MC(MC.knn.",input$kernel.knn,")\n```")
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.knn(3)
@@ -983,10 +990,13 @@ shinyServer(function(input, output, session) {
     tryCatch({ # Se corren los codigo
       isolate(eval(parse(text = cod.knn.ind)))
 
-      indices.knn <<- indices.generales(MC.knn)
-      indices.g("knn", MC.knn)
+      MC <- exe("MC.knn.",input$kernel.knn)
+      indices.knn <- indices.generales(MC)
+      eval(parse(text = paste0("indices.knn.",input$kernel.knn, "<<- indices.knn")))
+      indices.g("knn", MC)
 
-      codigo.reporte[["ind.knn"]] <<- paste0("## Índices Generales \n```{r}\n", cod.knn.ind, "\nindices.knn\n```")
+      codigo.reporte[[paste0("ind.knn.",input$kernel.knn)]] <<- paste0("## Índices Generales del Modelo KNN - ",input$kernel.knn,"\n```{r}\n",
+                                                                      cod.knn.ind, "\nindices.knn.",input$kernel.knn,"\n```")
 
       nombres <- c("knnPrecGlob", "knnErrorGlob")
       titulos <- c("Precisión Global", "Error Global")
@@ -1896,4 +1906,4 @@ shinyServer(function(input, output, session) {
     stopApp()
   })
 
-  })
+})
