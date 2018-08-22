@@ -434,6 +434,7 @@ theme(legend.position = 'top', legend.title = element_blank(), text = element_te
 
 #Crea el modelo KNN
 kkn.modelo <- function(variable.pr = NULL, scale = TRUE,kmax = 7, kernel = "optimal"){
+  kmax <- ifelse(!is.numeric(kmax), round(sqrt(nrow(datos.aprendizaje))), kmax)
   return(paste0("modelo.knn <<- train.kknn(",variable.pr,"~., data = datos.aprendizaje, scale =",scale,", kmax=",kmax,", kernel = '",kernel,"')"))
 }
 
