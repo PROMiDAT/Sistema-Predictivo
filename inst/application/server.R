@@ -1845,7 +1845,8 @@ shinyServer(function(input, output, session) {
   })
 
   observeEvent(c(input$runKnn, input$runSvm, input$runDt, input$runRf, input$runBoosting, input$select.models, input$roc.sel), {
-    if (!is.null(datos.prueba)) {
+    browser()
+    if (!is.null(datos.aprendizaje)) {
       calcular.areas()
       output$TablaComp <- DT::renderDataTable(DT::datatable(tabla.comparativa(),
                                                             selection = "none",
