@@ -353,6 +353,7 @@ shinyServer(function(input, output, session) {
 
   # Cunado es precionado el boton de transformar datos
   observeEvent(input$transButton, {
+    codigo.reporte <<- list()
 
     # transforma los datos
     code.res <- transformar.datos()
@@ -727,9 +728,9 @@ shinyServer(function(input, output, session) {
     output$plot.dist.poder <- renderPlot({
       tryCatch({
         cod.poder.cat <<- updatePlot$poder.cat
-        res <- isolate(eval(parse(text = cod.poder.cat)))
         updateAceEditor(session, "fieldCodePoderCat", value = cod.poder.cat)
         if (ncol(var.categoricas(datos)) > 1) {
+          res <- isolate(eval(parse(text = cod.poder.cat)))
           codigo.reporte[[paste0("poder.cat.",input$sel.distribucion.poder)]] <<- paste0("## Distribución Según Variable Discriminante \n```{r}\n", cod.poder.cat, "\n```")
         }else{
           error.plot.tipos.variables(num = F)
@@ -765,9 +766,9 @@ shinyServer(function(input, output, session) {
     output$plot.pairs.poder <- renderPlot({
       tryCatch({
         cod.poder.num <<- updatePlot$poder.num
+        updateAceEditor(session, "fieldCodePoderNum", value = cod.poder.num)
         if (ncol(var.numericas(datos)) >= 2) {
           res <- isolate(eval(parse(text = cod.poder.num)))
-          updateAceEditor(session, "fieldCodePoderNum", value = cod.poder.num)
           codigo.reporte[["poder.num"]] <<- paste0("## Poder Predictivo Variables Numéricas \n```{r}\n", cod.poder.num, "\n```")
           return(res)
         }else{
@@ -800,9 +801,9 @@ shinyServer(function(input, output, session) {
     output$plot.density.poder <- renderPlot({
       tryCatch({
         cod.poder.den <<- updatePlot$poder.dens
-        res <- isolate(eval(parse(text = cod.poder.den)))
         updateAceEditor(session, "fieldCodePoderDens", value = cod.poder.den)
         if (ncol(var.numericas(datos)) > 1) {
+          res <- isolate(eval(parse(text = cod.poder.den)))
           codigo.reporte[[paste0("poder.den.",input$sel.density.poder)]] <<- paste0("## Densidad Según Variable Discriminante\n```{r}\n", cod.poder.den, "\n```")
         }else{
           error.plot.tipos.variables(num = T)
