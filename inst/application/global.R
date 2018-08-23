@@ -201,7 +201,7 @@ particion.code <- function(data = "datos", p = "0.5", variable = NULL, semilla =
   semilla <- ifelse(is.numeric(semilla), semilla, 5)
   semilla <- ifelse(perm.semilla, paste0("set.seed(",semilla,")"), "rm(.Random.seed, envir = globalenv())")
   return(paste0(semilla,"\nparticion <- createDataPartition(datos$",variable,", p = ",p/100,", list = FALSE)\n
-                datos.prueba <<- datos[-particion,]\ndatos.aprendizaje <<- datos[particion,]"))
+datos.prueba <<- datos[-particion,]\ndatos.aprendizaje <<- datos[particion,]"))
 }
 
 # Pagina de Resumen ---------------------------------------------------------------------------------------------------------
@@ -297,7 +297,7 @@ default.disp <- function(data = "datos", vars = NULL, color = "#FF0000AA"){
     return(NULL)
   } else if(length(vars) == 2) {
     return(paste0("ggplot(data = ", data, ", aes(x = ", vars[1], ", y = ", vars[2], ", label = rownames(", data, "))) +
-                  geom_point(color = '", color, "', size = 3) + geom_text(vjust = -0.7)"))
+geom_point(color = '", color, "', size = 3) + geom_text(vjust = -0.7)"))
   } else{
     return(paste0("scatterplot3d(", data, "[, '", vars[1], "'], ", data, "[, '",
                   vars[2], "'], ", data, "[, '", vars[3], "'], pch = 16, color = '", color, "')"))
@@ -452,30 +452,35 @@ knn.MC <- function(variable.p, kernel = "optimal"){
 
 #Crea el modelo SVM
 svm.modelo <- function(variable.pr = NULL, scale = TRUE, kernel = "linear"){
-  return(paste0("modelo.svm <<- svm(",variable.pr,"~., data = datos.aprendizaje, scale =",scale,", kernel = '",kernel,"')"))
+  return(paste0("modelo.svm.",kernel," <<- svm(",variable.pr,"~., data = datos.aprendizaje, scale =",scale,", kernel = '",kernel,"')"))
 }
 
 #Codigo de la prediccion de svm
-svm.prediccion <- function() {
-  return(paste0("prediccion.svm <<- predict(modelo.svm, datos.prueba)"))
+svm.prediccion <- function(kernel = "linear") {
+  return(paste0("prediccion.svm.",kernel," <<- predict(modelo.svm.",kernel," , datos.prueba)"))
 }
 
 #Codigo de la matriz de confucion de svm
-svm.MC <- function(variable.p){
-  return(paste0("MC.svm <<- table(datos.prueba$",variable.p,", prediccion.svm)"))
+svm.MC <- function(variable.p, kernel = "linear"){
+  return(paste0("MC.svm.",kernel," <<- table(datos.prueba$",variable.p,", prediccion.svm.",kernel," )"))
 }
 
 #Codigo del grafico de svm
-svm.plot <- function(variables, resto){
+svm.plot <- function(variables, resto, kernel = "linear"){
   if(is.null(variables)){
     return("NULL")
   }
   l <- c()
   for(i in 1:length(resto)){
-    l <- c(l , paste0(resto[i],"=",2+i))
+    l <- c(l , paste0(resto[i],"=", 2 + i*0.5))
   }
   l <- paste0("list(",paste0(l,collapse = ","),")")
-  return(paste0("plot(modelo.svm, datos, ",variables[1],"~",variables[2],", slice = ",l,")"))
+
+  if(length(levels(datos[,variable.predecir])) == 2){
+    return(paste0("plot(modelo.svm.",kernel,", datos)"))
+  }else{
+    return(paste0("plot(modelo.svm.",kernel,", datos, ",variables[1],"~",variables[2],", slice = ",l,")"))
+  }
 }
 
 
@@ -547,29 +552,29 @@ boosting.modelo <- function(variable.pr = NULL, iter = 50, nu = 1, type = "discr
   nu <- ifelse(!is.numeric(nu), 1, nu)
   minsplit <- ifelse(!is.numeric(minsplit), 1, minsplit)
   cp <- ifelse(!is.numeric(cp), 0.01, cp)
-  codigo <- paste0("modelo.boosting <<- ada(",variable.pr,"~., data = datos.aprendizaje, iter = ",iter,", nu = ",nu,", type = '",type,"',
+  codigo <- paste0("modelo.boosting.",type," <<- ada(",variable.pr,"~., data = datos.aprendizaje, iter = ",iter,", nu = ",nu,", type = '",type,"',
                    control = rpart.control(minsplit = ",minsplit,", cp = ",cp,"))")
   return(codigo)
 }
 
 #Codigo de la prediccion de boosting
-boosting.prediccion <- function(variable.pr = NULL) {
-  return(paste0("prediccion.boosting <<- predict(modelo.boosting, datos.prueba[,-which(colnames(datos.prueba) == '",variable.pr,"')])"))
+boosting.prediccion <- function(variable.pr = NULL, type = "discrete") {
+  return(paste0("prediccion.boosting.",type," <<- predict(modelo.boosting.",type,", datos.prueba[,-which(colnames(datos.prueba) == '",variable.pr,"')])"))
 }
 
 #Codigo de la matriz de confucion de boosting
-boosting.MC <- function(variable.p){
-  return(paste0("MC.boosting <<- table(datos.prueba$",variable.p,", prediccion.boosting)"))
+boosting.MC <- function(variable.p, type = "discrete"){
+  return(paste0("MC.boosting.",type," <<- table(datos.prueba$",variable.p,", prediccion.boosting.",type,")"))
 }
 
 #Codigo del grafico de boosting
-boosting.plot <- function(){
-  return(paste0("plot(modelo.boosting,FALSE,TRUE)"))
+boosting.plot <- function(type = "discrete"){
+  return(paste0("plot(modelo.boosting.",type,",FALSE,TRUE)"))
 }
 
 #Codigo del grafico de boosting
-boosting.plot.import <- function(){
-  return(paste0("varplot(modelo.boosting)"))
+boosting.plot.import <- function(type = "discrete"){
+  return(paste0("varplot(modelo.boosting.",type,")"))
 }
 
 # Pagina de TABLA COMPARATIVA -----------------------------------------------------------------------------------------------
@@ -585,46 +590,31 @@ plotROCInd <- function(prediccion,real,adicionar=FALSE,color="red") {
 
 #Hace el grafico de la curba de roc de los modelos
 plotROC <- function(sel) {
-  modelos <- list("KNN" = score.knn, "SVM" = score.svm, "ÁRBOLES" = score.dt,
-                  "BOSQUES" = score.rf, "ADA-BOOSTING" = score.booting)
   clase <- datos.prueba[,variable.predecir]
-  col <- gg_color_hue(5)
+  col <- gg_color_hue(length(scores))
   nombres <- c()
   colores <- c()
   adicionar <- FALSE
+  index <- 1
+  scores <- scores[sort(names(scores))]
+  SCORES <- scores[names(scores) %in% sel]
 
-  if(is.numeric(modelos[[1]]) & "sel.knn" %in% sel){
-    plotROCInd(score.knn[,input$roc.sel],clase, adicionar,col[1])
-    nombres <- c("KNN")
-    colores <- c(colores,col[1])
+
+  for (nombre in names(SCORES)) {
+    if(is.numeric(SCORES[[nombre]])){
+      plotROCInd(SCORES[[nombre]][,which(levels(clase) == input$roc.sel)],clase,adicionar, col[index])
+    }else{
+      if(is.factor(SCORES[[nombre]])){
+        plotROCInd(attributes(SCORES[[nombre]])$probabilities[,input$roc.sel],clase,adicionar,col[index])
+      }
+    }
     adicionar <- TRUE
+    colores <- c(colores, col[index])
+    nombres <- c(nombres, nombre)
+    index <- index + 1
   }
-  if(is.factor(modelos[[2]]) & "sel.svm" %in% sel){
-    plotROCInd(attributes(score.svm)$probabilities[,input$roc.sel],clase,adicionar,col[2])
-    nombres <- c(nombres, "SVM")
-    colores <- c(colores,col[2])
-    adicionar <- TRUE
-  }
-  if(is.numeric(modelos[[3]]) & "sel.dt" %in% sel){
-    plotROCInd(score.dt[,input$roc.sel],clase,adicionar,col[3])
-    nombres <- c(nombres, "ÁRBOLES")
-    colores <- c(colores,col[3])
-    adicionar <- TRUE
-  }
-  if(is.numeric(modelos[[4]]) & "sel.rf" %in% sel){
-    plotROCInd(score.rf[,input$roc.sel],clase,adicionar,col[4])
-    nombres <- c(nombres, "BOSQUES")
-    colores <- c(colores,col[4])
-    adicionar <- TRUE
-  }
-  if(is.numeric(modelos[[5]]) & "sel.boosting" %in% sel){
-    plotROCInd(score.booting[,which(levels(clase) == input$roc.sel)],clase,adicionar,col[5])
-    nombres <- c(nombres, "ADA-BOOSTING")
-    colores <- c(colores,col[5])
-    adicionar <- TRUE
-  }
-  legend(x=0.88, y=0.25, legend = nombres, bty = "n", pch=20 ,
-         col = colores , text.col = "grey", cex=1.2, pt.cex=1.5)
+  legend(x=0.85, y=0.45, legend = nombres, bty = "n", pch=19 ,
+         col = colores , text.col = "black", cex=0.8, pt.cex=0.8)
 }
 
 #Calcula el area de la curva ROC
@@ -659,14 +649,25 @@ ordenar.reporte <- function(lista){
              combinar.nombres(c("modelo.knn","pred.knn","mc.knn","ind.knn"),
                               c("optimal", "rectangular", "triangular","epanechnikov",
                                 "biweight","triweight", "cos","inv","gaussian")),
-             "modelo.svm",
-             nombres[grepl("svm.plot.", nombres)],
-             "pred.svm","mc.svm","ind.svm",
+             "modelo.svm.linear",
+             nombres[grepl("svm.plot.linear", nombres)],
+             "pred.svm.linear","mc.svm.linear","ind.svm.linear",
+             "modelo.svm.polynomial",
+             nombres[grepl("svm.plot.polynomial", nombres)],
+             "pred.svm.polynomial","mc.svm.polynomial","ind.svm.polynomial",
+             "modelo.svm.radial",
+             nombres[grepl("svm.plot.radial", nombres)],
+             "pred.svm.radial","mc.svm.radial","ind.svm.radial",
+             "modelo.svm.sigmoid",
+             nombres[grepl("svm.plot.sigmoid", nombres)],
+             "pred.svm.sigmoid","mc.svm.sigmoid","ind.svm.sigmoid",
              "modelo.dt","modelo.dt.graf","pred.dt",
              "mc.dt","ind.dt","modelo.rf","modelo.rf.graf",
-             "pred.rf","mc.rf","ind.rf","modelo.b",
-             "modelo.b.error","modelo.b.imp","pred.b",
-             "mc.b","ind.b", "tabla.comparativa", "roc")
+             "pred.rf","mc.rf","ind.rf",
+             combinar.nombres(c("modelo.b","modelo.b.error","modelo.b.imp","pred.b","mc.b","ind.b"),
+                              c("discrete", "real", "gentle")),
+             "tabla.comparativa", "roc")
+
   orden <- c(orden, nombres[!(nombres %in% orden)])
   lista <- lista[orden]
   lista <- lista[!as.logical(lapply(lista, is.null))]
@@ -766,6 +767,12 @@ datos.aprendizaje <<- NULL
 variable.predecir <<- NULL
 contador <<- 0
 
+# -------------------  Modelos
+
+MCs <- list()
+areas <- list()
+scores <- list()
+
 # -------------------  Estadisticas Basicas
 
 
@@ -780,13 +787,6 @@ cod.poder.num <- NULL
 
 # -------------------  KNN
 
-# modelo.knn <<- NULL
-# MC.knn <<- NULL
-# prediccion.knn <<- NULL
-# indices.knn <<- rep(0,8)
-# score.knn <<- NULL
-# area.knn <<- NA
-
 cod.knn.modelo <<-  NULL
 cod.knn.pred <<-  NULL
 cod.knn.mc <<- NULL
@@ -796,26 +796,12 @@ knn.stop.excu <<- FALSE
 
 # -------------------  SVM
 
-modelo.svm <<- NULL
-MC.svm <<- NULL
-prediccion.svm <<- NULL
-indices.svm <<- rep(0,8)
-score.svm <<- NULL
-area.svm <<- NA
-
 cod.svm.modelo <<-  NULL
 cod.svm.pred <<-  NULL
 cod.svm.mc <<- NULL
 cod.svm.ind <<- NULL
 
 # -------------------  DT
-
-modelo.dt <<- NULL
-MC.dt <<- NULL
-prediccion.dt <<- NULL
-indices.dt <<- rep(0,8)
-score.dt <<- NULL
-area.dt <<- NA
 
 cod.dt.modelo <<-  NULL
 cod.dt.pred <<-  NULL
@@ -824,26 +810,12 @@ cod.dt.ind <<- NULL
 
 # -------------------  RF
 
-modelo.rf <<- NULL
-MC.rf <<- NULL
-prediccion.rf <<- NULL
-indices.rf <<- rep(0,8)
-score.rf <<- NULL
-area.rf <<- NA
-
 cod.rf.modelo <<-  NULL
 cod.rf.pred <<-  NULL
 cod.rf.mc <<- NULL
 cod.rf.ind <<- NULL
 
 # -------------------  BOOSTING
-
-modelo.boosting <<- NULL
-MC.boosting <<- NULL
-prediccion.boosting <<- NULL
-indices.boosting <<- rep(0,8)
-score.booting <<- NULL
-area.boosting <<- NA
 
 cod.b.modelo <<-  NULL
 cod.b.pred <<-  NULL

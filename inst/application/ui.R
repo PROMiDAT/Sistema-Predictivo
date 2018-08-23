@@ -85,6 +85,8 @@ menu.reporte <- menuItem("Generar Reporte", tabName = "reporte", icon = icon("sa
 
 menu.comparar <- menuItem("Comparación de Modelos", tabName = "comparar", icon = icon("eye"))
 
+prediccion.nuevos <- menuItem("Predicción Individuos Nuevos", tabName = "predNuevos", icon = icon("table"))
+
 menu.info <- menuItem("Acerca De", tabName = "acercaDe", icon = icon("info"))
 
 mi.menu <- sidebarMenu(id = "principal",
@@ -93,6 +95,7 @@ mi.menu <- sidebarMenu(id = "principal",
               menu.estadisticas,
               menu.aprendizaje.supervisado,
               menu.comparar,
+              prediccion.nuevos,
               menu.reporte,
               menu.info)
 
@@ -109,6 +112,9 @@ mi.titulo <- tags$script(HTML(
   '$(document).ready(function() {
   $("header").find("nav").append(\'<span class="header-title"> PredictoR </span>\');
   })'))
+
+load.page <- conditionalPanel(condition="($('html').hasClass('shiny-busy'))",
+                              div(id = "loaderWrapper", div(id="loader")) )
 
 # PAGINA DE CARGA Y  TRANSFORMACION DE DATOS -----------------------------------------------------------------------------
 
@@ -591,37 +597,26 @@ pagina.boosting <- tabItem(tabName = "boosting",
 # PAGINA DE COMPARACION DE MODELOS ---------------------------------------------------------------------------------------
 
 panel.comparacion.tabla <- tabPanel(title = "Tabla Comparativa",
-                                    DT::dataTableOutput("TablaComp"),
-                                    hr(),
-                                    checkboxGroupInput("select.models", "Mostrar Modelos:",
-                                                       c("KNN" = "sel.knn",
-                                                         "SVM" = "sel.svm",
-                                                         "ÁRBOLES" = "sel.dt",
-                                                         "BOSQUES" = "sel.rf",
-                                                         "ADA - BOOSTING" = "sel.boosting"),
-                                                       inline = TRUE,
-                                                       selected = c("sel.knn","sel.svm","sel.dt","sel.rf","sel.boosting")))
+                                    DT::dataTableOutput("TablaComp"))
 
 plot.comparacion.roc <- tabPanel(title = "Curva ROC",
                           plotOutput('plot.roc', height = "65vh"),
-                          hr(),
-                          checkboxGroupInput("select.models.roc", "Mostrar Modelos:",
-                                             c("KNN" = "sel.knn",
-                                               "SVM" = "sel.svm",
-                                               "ÁRBOLES" = "sel.dt",
-                                               "BOSQUES" = "sel.rf",
-                                               "ADA - BOOSTING" = "sel.boosting"),
-                                             inline = TRUE,
-                                             selected = c("sel.knn","sel.svm","sel.dt","sel.rf","sel.boosting")),
                           fluidRow(column(width = 12, selectInput(inputId = "roc.sel",
                                                                   label = h4("Seleccionar la Categoría:"),
                                                                   choices =  "", width = "100%"))))
+
+
+selector.modelos <- checkboxGroupButtons("select.models", "Mostrar Modelos:", c("P1" = "P1"),
+                                         size = "sm", status = "primary",
+                                         checkIcon = list(yes = icon("ok", lib = "glyphicon"),
+                                                          no = icon("remove", lib = "glyphicon")))
 
 pagina.comparacion <- tabItem(tabName = "comparar",
                            column(width = 12,
                                   tabBox(width = 12,
                                          panel.comparacion.tabla,
-                                         plot.comparacion.roc )))
+                                         plot.comparacion.roc )),
+                           column(width =12, selector.modelos))
 
 # PAGINA DE REPORTE -------------------------------------------------------------------------------------------------------
 
@@ -651,12 +646,12 @@ pagina.info <- tabItem(tabName = "acercaDe",
 # PAGINA COMPLETA ---------------------------------------------------------------------------------------------------------
 
 shinyUI(dashboardPage(title="PROMiDAT - PredictoR",
-                      dashboardHeader(title = tags$a(href="http://promidat.com",
+                      dashboardHeader(title = tags$a(href="http://promidat.com", target = "_blank",
                                                      img(src="Logo2.png", height=55, width="100%", style="padding-top:2px; padding-bottom:6px;"))),
                       dashboardSidebar(mi.menu),
                       dashboardBody(mi.head,
                                     mi.titulo,
-                                    div(id = "loaderWrapper", div(id="loader")),
+                                    load.page,
                                     tabItems( pagina.cargar.datos,
                                               pagina.resumen.numerico,
                                               pagina.test.normalidad,
