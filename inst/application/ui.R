@@ -76,10 +76,10 @@ menu.estadisticas <- menuItem("Estadísticas Básicas", tabName = "parte1", icon
 
 menu.aprendizaje.supervisado <- menuItem("Aprendizaje Supervisado", tabName = "parte2", icon = icon("th-list"),
                                          menuSubItem("K Vecinos Más Cercanos",tabName = "knn",icon = icon("dot-circle-o")),
-                                         menuSubItem("Soporte Vectorial",tabName = "svm",icon = icon("line-chart")),
                                          menuSubItem("Árboles de Decisión",tabName = "dt",icon = icon("tree")),
                                          menuSubItem("Bosques Aleatorios",tabName = "rf",icon = icon("sitemap")),
-                                         menuSubItem("ADA - Boosting",tabName = "boosting",icon = icon("superscript")) )
+                                         menuSubItem("ADA - Boosting",tabName = "boosting",icon = icon("superscript")),
+                                         menuSubItem("Soporte Vectorial",tabName = "svm",icon = icon("line-chart")))
 
 menu.reporte <- menuItem("Generar Reporte", tabName = "reporte", icon = icon("save-file",lib = "glyphicon"))
 
@@ -578,7 +578,7 @@ opciones.boosting <- fluidRow(column(width = 6, actionButton("runBoosting",label
                                                                numericInput("nu.boosting", "Valor de nu:", 1, width = "100%",min = 0, max = 1),
                                                                numericInput("minsplit.boosting", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1),
                                                                numericInput("cp.boosting", "Complejidad:", 0.01, width = "100%",min = 0,max = 1, step = 0.01),
-                                                               selectInput(inputId = "tipo.boosting", label = "Seleccionar un tipo",selected = 1,
+                                                               selectInput(inputId = "tipo.boosting", label = "Seleccionar algoritmo",selected = 1,
                                                                            choices =  c("discrete", "real", "gentle")))
                                      ))
 

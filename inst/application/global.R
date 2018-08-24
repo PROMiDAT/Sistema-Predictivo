@@ -472,15 +472,10 @@ svm.plot <- function(variables, resto, kernel = "linear"){
   }
   l <- c()
   for(i in 1:length(resto)){
-    l <- c(l , paste0(resto[i],"=", 2 + i*0.5))
+    l <- c(l , paste0(resto[i]," = 0"))
   }
   l <- paste0("list(",paste0(l,collapse = ","),")")
-
-  if(length(levels(datos[,variable.predecir])) == 2){
-    return(paste0("plot(modelo.svm.",kernel,", datos)"))
-  }else{
-    return(paste0("plot(modelo.svm.",kernel,", datos, ",variables[1],"~",variables[2],", slice = ",l,")"))
-  }
+  return(paste0("plot(modelo.svm.",kernel,", datos, ",variables[1],"~",variables[2],", slice = ",l,")"))
 }
 
 
@@ -639,7 +634,8 @@ combinar.nombres <- function(n.modelos, n.modos){
 #Ordena el reporte
 ordenar.reporte <- function(lista){
   nombres <- names(lista)
-  orden <- c("resumen", nombres[grepl("normalidad.", nombres)],
+  orden <- c("new.secction","carga.datos","transformar.datos","resumen",
+             nombres[grepl("normalidad.", nombres)],
              nombres[grepl("dispersion.", nombres)],
              nombres[grepl("dya.num.", nombres)],
              nombres[grepl("dya.cat.", nombres)],
@@ -677,9 +673,14 @@ ordenar.reporte <- function(lista){
 # Crea el codigo del reporte rmd
 def.reporte <- function(titulo = "Sin Titulo", nombre = "PROMiDAT", entradas) {
   codigo.usuario <- ""
-  codigo.reporte <- ordenar.reporte(codigo.reporte)
-  for (codigo in codigo.reporte) {
-    codigo.usuario <- paste0(codigo.usuario, "\n\n#### Interpretación\n\n", codigo)
+  codigos <- codigo.reporte
+  for (lista in codigos) {
+    lista <- ordenar.reporte(lista)
+    for (codigo in lista) {
+      if(!is.data.frame(codigo)){
+        codigo.usuario <- paste0(codigo.usuario, codigo)
+      }
+    }
   }
   return(paste0("---
 title: '", titulo, "'
@@ -742,36 +743,20 @@ colnames(data)[length(colnames(data))] <- paste0(variable, '.', categoria)
 return(data)
 }\n", default.func.num(), "\n", default.func.cat(), "
 ```
-# Carga de Datos
-```{r}
-head(datos)
-```
-# Datos de Aprendizaje
-```{r}
-head(datos.aprendizaje)
-```
-# Datos de Prueba
-```{r}
-head(datos.prueba)
-```\n", codigo.usuario, ""))
+\n", codigo.usuario, ""))
 }
 
 # VARIABLES GLOBALES --------------------------------------------------------------------------------------------------------
 
 # -------------------  Datos
 codigo.reporte <<- list()
+
 datos <<- NULL
 datos.originales <<- NULL
 datos.prueba <<- NULL
 datos.aprendizaje <<- NULL
 variable.predecir <<- NULL
 contador <<- 0
-
-# -------------------  Modelos
-
-MCs <- list()
-areas <- list()
-scores <- list()
 
 # -------------------  Estadisticas Basicas
 
@@ -784,6 +769,12 @@ cod.dya.num <- def.code.num()
 
 cod.poder.cat <- NULL
 cod.poder.num <- NULL
+
+# -------------------  Modelos
+
+MCs <- list()
+areas <- list()
+scores <- list()
 
 # -------------------  KNN
 
@@ -821,4 +812,7 @@ cod.b.modelo <<-  NULL
 cod.b.pred <<-  NULL
 cod.b.mc <<- NULL
 cod.b.ind <<- NULL
+
+# -------------------  Reporte
+
 
