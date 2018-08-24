@@ -537,7 +537,7 @@ pagina.rf <- tabItem(tabName = "rf",
 panel.generar.boosting <- tabPanel(title = "Generación del Modelo",
                               verbatimTextOutput("txtBoosting"),
                               aceEditor("fieldCodeBoosting", mode = "r", theme = "monokai",
-                                        value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
+                                        value = "", height = "4vh", readOnly = F, autoComplete = "enabled"))
 
 plot.boosting <- tabPanel(title = "Evolución del Error",
                                  plotOutput('plot.boosting', height = "55vh"),

@@ -594,6 +594,9 @@ plotROC <- function(sel) {
   scores <- scores[sort(names(scores))]
   SCORES <- scores[names(scores) %in% sel]
 
+  if(length(SCORES) == 0) {
+    return(NULL)
+  }
 
   for (nombre in names(SCORES)) {
     if(is.numeric(SCORES[[nombre]])){
@@ -634,7 +637,7 @@ combinar.nombres <- function(n.modelos, n.modos){
 #Ordena el reporte
 ordenar.reporte <- function(lista){
   nombres <- names(lista)
-  orden <- c("new.secction","carga.datos","transformar.datos","resumen",
+  orden <- c("new.secction","carga.datos","transformar.datos","segmentar.datos","resumen",
              nombres[grepl("normalidad.", nombres)],
              nombres[grepl("dispersion.", nombres)],
              nombres[grepl("dya.num.", nombres)],

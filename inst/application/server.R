@@ -976,7 +976,7 @@ shinyServer(function(input, output, session) {
 
       insert.report(paste0("ind.knn.",input$kernel.knn),
                     paste0("## Índices Generales del Modelo KNN - ",input$kernel.knn,"\n```{r}\n",
-                           cod.knn.ind, "\nindices.knn.",input$kernel.knn,"\n```"))
+                           cod.knn.ind, "\nindices.generales(MC.knn.",input$kernel.knn,")\n```"))
 
       nombres <- c("knnPrecGlob", "knnErrorGlob")
       titulos <- c("Precisión Global", "Error Global")
@@ -1159,9 +1159,9 @@ shinyServer(function(input, output, session) {
       eval(parse(text = paste0("indices.svm.",input$kernel.svm, "<<- indices.svm")))
       indices.g("svm", MC)
 
-      insert.report(paste0("ind.svm.",input$kernel.knn),
+      insert.report(paste0("ind.svm.",input$kernel.svm),
                     paste0("## Índices Generales del modelo SVM  - ",input$kernel.svm," \n```{r}\n",
-                           cod.svm.ind, "\nindices.svm.",input$kernel.svm,"\n```"))
+                           cod.svm.ind, "\nindices.generales(MC.svm.",input$kernel.svm,")\n```"))
 
       nombres <- c("svmPrecGlob", "svmErrorGlob")
       titulos <- c("Precisión Global", "Error Global")
@@ -1382,7 +1382,7 @@ shinyServer(function(input, output, session) {
       indices.dt <<- indices.generales(MC.dt)
       indices.g("dt", MC.dt)
 
-      insert.report("ind.dt", paste0("## Índices Generales \n```{r}\n", cod.dt.ind, "\nindices.dt\n```"))
+      insert.report("ind.dt", paste0("## Índices Generales \n```{r}\n", cod.dt.ind, "\nindices.generales(MC.dt)\n```"))
 
       nombres <- c("dtPrecGlob", "dtErrorGlob")
       titulos <- c("Precisión Global", "Error Global")
@@ -1561,7 +1561,7 @@ shinyServer(function(input, output, session) {
       indices.rf <<- indices.generales(MC.rf)
       indices.g("rf", MC.rf)
 
-      insert.report("ind.rf",paste0("## Índices Generales\n```{r}\n", cod.rf.ind, "\nindices.rf\n```"))
+      insert.report("ind.rf",paste0("## Índices Generales\n```{r}\n", cod.rf.ind, "\nindices.generales(MC.rf)\n```"))
 
       nombres <- c("rfPrecGlob", "rfErrorGlob")
       titulos <- c("Precisión Global", "Error Global")
@@ -1783,7 +1783,7 @@ shinyServer(function(input, output, session) {
 
       insert.report(paste0("ind.b.",input$tipo.boosting),
                     paste0("## Índices Generales del Modelo ADA-BOOSTING - ",input$tipo.boosting,"\n```{r}\n",
-                           cod.b.ind, "\nMC.boosting.",input$tipo.boosting,"\n```"))
+                           cod.b.ind, "\nindices.generales(MC.boosting.",input$tipo.boosting,")\n```"))
       nombres <- c("boostingPrecGlob", "boostingErrorGlob")
       titulos <- c("Precisión Global", "Error Global")
 
@@ -1815,7 +1815,6 @@ shinyServer(function(input, output, session) {
   # Crea la tabla comparativa
   tabla.comparativa <- function() {
     tryCatch({
-      browser()
       cant.class <- length(unique(datos[, variable.predecir]))
       names.class <- as.character(unique(datos[, variable.predecir]))
 
@@ -1826,6 +1825,10 @@ shinyServer(function(input, output, session) {
       matrices <- MCs[sort(names(MCs))]
       matrices <- matrices[names(matrices) %in% input$select.models]
       df  <- data.frame()
+
+      if(length(matrices) == 0) {
+        return(data.frame())
+      }
 
       for (i in seq_len(length(matrices))) {
         if (is.null(matrices[[i]])) {
@@ -1912,13 +1915,17 @@ shinyServer(function(input, output, session) {
 
   new.report <- function(){
     n <- len.report() + 1
-    codigo.reporte[[n]] <<- list(datos =  datos, datos.originales = datos.originales)
-    codigo.reporte[[n]][["carga.datos"]] <<- paste0("# Carga de Datos (",input$file1$name,")\n```{r}\ndatos <- codigo.reporte[[",n,"]]$datos\ndatos.originales <- codigo.reporte[[",n,"]]$datos.originales\nhead(datos)\n```")
+    codigo.reporte[[n]] <<- list(datos =  datos, datos.originales = datos.originales, variable.predecir = variable.predecir)
+    codigo.reporte[[n]][["carga.datos"]] <<- paste0("# Carga de Datos (",input$file1$name,
+                                                    ")\n```{r}\ndatos <<- codigo.reporte[[",
+                                                    n,"]]$datos\ndatos.originales <<- codigo.reporte[[",
+                                                    n,"]]$datos.originales\nhead(datos)\nvariable.predecir<<- codigo.reporte[[",
+                                                    n,"]]$variable.predecir\n```")
   }
 
   new.secction.report <- function(){
     n <- len.report() + 1
-    codigo.reporte[[n]] <<- list()
+    codigo.reporte[[n]] <<- list(datos =  datos, datos.originales = datos.originales, variable.predecir = variable.predecir)
     index <- 0
     for (i in rev(seq_len(len.report()))) {
       if(is.data.frame(codigo.reporte[[i]]$datos)){
@@ -1926,7 +1933,10 @@ shinyServer(function(input, output, session) {
         break()
       }
     }
-    codigo.reporte[[n]][["new.secction"]] <<- paste0("\n```{r}\ndatos <- codigo.reporte[[",index,"]]$datos\ndatos.originales <- codigo.reporte[[",index,"]]$datos.originales\n```\n")
+    codigo.reporte[[n]][["new.secction"]] <<- paste0("\n```{r}\ndatos <<- codigo.reporte[[",index,
+                                                     "]]$datos\ndatos.originales <<- codigo.reporte[[",index,
+                                                     "]]$datos.originales\nvariable.predecir<<- codigo.reporte[[",
+                                                     index,"]]$variable.predecir\n```")
   }
 
   observeEvent(input$btnReporte, {
