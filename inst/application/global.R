@@ -200,7 +200,7 @@ particion.code <- function(data = "datos", p = "0.5", variable = NULL, semilla =
   variable.predecir <<- variable
   semilla <- ifelse(is.numeric(semilla), semilla, 5)
   semilla <- ifelse(perm.semilla, paste0("set.seed(",semilla,")"), "rm(.Random.seed, envir = globalenv())")
-  return(paste0(semilla,"\nparticion <- createDataPartition(datos$",variable,", p = ",p/100,", list = FALSE)\n
+  return(paste0(semilla,"\nvariable.predecir <<- '",variable,"'\nparticion <- createDataPartition(datos$",variable,", p = ",p/100,", list = FALSE)\n
 datos.prueba <<- datos[-particion,]\ndatos.aprendizaje <<- datos[particion,]"))
 }
 
@@ -637,7 +637,7 @@ combinar.nombres <- function(n.modelos, n.modos){
 #Ordena el reporte
 ordenar.reporte <- function(lista){
   nombres <- names(lista)
-  orden <- c("new.secction","carga.datos","transformar.datos","segmentar.datos","resumen",
+  orden <- c("carga.datos","na.delete","transformar.datos","segmentar.datos","resumen",
              nombres[grepl("normalidad.", nombres)],
              nombres[grepl("dispersion.", nombres)],
              nombres[grepl("dya.num.", nombres)],
@@ -709,6 +709,7 @@ library(stringr)
 library(caret)
 library(kknn)
 library(e1071)
+library(e1071)
 library(rpart)
 library(rpart.plot)
 library(randomForest)
@@ -719,6 +720,8 @@ library(dplyr)
 library(forcats)
 library(psych)
 library(ROCR)
+library(xtable)
+library(raster)
 ```
 
 ```{r}

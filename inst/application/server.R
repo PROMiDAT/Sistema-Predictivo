@@ -202,6 +202,7 @@ shinyServer(function(input, output, session) {
     } else {
       codigo.na <- ""
     }
+    insert.report("na.delete",paste0("\n```{r}\n",codigo.na,"\nhead(datos)\n```"))
     return(codigo.na)
   }
 
@@ -1116,7 +1117,7 @@ shinyServer(function(input, output, session) {
       # Cambia la tabla con la prediccion de knn
       output$svmPrediTable <- DT::renderDataTable(exe("obj.predic(prediccion.svm.",input$kernel.svm,")"))
       insert.report(paste0("pred.svm.",input$kernel.svm),
-                    paste0("## Predicción del Modelo SVM - ",input$kernel.svm,"\n```{r}\n", cod.knn.pred,
+                    paste0("## Predicción del Modelo SVM - ",input$kernel.svm,"\n```{r}\n", cod.svm.pred,
                            "\nhead(dt.to.data.frame.predict(obj.predic(prediccion.svm.",input$kernel.svm,")))\n```"))
 
       updatePlot$roc <- !updatePlot$roc #graficar otra vez la curva roc
@@ -1915,28 +1916,14 @@ shinyServer(function(input, output, session) {
 
   new.report <- function(){
     n <- len.report() + 1
-    codigo.reporte[[n]] <<- list(datos =  datos, datos.originales = datos.originales, variable.predecir = variable.predecir)
-    codigo.reporte[[n]][["carga.datos"]] <<- paste0("# Carga de Datos (",input$file1$name,
-                                                    ")\n```{r}\ndatos <<- codigo.reporte[[",
-                                                    n,"]]$datos\ndatos.originales <<- codigo.reporte[[",
-                                                    n,"]]$datos.originales\nhead(datos)\nvariable.predecir<<- codigo.reporte[[",
-                                                    n,"]]$variable.predecir\n```")
+    codigo.reporte[[n]] <<- list(datos.originales = datos.originales)
+    codigo.reporte[[n]][["carga.datos"]] <<- paste0("\n# Carga de Datos (",input$file1$name,")",
+                                                    "\n```{r}\ndatos.originales <<- codigo.reporte[[",n,"]]$datos.originales\n```")
   }
 
   new.secction.report <- function(){
     n <- len.report() + 1
-    codigo.reporte[[n]] <<- list(datos =  datos, datos.originales = datos.originales, variable.predecir = variable.predecir)
-    index <- 0
-    for (i in rev(seq_len(len.report()))) {
-      if(is.data.frame(codigo.reporte[[i]]$datos)){
-        index <- i
-        break()
-      }
-    }
-    codigo.reporte[[n]][["new.secction"]] <<- paste0("\n```{r}\ndatos <<- codigo.reporte[[",index,
-                                                     "]]$datos\ndatos.originales <<- codigo.reporte[[",index,
-                                                     "]]$datos.originales\nvariable.predecir<<- codigo.reporte[[",
-                                                     index,"]]$variable.predecir\n```")
+    codigo.reporte[[n]] <<- list()
   }
 
   observeEvent(input$btnReporte, {
@@ -1976,6 +1963,7 @@ shinyServer(function(input, output, session) {
 
   session$onSessionEnded(function() {
     rm(envir = .GlobalEnv, list = ls(envir = .GlobalEnv))
+    unlink("figure", recursive = T)
     stopApp()
   })
 
