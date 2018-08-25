@@ -272,7 +272,7 @@ shinyServer(function(input, output, session) {
 
     MCs <<- list()
     areas <<- list()
-    scores <- list()
+    scores <<- list()
 
   }
 
