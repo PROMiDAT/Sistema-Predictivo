@@ -676,7 +676,7 @@ ordenar.reporte <- function(lista){
 # Crea el codigo del reporte rmd
 def.reporte <- function(titulo = "Sin Titulo", nombre = "PROMiDAT", entradas) {
   codigo.usuario <- ""
-  codigos <- codigo.reporte
+  codigos <- env.report$codigo.reporte
   for (lista in codigos) {
     lista <- ordenar.reporte(lista)
     for (codigo in lista) {
@@ -694,6 +694,7 @@ output: word_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE,  fig.height = 10, fig.width = 15, error = TRUE)
+options(digits = 3)
 ```
 
 ```{r message=FALSE, warning=FALSE}
@@ -755,8 +756,6 @@ return(data)
 # VARIABLES GLOBALES --------------------------------------------------------------------------------------------------------
 
 # -------------------  Datos
-codigo.reporte <<- list()
-
 datos <<- NULL
 datos.originales <<- NULL
 datos.prueba <<- NULL
@@ -775,6 +774,9 @@ cod.dya.num <- def.code.num()
 
 cod.poder.cat <- NULL
 cod.poder.num <- NULL
+
+env.report <<- new.env()
+env.report$codigo.reporte <- list()
 
 # -------------------  Modelos
 

@@ -103,6 +103,7 @@ mi.menu <- sidebarMenu(id = "principal",
 # HEAD HTML ---------------------------------------------------------------------------------------------------------
 
 mi.head <- tags$head(
+  tags$script(src = "myscript.js"),
   tags$link(rel = "stylesheet", type = "text/css", href = "style_promidat.css"),
   tags$link(rel="shortcut icon", href="http://www.promidat.org/theme/image.php/formal_white/theme/1438713216/favicon"),
   useShinyjs()
@@ -128,14 +129,14 @@ panel.cargar.datos <- tabPanel(title = "Cargar", width = 12, solidHeader = FALSE
                                fileInput('file1', label = 'Cargar Archivo', placeholder = "", buttonLabel = "Subir", width = "100%",
                                          accept = c('text/csv', 'text/comma-separated-values, text/plain', '.csv')),
                                actionButton("loadButton", "Cargar", width = "100%"),
-                               hr(),
+                               br(),br(),
                                aceEditor("fieldCodeData", mode = "r", theme = "monokai", value = "", height = "15vh", readOnly = T))
 
 panel.tansformar.datos <- tabPanel(title = "Transformar", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
                                    DT::dataTableOutput('transData'),
-                                   hr(),
+                                   br(),br(),
                                    actionButton("transButton", "Aplicar", width = "100%"),
-                                   hr(),
+                                   br(),br(),
                                    aceEditor("fieldCodeTrans", mode = "r", theme = "monokai", value = "", height = "10vh",  readOnly = T))
 
 panel.segmentar.datos <- tabPanel(title = "Configuraciones", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,

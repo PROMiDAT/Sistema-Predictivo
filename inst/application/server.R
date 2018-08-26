@@ -32,7 +32,7 @@ shinyServer(function(input, output, session) {
     if (any("datos" %in% x)) { # Cambia la tabla de datos
       output$contents <- DT::renderDT(renderizar.tabla.datos(datos,
                                                              editable = T,
-                                                             pageLength = 10,
+                                                             pageLength = 8,
                                                              buttons = T,
                                                              filename = "datos"
       ), server = F)
@@ -193,7 +193,7 @@ shinyServer(function(input, output, session) {
       tryCatch({
         codigo.na <- paste0(code.NA(deleteNA = input$deleteNA), "\n", "datos <<- datos.originales")
         isolate(eval(parse(text = codigo.na)))
-        insert.report("na.delete",paste0("\n```{r}\n",codigo.na,"\nhead(datos)\n```"))
+        insert.report("na.delete",paste0("\n# Imputación de Datos\n```{r}\n",codigo.na,"\nhead(datos)\nstr(datos)\n```"))
       }, error = function(e) {
         showNotification(paste0("Error al eliminar NAs: ", e), duration = 10, type = "error")
         datos <<- NULL
@@ -273,6 +273,13 @@ shinyServer(function(input, output, session) {
     MCs <<- list()
     areas <<- list()
     scores <<- list()
+
+    #Se usan como condicion para el codigo js
+    output$txtknn <- renderPrint(invisible(""))
+    output$txtSvm <- renderPrint(invisible(""))
+    output$txtDt <- renderPrint(invisible(""))
+    output$txtRf <- renderPrint(invisible(""))
+    output$txtBoosting <- renderPrint(invisible(""))
 
   }
 
@@ -411,22 +418,22 @@ shinyServer(function(input, output, session) {
       segmentar.datos(codigo)
 
       new.secction.report()
-      insert.report("segmentar.datos",paste0("# Datos de Aprendizaje\n```{r}\n",codigo,"\nhead(datos.aprendizaje)\n```\n\n# Datos de Prueba\n```{r}\nhead(datos.prueba)\n```\n"))
+      insert.report("segmentar.datos",paste0("\n# Datos de Aprendizaje\n```{r}\n",codigo,"\nhead(datos.aprendizaje)\n```\n\n# Datos de Prueba\n```{r}\nhead(datos.prueba)\n```\n"))
 
       acualizar.selecctores.seg()
       borrar.modelos(FALSE)
 
       # Cambia los codigos de los modelos
       default.codigo.knn(k.def = TRUE)
-      knn.full()
+      #knn.full()
       default.codigo.svm()
-      svm.full()
+      #svm.full()
       default.codigo.dt()
-      dt.full()
+      #dt.full()
       deafult.codigo.rf()
-      rf.full()
+      #rf.full()
       deault.codigo.boosting()
-      boosting.full()
+      #boosting.full()
     } else {
       showNotification("Tiene que seleccionar una variable a predecir", duration = 15, type = "error")
     }
@@ -465,7 +472,7 @@ shinyServer(function(input, output, session) {
 
   # Se crea una tabla summary
   obj.resum <- eventReactive(c(input$loadButton, input$transButton), {
-    insert.report("resumen" ,c(paste0("## Resumen Numérico \n```{r} \nsummary(datos) \n```")))
+    insert.report("resumen" ,c(paste0("\n## Resumen Numérico \n```{r} \nsummary(datos) \n```")))
     data.frame(unclass(summary(datos)), check.names = FALSE, stringsAsFactors = FALSE)
   })
 
@@ -916,7 +923,7 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.knn(1)
-      showNotification(paste0("Error al ejecutar el modelo knn, intente nuevamente : ", e), duration = 15, type = "error")
+      showNotification(paste0("Error al ejecutar el modelo knn : ", e), duration = 15, type = "error")
     }
     )
   }
@@ -937,7 +944,7 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.knn(2)
-      showNotification(paste0("Error al ejecutar la prediccion, intente nuevamente : ", e), duration = 15, type = "error")
+      showNotification(paste0("Error al ejecutar la prediccion knn : ", e), duration = 15, type = "error")
     }
     )
   }
@@ -960,7 +967,7 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.knn(3)
-      showNotification("Error al ejecutar la matriz, intente nuevamente", duration = 15, type = "error")
+      showNotification(paste0("Error al ejecutar la matriz knn: ",e), duration = 15, type = "error")
     }
     )
   }
@@ -994,7 +1001,7 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.knn(4)
-      showNotification("Error al ejecutar los indices, intente nuevamente", duration = 15, type = "error")
+      showNotification(paste0("Error al ejecutar los indices: ",e), duration = 15, type = "error")
     }
     )
   }
@@ -1096,7 +1103,7 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.svm(1)
-      showNotification("Error al ejecutar el modelo, intente nuevamente", duration = 15, type = "error")
+      showNotification(paste0("Error al ejecutar el modelo svm:",e), duration = 15, type = "error")
     }
     )
   }
@@ -1124,7 +1131,7 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.svm(2)
-      showNotification("Error al ejecutar la prediccion, intente nuevamente", duration = 15, type = "error")
+      showNotification(paste0("Error al ejecutar la prediccion svm:",e), duration = 15, type = "error")
     }
     )
   }
@@ -1145,7 +1152,7 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.svm(3)
-      showNotification("Error al ejecutar la matriz, intente nuevamente", duration = 15, type = "error")
+      showNotification(paste0("Error al ejecutar la matriz svm:",e), duration = 15, type = "error")
     }
     )
   }
@@ -1178,7 +1185,7 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.knn(4)
-      showNotification("Error al ejecutar los indices, intente nuevamente", duration = 15, type = "error")
+      showNotification(paste0("Error al ejecutar los indices svm: ",e), duration = 15, type = "error")
     }
     )
   }
@@ -1330,7 +1337,7 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.dt(1)
-      showNotification(paste0("Error al ejecutar el modelo, intente nuevamente:",e), duration = 15, type = "error")
+      showNotification(paste0("Error al ejecutar el modelo dt:",e), duration = 15, type = "error")
     }
     )
   }
@@ -1350,7 +1357,7 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.dt(2)
-      showNotification("Error al ejecutar la prediccion, intente nuevamente", duration = 15, type = "error")
+      showNotification(paste0("Error al ejecutar la prediccion dt: ",e), duration = 15, type = "error")
     }
     )
   }
@@ -1371,7 +1378,7 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.dt(3)
-      showNotification("Error al ejecutar la matriz, intente nuevamente", duration = 15, type = "error")
+      showNotification(paste0("Error al ejecutar la matriz dt :", e), duration = 15, type = "error")
     }
     )
   }
@@ -1399,7 +1406,7 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.dt(4)
-      showNotification("Error al ejecutar los indices, intente nuevamente", duration = 15, type = "error")
+      showNotification(paste0("Error al ejecutar los indices dt :",e), duration = 15, type = "error")
     }
     )
   }
@@ -1511,7 +1518,7 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.rf(1)
-      showNotification("Error al ejecutar el modelo, intente nuevamente", duration = 15, type = "error")
+      showNotification(paste0("Error al ejecutar el modelo rf :",e), duration = 15, type = "error")
     }
     )
   }
@@ -1530,7 +1537,7 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.rf(2)
-      showNotification("Error al ejecutar la prediccion, intente nuevamente", duration = 15, type = "error")
+      showNotification(paste0("Error al ejecutar la prediccion rf :", e), duration = 15, type = "error")
     }
     )
   }
@@ -1550,7 +1557,7 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.rf(3)
-      showNotification("Error al ejecutar la matriz, intente nuevamente", duration = 15, type = "error")
+      showNotification(paste0("Error al ejecutar la matriz rf:",e), duration = 15, type = "error")
     }
     )
   }
@@ -1579,7 +1586,7 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.rf(4)
-      showNotification("Error al ejecutar los indices, intente nuevamente", duration = 15, type = "error")
+      showNotification(paste0("Error al ejecutar los indices rf :",e), duration = 15, type = "error")
     }
     )
   }
@@ -1723,7 +1730,7 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.boosting(1)
-      showNotification("Error al ejecutar el modelo, intente nuevamente", duration = 15, type = "error")
+      showNotification(paste0("Error al ejecutar el modelo boosting :",e), duration = 15, type = "error")
     }
     )
   }
@@ -1744,7 +1751,7 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.boosting(2)
-      showNotification("Error al ejecutar la prediccion, intente nuevamente", duration = 15, type = "error")
+      showNotification(paste0("Error al ejecutar la prediccion boosting :",e), duration = 15, type = "error")
     }
     )
   }
@@ -1767,7 +1774,7 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.boosting(3)
-      showNotification("Error al ejecutar la matriz, intente nuevamente", duration = 15, type = "error")
+      showNotification(paste0("Error al ejecutar la matriz booting :",e), duration = 15, type = "error")
     }
     )
   }
@@ -1799,16 +1806,15 @@ shinyServer(function(input, output, session) {
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.boosting(4)
-      showNotification("Error al ejecutar los indices, intente nuevamente", duration = 15, type = "error")
-    }
-    )
+      showNotification(paste0("Error al ejecutar los indices booting :", e), duration = 15, type = "error")
+    })
   }
 
   # TABLA COMPARATIVA -------------------------------------------------------------------------------------------------------
 
   #Actualiza los selectores de la tabla comparativa
   actualizar.selector.comparativa <- function(){
-    shinyWidgets::updateCheckboxGroupButtons(session,"select.models",choices = names(MCs),selected = names(MCs),
+    shinyWidgets::updateCheckboxGroupButtons(session,"select.models",choices = sort(names(MCs)),selected = sort(names(MCs)),
                                              status = "primary",checkIcon = list(yes = icon("ok", lib = "glyphicon"),
                                                                                  no = icon("remove", lib = "glyphicon")))
   }
@@ -1897,33 +1903,34 @@ shinyServer(function(input, output, session) {
   # PAGINA DE REPORTE -------------------------------------------------------------------------------------------------------
 
   len.report <- function(){
-    length(codigo.reporte)
+    length(env.report$codigo.reporte)
   }
 
   insert.report <- function(id, content, interpretation =  TRUE){
     n <- len.report()
     if(is.null(content)){
-      codigo.reporte[[n]][[id]] <<- content
+      env.report$codigo.reporte[[n]][[id]] <<- content
     }else{
-      codigo.reporte[[n]][[id]] <<- ifelse(interpretation, paste0(content,"\n\n#### Interpretación\n\n"), content)
+      env.report$codigo.reporte[[n]][[id]] <<- ifelse(interpretation, paste0(content,"\n\n#### Interpretación\n\n"), content)
     }
   }
 
   names.report <- function(){
     n <- len.report()
-    names(codigo.reporte[[n]])
+    names(env.report$codigo.reporte[[n]])
   }
 
   new.report <- function(){
     n <- len.report() + 1
-    codigo.reporte[[n]] <<- list(datos.originales = datos.originales)
-    codigo.reporte[[n]][["carga.datos"]] <<- paste0("\n# Carga de Datos (",input$file1$name,")",
-                                                    "\n```{r}\ndatos.originales <<- codigo.reporte[[",n,"]]$datos.originales\n```")
+    env.report$codigo.reporte[[n]] <<- list(datos.originales = datos.originales)
+    env.report$codigo.reporte[[n]][["carga.datos"]] <<- paste0("\n# Carga de Datos (",input$file1$name,")",
+                                                    "\n```{r}\ndatos.originales <<- codigo.reporte[[",n,"]]$datos.originales\n",
+                                                    "datos <<- datos.originales\n```\n```{r}\nhead(datos)\nstr(datos)\n```\n")
   }
 
   new.secction.report <- function(){
     n <- len.report() + 1
-    codigo.reporte[[n]] <<- list()
+    env.report$codigo.reporte[[n]] <<- list()
   }
 
   observeEvent(input$btnReporte, {
@@ -1932,7 +1939,7 @@ shinyServer(function(input, output, session) {
 
   obj.reporte <- eventReactive(input$fieldCodeReport, {
     updateAceEditor(session, "fieldCodeReport", value = input$fieldCodeReport)
-    return(isolate(HTML(knit2html(text = input$fieldCodeReport, fragment.only = T, quiet = T))))
+    return(isolate(HTML(knit2html(text = input$fieldCodeReport, fragment.only = T, quiet = T,envir = env.report))))
   })
 
   output$knitDoc <- renderUI(obj.reporte())
@@ -1950,7 +1957,7 @@ shinyServer(function(input, output, session) {
       files <- c(namermd, files)
 
       src <- normalizePath(namermd)
-      out <- rmarkdown::render(src,  params = NULL, "word_document")
+      out <- rmarkdown::render(src,  params = NULL, "word_document",envir = env.report)
       file.rename(out, paste('data-', Sys.Date(), '.docx', sep=''))
       files <- c(paste('data-', Sys.Date(), '.docx', sep=''), files)
 
