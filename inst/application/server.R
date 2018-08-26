@@ -193,6 +193,7 @@ shinyServer(function(input, output, session) {
       tryCatch({
         codigo.na <- paste0(code.NA(deleteNA = input$deleteNA), "\n", "datos <<- datos.originales")
         isolate(eval(parse(text = codigo.na)))
+        insert.report("na.delete",paste0("\n```{r}\n",codigo.na,"\nhead(datos)\n```"))
       }, error = function(e) {
         showNotification(paste0("Error al eliminar NAs: ", e), duration = 10, type = "error")
         datos <<- NULL
@@ -202,7 +203,6 @@ shinyServer(function(input, output, session) {
     } else {
       codigo.na <- ""
     }
-    insert.report("na.delete",paste0("\n```{r}\n",codigo.na,"\nhead(datos)\n```"))
     return(codigo.na)
   }
 
