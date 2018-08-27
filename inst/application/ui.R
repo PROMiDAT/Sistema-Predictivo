@@ -417,7 +417,7 @@ opciones.svm <- fluidRow(column(width = 6, actionButton("runSvm", label = "Ejecu
                                                tooltip = tooltipOptions(title = "Clic para ver opciones"),
                                                switchInput(inputId = "switch.scale.svm", onStatus = "success", offStatus = "danger", value = T,
                                                            label = "Escalar datos", onLabel = "SI", offLabel = "NO", labelWidth = "100%"),
-                                               selectInput(inputId = "kernel.svm", label = "Seleccionar un Kernel", selected = 1,
+                                               selectInput(inputId = "kernel.svm", label = "Seleccionar un Kernel", selected = "radial",
                                                            choices =  c("linear", "polynomial", "radial", "sigmoid")))))
 
 titulo.svm <- fluidRow(column(width = 12, opciones.svm))
