@@ -1,3 +1,9 @@
+
+#' STARTUP
+#' @author Andres
+#' @return Sniny app
+#' @export
+#'
 init_shiny_predictivo <- function(){
   rm(envir = .GlobalEnv, list = ls(envir = .GlobalEnv))
   Sys.setenv("LANGUAGE" = "ES")
