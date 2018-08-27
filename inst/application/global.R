@@ -440,7 +440,7 @@ kkn.modelo <- function(variable.pr = NULL, scale = TRUE,kmax = 7, kernel = "opti
 
 #Codigo de la prediccion de knn
 kkn.prediccion <- function(kernel = "optimal") {
-  return(paste0("prediccion.knn.",kernel," <<- predict(modelo.knn.",kernel,", datos.prueba)"))
+  return(paste0("prediccion.knn.",kernel," <<- predict(modelo.knn.",kernel,", datos.prueba[,-which(colnames(datos.prueba) == '",variable.predecir,"')])"))
 }
 
 #Codigo de la matriz de confucion de knn
@@ -762,6 +762,7 @@ datos.prueba <<- NULL
 datos.aprendizaje <<- NULL
 variable.predecir <<- NULL
 contador <<- 0
+semilla <<- FALSE
 
 # -------------------  Estadisticas Basicas
 

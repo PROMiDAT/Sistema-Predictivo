@@ -597,20 +597,21 @@ pagina.boosting <- tabItem(tabName = "boosting",
 
 # PAGINA DE COMPARACION DE MODELOS ---------------------------------------------------------------------------------------
 
-panel.comparacion.tabla <- tabPanel(title = "Tabla Comparativa",
-                                    DT::dataTableOutput("TablaComp"))
+panel.comparacion.tabla <- fluidRow(tabPanel(title = "Tabla Comparativa",
+                                    DT::dataTableOutput("TablaComp")))
 
-plot.comparacion.roc <- tabPanel(title = "Curva ROC",
+plot.comparacion.roc <- fluidRow(tabPanel(title = "Curva ROC",
                           plotOutput('plot.roc', height = "65vh"),
                           fluidRow(column(width = 12, selectInput(inputId = "roc.sel",
                                                                   label = h4("Seleccionar la Categoría:"),
-                                                                  choices =  "", width = "100%"))))
+                                                                  choices =  "", width = "100%")))))
 
 
-selector.modelos <- checkboxGroupButtons("select.models", "Mostrar Modelos:", c("P1" = "P1"),
+selector.modelos <- fluidRow(box(title = "Mostrar Modelos:", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
+                        checkboxGroupButtons("select.models", "", c("No Disponible" = "NoDisponible"),
                                          size = "sm", status = "primary",
                                          checkIcon = list(yes = icon("ok", lib = "glyphicon"),
-                                                          no = icon("remove", lib = "glyphicon")))
+                                                          no = icon("remove", lib = "glyphicon")))))
 
 pagina.comparacion <- tabItem(tabName = "comparar",
                            column(width = 12,
@@ -634,6 +635,7 @@ vista.previa.reporte <- column(width = 7,
                                box(title = "Vista Previa", width = 12, height = "90vh", status = "primary", solidHeader = TRUE,
                                    collapsible = TRUE, div(style = 'overflow-x: scroll; overflow-y: scroll; height: 80vh;',
                                                            withSpinner(htmlOutput("knitDoc"), type = 7, color = "#CBB051"))))
+
 
 pagina.generar.reporte <- tabItem(tabName = "reporte", panel.reporte.codigo , vista.previa.reporte )
 

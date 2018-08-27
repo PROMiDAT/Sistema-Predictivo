@@ -412,6 +412,7 @@ shinyServer(function(input, output, session) {
         input$sel.predic.var,
         input$semilla,
         input$permitir.semilla)
+      semilla <<- input$permitir.semilla
 
       knn.stop.excu <<- FALSE
 
@@ -915,6 +916,10 @@ shinyServer(function(input, output, session) {
   # Genera el modelo
   ejecutar.knn <- function() {
     tryCatch({
+      if(!semilla){
+        rm(.Random.seed, envir = globalenv())
+      }
+
       eval(parse(text = cod.knn.modelo))
       updateAceEditor(session, "fieldCodeKnn", value = cod.knn.modelo)
       output$txtknn <- renderPrint(exe("modelo.knn.",input$kernel.knn))
@@ -1094,6 +1099,10 @@ shinyServer(function(input, output, session) {
   # Genera el modelo
   ejecutar.svm <- function() {
     tryCatch({ # Se corren los codigo
+      if(!semilla){
+        rm(.Random.seed, envir = globalenv())
+      }
+
       isolate(eval(parse(text = cod.svm.modelo)))
       output$txtSvm <- renderPrint(exe("print(modelo.svm.",input$kernel.svm,")"))
       updateAceEditor(session, "fieldCodeSvm", value = cod.svm.modelo)
@@ -1329,6 +1338,9 @@ shinyServer(function(input, output, session) {
   # Genera el modelo
   ejecutar.dt <- function() {
     tryCatch({ # Se corren los codigo
+      if(!semilla){
+        rm(.Random.seed, envir = globalenv())
+      }
       isolate(eval(parse(text = cod.dt.modelo)))
       output$txtDt <- renderPrint(print(modelo.dt))
       insert.report("modelo.dt",
@@ -1511,6 +1523,9 @@ shinyServer(function(input, output, session) {
   # Genera el modelo
   ejecutar.rf <- function() {
     tryCatch({ # Se corren los codigo
+      if(!semilla){
+        rm(.Random.seed, envir = globalenv())
+      }
       isolate(eval(parse(text = cod.rf.modelo)))
       output$txtRf <- renderPrint(print(modelo.rf))
       insert.report("modelo.rf",paste0("## Generación del Modelo Bosques Aleatorios\n```{r}\n", cod.rf.modelo, "\nmodelo.rf\n```"))
@@ -1720,6 +1735,9 @@ shinyServer(function(input, output, session) {
   # Genera el modelo
   ejecutar.boosting <- function() {
     tryCatch({ # Se corren los codigo
+      if(!semilla){
+        rm(.Random.seed, envir = globalenv())
+      }
       isolate(eval(parse(text = cod.b.modelo)))
       output$txtBoosting <- renderPrint(exe("print(modelo.boosting.",input$tipo.boosting,")"))
       plotear.boosting()
@@ -1841,9 +1859,9 @@ shinyServer(function(input, output, session) {
         if (is.null(matrices[[i]])) {
           df <- rbind(df, c(names(matrices)[i], NA, rep(NA, cant.class), NA))
         } else {
-          df <- rbind(df, c(NA,round((sum(diag(matrices[[i]])) / sum(matrices[[i]])) * 100, 2),
-                            round(diag(matrices[[i]]) / rowSums(matrices[[i]]) * 100, 2),
-                            ifelse(cant.class == 2,round(areas[[names(matrices)[i]]], 2), NA)))
+          df <- rbind(df, c(NA,round((sum(diag(matrices[[i]])) / sum(matrices[[i]])) * 100, 3),
+                            round(diag(matrices[[i]]) / rowSums(matrices[[i]]) * 100, 3),
+                            ifelse(cant.class == 2,round(areas[[names(matrices)[i]]], 3), NA)))
           df[nrow(df),1] <- names(matrices)[i]
           names.class <- colnames(matrices[[i]])
         }
