@@ -2,9 +2,9 @@ Package: PROMIDAT.PREDICTIVO.SHINY
 Type: Package
 Title: Predictivo Shiny
 Version: 1.0.1
-Author: Andres and Diego
-Maintainer: Andrés Navarro Durán <andres.navarro@promidat.com>, DIEGO <yourself@somewhere.net>
-Description: Hace cosas bonitas
+Author: Andres Navarro and Diego Jimenez
+Maintainer: PROMiDAT <info@promidat.con>
+Description:  Este paquete ayuda a realizar un análisis predictivo sobre una base de datos mediante una interfaz gráfica.
 License: GPL (>=2)
 Encoding: UTF-8
 LazyData: true
