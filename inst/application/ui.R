@@ -597,14 +597,14 @@ pagina.boosting <- tabItem(tabName = "boosting",
 
 # PAGINA DE COMPARACION DE MODELOS ---------------------------------------------------------------------------------------
 
-panel.comparacion.tabla <- fluidRow(tabPanel(title = "Tabla Comparativa",
-                                    DT::dataTableOutput("TablaComp")))
+panel.comparacion.tabla <- tabPanel(title = "Tabla Comparativa",
+                                    DT::dataTableOutput("TablaComp"))
 
-plot.comparacion.roc <- fluidRow(tabPanel(title = "Curva ROC",
+plot.comparacion.roc <- tabPanel(title = "Curva ROC",
                           plotOutput('plot.roc', height = "65vh"),
                           fluidRow(column(width = 12, selectInput(inputId = "roc.sel",
                                                                   label = h4("Seleccionar la Categoría:"),
-                                                                  choices =  "", width = "100%")))))
+                                                                  choices =  "", width = "100%"))))
 
 
 selector.modelos <- fluidRow(box(title = "Mostrar Modelos:", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
