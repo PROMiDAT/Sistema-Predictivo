@@ -220,6 +220,10 @@ input[type="checkbox"]:hover:before {
     background: #555;
 }
 
-#txtreport #rulesDt{
+#txtreport{
+  height: 24vh;
+}
+
+#rulesDt{
   height: 24vh;
 }

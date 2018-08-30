@@ -1176,8 +1176,8 @@ shinyServer(function(input, output, session) {
       insert.report(paste0("pred.svm.",input$kernel.svm),
                     paste0("## Predicción del Modelo SVM - ",input$kernel.svm,"\n```{r}\n", cod.svm.pred,
                            "\nhead(dt.to.data.frame.predict(obj.predic(prediccion.svm.",input$kernel.svm,")))\n",
-                           "modelo.svm.roc <- svm(as.formula(paste0(variable.predecir, '~.')),data = datos.aprendizaje,scale = T,kernel = ",
-                           input$kernel.svm,",probability = T)\n",
+                           "modelo.svm.roc <- svm(as.formula(paste0(variable.predecir, '~.')),data = datos.aprendizaje,scale = T,kernel = '",
+                           input$kernel.svm,"',probability = T)\n",
                            "scores[['SVM -",input$kernel.svm,"']] <<- predict(modelo.svm.roc,datos.prueba, probability = T)\n```"))
 
       updatePlot$roc <- !updatePlot$roc #graficar otra vez la curva roc
@@ -1820,7 +1820,7 @@ shinyServer(function(input, output, session) {
       insert.report(paste0("pred.b.",input$tipo.boosting),
                     paste0("## Predicción del Modelo ADA-BOOSTING - ",input$tipo.boosting,"\n```{r}\n",
                     cod.b.pred,"\nhead(dt.to.data.frame.predict(obj.predic(prediccion.boosting.",input$tipo.boosting,")))\n",
-                    "scores[['",paste0("ADA-BOOSTING - ",input$tipo.boosting),"']] <<- predict(modelo.boosting.",input$tipo.boosting,
+                    "scores[['ADA-BOOSTING - ",input$tipo.boosting,"']] <<- predict(modelo.boosting.",input$tipo.boosting,
                     ", datos.prueba[, -which(colnames(datos.prueba) == variable.predecir)], type = 'prob')\n```"))
       updatePlot$roc <- !updatePlot$roc #graficar otra vez la curva roc
     },
@@ -1843,7 +1843,7 @@ shinyServer(function(input, output, session) {
       insert.report(paste0("mc.b.",input$tipo.boosting), paste0("## Matriz de Confusión del Modelo ADA-BOOSTING - ",input$tipo.boosting,"\n```{r}\n",
                                                                 cod.b.mc,"\nMC.boosting.",input$tipo.boosting,
                                                                 "\n```\n\n```{r}\nplot.MC(MC.boosting.",input$tipo.boosting,")\n",
-                                                                "MCs[['ADA-BOOSTING - ",input$tipo.boosting,"')]] <<- MC.boosting.",input$tipo.boosting,"\n```"))
+                                                                "MCs[['ADA-BOOSTING - ",input$tipo.boosting,"']] <<- MC.boosting.",input$tipo.boosting,"\n```"))
 
       MCs[[paste0("ADA-BOOSTING - ",input$tipo.boosting)]] <<- exe("MC.boosting.",input$tipo.boosting)
       actualizar.selector.comparativa()
@@ -1967,7 +1967,7 @@ shinyServer(function(input, output, session) {
       insert.report("tabla.comparativa",paste0("## Tabla Comparativa \n```{r}\ncalcular.areas()\ntabla.comparativa( ",as.string.c(input$select.models)," )\n```"))
       DT::datatable(tabla.comparativa(input$select.models),
                     selection = "none", editable = FALSE, extensions = c("Responsive"),
-                    options = list(dom = "frtip", pageLength = 10, buttons = NULL, scrollY = "50vh"))
+                    options = list(dom = "frtip", pageLength = 10, buttons = NULL))
     }
   })
 
