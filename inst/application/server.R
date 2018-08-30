@@ -23,7 +23,7 @@ shinyServer(function(input, output, session) {
 
     return(DT::datatable(data,
                          selection = "none", editable = editable, container = sketch, extensions = extensions,
-                         options = list(dom = dom, pageLength = pageLength, buttons = buttons, scrollY = T)
+                         options = list(dom = dom, pageLength = pageLength, buttons = buttons)
     ))
   }
 
@@ -34,8 +34,9 @@ shinyServer(function(input, output, session) {
                                                              editable = T,
                                                              pageLength = 8,
                                                              buttons = T,
-                                                             filename = "datos"
-      ), server = F)
+                                                             filename = "datos"),
+                                      options = list(scrollY = T),
+                                      server = F)
     }
 
     if (any("datos.aprendizaje" %in% x)) { # Cambia la tabla de datos de aprendizaje
@@ -43,8 +44,9 @@ shinyServer(function(input, output, session) {
                                                                    editable = T,
                                                                    pageLength = 5,
                                                                    buttons = T,
-                                                                   filename = "datos.aprendizaje"
-      ), server = F)
+                                                                   filename = "datos.aprendizaje"),
+                                            options = list(scrollY = T),
+                                            server = F)
     }
 
     if (any("datos.prueba" %in% x)) { # Cambia la tabla de datos de prueba
@@ -52,8 +54,9 @@ shinyServer(function(input, output, session) {
                                                                    editable = T,
                                                                    pageLength = 5,
                                                                    buttons = T,
-                                                                   filename = "datos.prueba"
-      ), server = F)
+                                                                   filename = "datos.prueba"),
+                                            options = list(scrollY = T),
+                                            server = F)
     }
   }
 
@@ -165,6 +168,8 @@ shinyServer(function(input, output, session) {
     poder.cat = NULL, poder.num = NULL, poder.dens = NULL, roc = FALSE,
     svm.graf = NULL
   )
+
+  disp.ranges <- reactiveValues(x = NULL, y = NULL)
 
   # Pagina de Cargar y Transformar Datos ------------------------------------------------------------------------------------
 
@@ -368,15 +373,13 @@ shinyServer(function(input, output, session) {
   # Cambia la tabla de con las opciones del panel de transformar
   output$transData <- DT::renderDataTable(update.trans(),
                                           escape = FALSE, selection = "none", server = FALSE,
-                                          options = list(dom = "t", paging = FALSE, ordering = FALSE), rownames = F,
+                                          options = list(dom = "t", paging = FALSE, ordering = FALSE, scrollY = "45vh"), rownames = F,
                                           callback = JS("table.rows().every(function(i, tab, row) {
                                                         var $this = $(this.node());
                                                         $this.attr('id', this.data()[0]);
                                                         $this.addClass('shiny-input-checkbox');});
                                                         Shiny.unbindAll(table.table().node());
-                                                        Shiny.bindAll(table.table().node());")
-  )
-
+                                                        Shiny.bindAll(table.table().node());"))
 
   # Pagina de Segmentar Datos -----------------------------------------------------------------------------------------------
 
@@ -422,6 +425,8 @@ shinyServer(function(input, output, session) {
       insert.report("segmentar.datos",paste0("\n# Datos de Aprendizaje\n```{r}\n",codigo,"\nhead(datos.aprendizaje)\n```\n\n# Datos de Prueba\n```{r}\nhead(datos.prueba)\n```\n"))
 
       acualizar.selecctores.seg()
+
+      # borra los datos de modelos
       borrar.modelos(FALSE)
 
       # Cambia los codigos de los modelos
@@ -557,6 +562,40 @@ shinyServer(function(input, output, session) {
         return(NULL)
       })
     })
+  })
+
+  #Hace el grafico del zoom
+  output$plot.disp.zoom <- renderPlot({
+    tryCatch({
+      cod.disp <<- updatePlot$disp
+      res <- isolate(eval(parse(text = cod.disp)))
+      res <- res + coord_cartesian(xlim = disp.ranges$x, ylim = disp.ranges$y, expand = FALSE)
+      return(res)
+    }, error = function(e) {
+      return(NULL)
+    })
+  })
+
+  #Hace la tabal de con los valores de disperción.
+  output$mostrar.disp.zoom <- DT::renderDataTable({
+    tryCatch({
+      return(brushedPoints(datos[, input$select.var], input$zoom.disp))
+    }, error = function(e) {
+      return(NULL)
+    })
+  }, options = list(dom = 't', scrollX = TRUE, scrollY = "20vh", pageLength = nrow(datos)))
+
+  # Si se selecciona un area de zoom
+  observe({
+    brush <- input$zoom.disp
+    if (!is.null(brush)) {
+      disp.ranges$x <- c(brush$xmin, brush$xmax)
+      disp.ranges$y <- c(brush$ymin, brush$ymax)
+
+    } else {
+      disp.ranges$x <- NULL
+      disp.ranges$y <- NULL
+    }
   })
 
   # Ejecuta el codigo del grafico
@@ -943,7 +982,8 @@ shinyServer(function(input, output, session) {
       output$knnPrediTable <- DT::renderDataTable(obj.predic(exe("prediccion.knn.",input$kernel.knn)))
       insert.report(paste0("pred.knn.",input$kernel.knn),
                     paste0("## Predicción del Modelo KNN - ",input$kernel.knn,"\n```{r}\n", cod.knn.pred,
-                           "\nhead(dt.to.data.frame.predict(obj.predic(prediccion.knn.",input$kernel.knn,")))\n```"))
+                           "\nhead(dt.to.data.frame.predict(obj.predic(prediccion.knn.",input$kernel.knn,")))\n",
+                           "scores[['",paste0("KNN - ",input$kernel.knn),"']] <<- predict(modelo.knn.",input$kernel.knn,",datos.prueba, type = 'prob')\n```"))
 
       updatePlot$roc <- !updatePlot$roc #graficar otra vez la curva roc
     },
@@ -966,7 +1006,8 @@ shinyServer(function(input, output, session) {
                     paste0("## Matriz de confusión del Modelo KNN - ",
                            input$kernel.knn,"\n```{r}\n", cod.knn.mc,
                            "\nMC.knn.",input$kernel.knn,
-                           "\n```\n```{r}\nplot.MC(MC.knn.",input$kernel.knn,")\n```"))
+                           "\n```\n```{r}\nplot.MC(MC.knn.",input$kernel.knn,")\n",
+                           "MCs[['KNN - ",input$kernel.knn,"']] <<- MC.knn.",input$kernel.knn,"\n```"))
       MCs[[paste0("KNN - ",input$kernel.knn)]] <<- exe("MC.knn.",input$kernel.knn)
       actualizar.selector.comparativa()
     },
@@ -1134,7 +1175,10 @@ shinyServer(function(input, output, session) {
       output$svmPrediTable <- DT::renderDataTable(exe("obj.predic(prediccion.svm.",input$kernel.svm,")"))
       insert.report(paste0("pred.svm.",input$kernel.svm),
                     paste0("## Predicción del Modelo SVM - ",input$kernel.svm,"\n```{r}\n", cod.svm.pred,
-                           "\nhead(dt.to.data.frame.predict(obj.predic(prediccion.svm.",input$kernel.svm,")))\n```"))
+                           "\nhead(dt.to.data.frame.predict(obj.predic(prediccion.svm.",input$kernel.svm,")))\n",
+                           "modelo.svm.roc <- svm(as.formula(paste0(variable.predecir, '~.')),data = datos.aprendizaje,scale = T,kernel = ",
+                           input$kernel.svm,",probability = T)\n",
+                           "scores[['SVM -",input$kernel.svm,"']] <<- predict(modelo.svm.roc,datos.prueba, probability = T)\n```"))
 
       updatePlot$roc <- !updatePlot$roc #graficar otra vez la curva roc
     },
@@ -1154,7 +1198,8 @@ shinyServer(function(input, output, session) {
       output$plot.svm.mc <- renderPlot(exe("plot.MC(MC.svm.",input$kernel.svm,")"))
       insert.report(paste0("mc.svm.",input$kernel.svm),
                     paste0("## Matriz de Confusión del Modelo SVM - ",input$kernel.svm,"\n```{r}\n",
-                           cod.svm.mc, "\nMC.svm.",input$kernel.svm,"\n```\n```{r}\nplot.MC(MC.svm.",input$kernel.svm,")\n```"))
+                           cod.svm.mc, "\nMC.svm.",input$kernel.svm,"\n```\n```{r}\nplot.MC(MC.svm.",input$kernel.svm,")\n",
+                           "MCs[['SVM -",input$kernel.svm,"']] <<- MC.svm.",input$kernel.svm,"\n```"))
 
       MCs[[paste0("SVM -",input$kernel.svm)]] <<- exe("MC.svm.",input$kernel.svm)
       actualizar.selector.comparativa()
@@ -1251,7 +1296,7 @@ shinyServer(function(input, output, session) {
   })
 
   # Si las opciones cambian
-  observeEvent(c(input$minsplit.dt, input$cp.dt), {
+  observeEvent(c(input$minsplit.dt, input$maxdepth.dt), {
     if (validar.datos(print = FALSE)) {
       default.codigo.dt()
       dt.full()
@@ -1264,7 +1309,7 @@ shinyServer(function(input, output, session) {
     # Se acualiza el codigo del modelo
     codigo <- dt.modelo(variable.pr = variable.predecir,
                         minsplit = input$minsplit.dt,
-                        cp = input$cp.dt)
+                        maxdepth = input$maxdepth.dt)
 
     updateAceEditor(session, "fieldCodeDt", value = codigo)
     cod.dt.modelo <<- codigo
@@ -1299,6 +1344,12 @@ shinyServer(function(input, output, session) {
       output$plot.dt <- renderPlot(NULL)
       insert.report("modelo.dt.graf",NULL)
     })
+  }
+
+  #Mostrar Reglas
+  mostrar.reglas <- function(){
+    output$rulesDt <- renderPrint(rattle::asRules(modelo.dt))
+    insert.report("modelo.dt.rules", paste0("\n```{r}\nrattle::asRules(modelo.dt)\n```"))
   }
 
   # Limpia los datos segun el proceso donde se genera el error
@@ -1346,6 +1397,7 @@ shinyServer(function(input, output, session) {
       insert.report("modelo.dt",
                     paste0("## Generación del modelo Árboles de Decisión\n```{r}\n", cod.dt.modelo, "\nmodelo.dt\n```"))
       plotear.arbol()
+      mostrar.reglas()
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.dt(1)
@@ -1363,7 +1415,8 @@ shinyServer(function(input, output, session) {
       output$dtPrediTable <- DT::renderDataTable(obj.predic(prediccion.dt))
       insert.report("pred.dt",
                     paste0("## Predicción del Modelo Árboles de Decisión\n```{r}\n", cod.dt.pred,
-                           "\nhead(dt.to.data.frame.predict(obj.predic(prediccion.dt)))\n```"))
+                           "\nhead(dt.to.data.frame.predict(obj.predic(prediccion.dt)))\n",
+                           "scores[['Árboles de Decisión']] <<- predict(modelo.dt, datos.prueba, type = 'prob')\n```"))
 
       updatePlot$roc <- !updatePlot$roc #graficar otra vez la curva roc
     },
@@ -1383,7 +1436,8 @@ shinyServer(function(input, output, session) {
       output$plot.dt.mc <- renderPlot(isolate(eval(parse(text = "plot.MC(MC.dt)"))))
       insert.report("mc.dt",
                     paste0("## Matriz de Confusión del Modelo Árboles de Decisión\n```{r}\n", cod.dt.mc,
-                           "\nMC.dt\n```\n```{r}\nplot.MC(MC.dt)\n```"))
+                           "\nMC.dt\n```\n```{r}\nplot.MC(MC.dt)\n",
+                           "MCs[['Árboles de Decisión']] <<- MC.dt\n```"))
 
       MCs[["Árboles de Decisión"]] <<- MC.dt
       actualizar.selector.comparativa()
@@ -1547,7 +1601,8 @@ shinyServer(function(input, output, session) {
       output$rfPrediTable <- DT::renderDataTable(obj.predic(prediccion.rf))
       insert.report("pred.rf",
                     paste0("## Predicción del Modelo Bosques Aleatorios\n```{r}\n", cod.rf.pred,
-                           "\nhead(dt.to.data.frame.predict(obj.predic(prediccion.rf)))\n```"))
+                           "\nhead(dt.to.data.frame.predict(obj.predic(prediccion.rf)))\n",
+                           "scores[['Bosques Aleatorios']] <<- predict(modelo.rf, datos.prueba[, -which(colnames(datos.prueba) == variable.predecir)], type = 'prob')\n```"))
       updatePlot$roc <- !updatePlot$roc #graficar otra vez la curva roc
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
@@ -1565,7 +1620,8 @@ shinyServer(function(input, output, session) {
       isolate(eval(parse(text = plot.MC.code())))
       output$plot.rf.mc <- renderPlot(isolate(eval(parse(text = "plot.MC(MC.rf)"))))
       insert.report("mc.rf",paste0("## Matriz de Confusión del Modelo Bosques Aleatorios\n```{r}\n", cod.rf.mc,
-                                   "\nMC.rf\n```\n```{r}\nplot.MC(MC.rf)\n```"))
+                                   "\nMC.rf\n```\n```{r}\nplot.MC(MC.rf)\n",
+                                   "MCs[['Bosques Aleatorios']] <<- MC.rf\n```"))
 
       MCs[["Bosques Aleatorios"]] <<- MC.rf
       actualizar.selector.comparativa()
@@ -1761,10 +1817,11 @@ shinyServer(function(input, output, session) {
 
       # Cambia la tabla con la prediccion de boosting
       output$boostingPrediTable <- DT::renderDataTable(obj.predic(exe("prediccion.boosting.",input$tipo.boosting)))
-      insert.report(paste0("pred.b.",input$tipo.boosting),paste0("## Predicción del Modelo ADA-BOOSTING - ",
-                                                                 input$tipo.boosting,"\n```{r}\n",
-                                                                 cod.b.pred,"\nhead(dt.to.data.frame.predict(obj.predic(prediccion.boosting.",
-                                                                 input$tipo.boosting,")))\n```"))
+      insert.report(paste0("pred.b.",input$tipo.boosting),
+                    paste0("## Predicción del Modelo ADA-BOOSTING - ",input$tipo.boosting,"\n```{r}\n",
+                    cod.b.pred,"\nhead(dt.to.data.frame.predict(obj.predic(prediccion.boosting.",input$tipo.boosting,")))\n",
+                    "scores[['",paste0("ADA-BOOSTING - ",input$tipo.boosting),"']] <<- predict(modelo.boosting.",input$tipo.boosting,
+                    ", datos.prueba[, -which(colnames(datos.prueba) == variable.predecir)], type = 'prob')\n```"))
       updatePlot$roc <- !updatePlot$roc #graficar otra vez la curva roc
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
@@ -1785,7 +1842,8 @@ shinyServer(function(input, output, session) {
 
       insert.report(paste0("mc.b.",input$tipo.boosting), paste0("## Matriz de Confusión del Modelo ADA-BOOSTING - ",input$tipo.boosting,"\n```{r}\n",
                                                                 cod.b.mc,"\nMC.boosting.",input$tipo.boosting,
-                                                                "\n```\n\n```{r}\nplot.MC(MC.boosting.",input$tipo.boosting,")\n```"))
+                                                                "\n```\n\n```{r}\nplot.MC(MC.boosting.",input$tipo.boosting,")\n",
+                                                                "MCs[['ADA-BOOSTING - ",input$tipo.boosting,"')]] <<- MC.boosting.",input$tipo.boosting,"\n```"))
 
       MCs[[paste0("ADA-BOOSTING - ",input$tipo.boosting)]] <<- exe("MC.boosting.",input$tipo.boosting)
       actualizar.selector.comparativa()
@@ -1838,7 +1896,7 @@ shinyServer(function(input, output, session) {
   }
 
   # Crea la tabla comparativa
-  tabla.comparativa <- function() {
+  tabla.comparativa <- function(sel) {
     tryCatch({
       cant.class <- length(unique(datos[, variable.predecir]))
       names.class <- as.character(unique(datos[, variable.predecir]))
@@ -1848,7 +1906,7 @@ shinyServer(function(input, output, session) {
       }
 
       matrices <- MCs[sort(names(MCs))]
-      matrices <- matrices[names(matrices) %in% input$select.models]
+      matrices <- matrices[names(matrices) %in% sel]
       df  <- data.frame()
 
       if(length(matrices) == 0) {
@@ -1866,9 +1924,9 @@ shinyServer(function(input, output, session) {
           names.class <- colnames(matrices[[i]])
         }
       }
-      colnames(df) <- c("Modelo", "Precisión Global", names.class, "Área de ROC")
+      colnames(df) <- c('Modelo', 'Precisión Global', names.class, 'Área de ROC')
       return(df)
-    }, error = function() {
+    }, error = function(e) {
       return(data.frame())
     })
   }
@@ -1892,7 +1950,7 @@ shinyServer(function(input, output, session) {
     graficar <- updatePlot$roc
     if(!is.null(datos.prueba) & length(levels(datos[,variable.predecir])) == 2) {
       calcular.areas()
-      insert.report("roc",paste0("## Curva ROC \n```{r}\nplotROC(input$select.models)\n```"))
+      insert.report("roc",paste0("## Curva ROC \n```{r}\nplotROC( ",as.string.c(input$select.models)," )\n```"))
       plotROC(input$select.models)
     } else {
       insert.report("roc", NULL)
@@ -1906,10 +1964,10 @@ shinyServer(function(input, output, session) {
     graficar <- updatePlot$roc
     if (!is.null(datos.aprendizaje)) {
       calcular.areas()
-      insert.report("tabla.comparativa",paste0("## Tabla Comparativa \n```{r}\ncalcular.areas()\ntabla.comparativa()\n```"))
-      DT::datatable(tabla.comparativa(),
+      insert.report("tabla.comparativa",paste0("## Tabla Comparativa \n```{r}\ncalcular.areas()\ntabla.comparativa( ",as.string.c(input$select.models)," )\n```"))
+      DT::datatable(tabla.comparativa(input$select.models),
                     selection = "none", editable = FALSE, extensions = c("Responsive"),
-                    options = list(dom = "frtip", pageLength = 10, buttons = NULL, scrollY = T))
+                    options = list(dom = "frtip", pageLength = 10, buttons = NULL, scrollY = "50vh"))
     }
   })
 
@@ -1943,7 +2001,8 @@ shinyServer(function(input, output, session) {
     env.report$codigo.reporte[[n]] <<- list(datos.originales = datos.originales)
     env.report$codigo.reporte[[n]][["carga.datos"]] <<- paste0("\n# Carga de Datos (",input$file1$name,")",
                                                     "\n```{r}\ndatos.originales <<- codigo.reporte[[",n,"]]$datos.originales\n",
-                                                    "datos <<- datos.originales\n```\n```{r}\nhead(datos)\nstr(datos)\n```\n")
+                                                    "datos <<- datos.originales\n```\n```{r}\nhead(datos)\n```\n```{r}\nstr(datos)\n```\n",
+                                                    "```{r}\nMCs <<- list()\nareas <<- list()\nscores <<- list()\n```\n")
   }
 
   new.secction.report <- function(){
@@ -1951,38 +2010,52 @@ shinyServer(function(input, output, session) {
     env.report$codigo.reporte[[n]] <<- list()
   }
 
-  observeEvent(input$btnReporte, {
-    updateAceEditor(session, "fieldCodeReport", value = def.reporte(titulo = input$textTitulo, nombre = input$textNombre, input))
+  observeEvent(input$principal, {
+    if(input$principal == "reporte"){
+      updateAceEditor(session, "fieldCodeReport", value = def.reporte(titulo = input$textTitulo, nombre = input$textNombre, input))
+    }
   })
 
-  obj.reporte <- eventReactive(input$fieldCodeReport, {
-    updateAceEditor(session, "fieldCodeReport", value = input$fieldCodeReport)
-    return(isolate(HTML(knit2html(text = input$fieldCodeReport, fragment.only = T, quiet = T,envir = env.report))))
+  observeEvent(input$textTitulo, {
+    updateAceEditor(session, "fieldCodeReport", value = str_replace(input$fieldCodeReport, "title: '.*'", paste0("title: '", input$textTitulo, "'")))
   })
 
-  output$knitDoc <- renderUI(obj.reporte())
+  observeEvent(input$textNombre, {
+    updateAceEditor(session, "fieldCodeReport", value = str_replace(input$fieldCodeReport, "author: '.*'", paste0("author: '", input$textNombre, "'")))
+  })
 
   output$descargar <- downloadHandler(
     filename = function() {
-      paste('data-', Sys.Date(), '.zip', sep='')
+      paste(input$textTitulo,'-', input$textNombre, '.zip', sep='')
     },
     content = function(file) {
       owd <- setwd(tempdir())
       on.exit(setwd(owd))
-      files <- NULL;
-      namermd <- paste('data-', Sys.Date(), '.rmd', sep='')
+      files <- NULL
+
+      namermd <- paste(input$textTitulo,'-', input$textNombre, '.rmd', sep='')
       writeLines(input$fieldCodeReport, namermd)
       files <- c(namermd, files)
 
       src <- normalizePath(namermd)
-      out <- rmarkdown::render(src,  params = NULL, "word_document",envir = env.report)
-      file.rename(out, paste('data-', Sys.Date(), '.docx', sep=''))
-      files <- c(paste('data-', Sys.Date(), '.docx', sep=''), files)
+      withCallingHandlers({
+        overwrite.cat()
+        salida.code <<- ""
+        shinyjs::html("txtreport", salida.code)
+        out <- rmarkdown::render(src,  params = NULL, rmarkdown::word_document(highlight = "tango"), envir = env.report)
+      },
+      message = function(m) {
+        salida.code <<- paste0(m$message, salida.code)
+        shinyjs::html(id = "txtreport", html = salida.code)
+      })
+
+      recover.cat()
+      file.rename(out, paste(input$textTitulo,'-', input$textNombre, '.docx', sep=''))
+      files <- c(paste(input$textTitulo,'-', input$textNombre, '.docx', sep=''), files)
 
       zip::zip(file, files)
     }
   )
-
 
   # Termina la Sesion -------------------------------------------------------------------------------------------------------
 

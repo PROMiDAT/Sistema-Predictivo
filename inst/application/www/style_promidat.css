@@ -13,6 +13,7 @@
   font-size: 24px;
   color: white;
   margin-left: 45%;
+  color: #CBB051;
 }
 
 .disabled {
@@ -217,4 +218,8 @@ input[type="checkbox"]:hover:before {
 /* Handle on hover */
 ::-webkit-scrollbar-thumb:hover {
     background: #555;
+}
+
+#txtreport #rulesDt{
+  height: 24vh;
 }

@@ -2,18 +2,12 @@
 library(shiny)
 library(shinyAce)
 library(shinydashboard)
-library(shinycssloaders)
 library(shinyWidgets)
 library(colourpicker)
 library(shinyjs)
 library(knitr)
 library(DT)
-library(future)
-library(promises)
 library(ggplot2)
-library(FactoMineR)
-library(factoextra)
-library(reshape)
 library(corrplot)
 library(dendextend)
 library(scatterplot3d)
@@ -35,6 +29,7 @@ library(psych)
 library(ROCR)
 library(xtable)
 library(raster)
+library(rattle)
 
 # FUNCIONES --------------------------------------------------------------------------------------------------------------
 
@@ -85,7 +80,7 @@ menu.reporte <- menuItem("Generar Reporte", tabName = "reporte", icon = icon("sa
 
 menu.comparar <- menuItem("Comparación de Modelos", tabName = "comparar", icon = icon("eye"))
 
-prediccion.nuevos <- menuItem("Predicción Individuos Nuevos", tabName = "predNuevos", icon = icon("table"))
+menu.prediccion.nuevos <- menuItem("Predicción Individuos Nuevos", tabName = "predNuevos", icon = icon("table"))
 
 menu.info <- menuItem("Acerca De", tabName = "acercaDe", icon = icon("info"))
 
@@ -95,7 +90,7 @@ mi.menu <- sidebarMenu(id = "principal",
               menu.estadisticas,
               menu.aprendizaje.supervisado,
               menu.comparar,
-              prediccion.nuevos,
+              menu.prediccion.nuevos,
               menu.reporte,
               menu.info)
 
@@ -111,7 +106,7 @@ mi.head <- tags$head(
 
 mi.titulo <- tags$script(HTML(
   '$(document).ready(function() {
-  $("header").find("nav").append(\'<span class="header-title"> PredictoR </span>\');
+  $("header").find("nav").append(\'<span class="header-title"> <i>Predicto</i>R </span>\');
   })'))
 
 load.page <- conditionalPanel(condition="($('html').hasClass('shiny-busy'))",
@@ -154,13 +149,13 @@ panel.segmentar.datos <- tabPanel(title = "Configuraciones", width = 12, solidHe
                                   aceEditor("fieldCodeSegment", mode = "r", theme = "monokai", value = "", height = "8vh",  readOnly = T))
 
 muestra.datos <- box(title = "Datos", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
-                     withSpinner(DT::DTOutput('contents'), type = 7, color = "#CBB051"))
+                     DT::DTOutput('contents'), type = 7, color = "#CBB051")
 
 muestra.datos.aprend <- box(title = "Datos de Aprendizaje", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
-                            withSpinner(DT::DTOutput('contentsAprend'), type = 7, color = "#CBB051"))
+                            DT::DTOutput('contentsAprend'), type = 7, color = "#CBB051")
 
 muestra.datos.prueba <- box(title = "Datos de Prueba", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
-                            withSpinner(DT::DTOutput('contentsPrueba'), type = 7, color = "#CBB051"))
+                            DT::DTOutput('contentsPrueba'), type = 7, color = "#CBB051")
 
 pagina.cargar.datos <- tabItem(tabName = "cargar",
                                fluidRow(column(width = 5, tabBox(id ="tabs", title = NULL, width = 12, panel.cargar.datos, panel.tansformar.datos, panel.segmentar.datos)),
@@ -218,8 +213,9 @@ pagina.test.normalidad <- tabItem(tabName = "normalidad",
 
 # PAGINA DE DISPERSION -----------------------------------------------------------------------------------------------------
 
-
 codigo.dispersion <- column(width = 12, campo.codigo(runid = "run.disp", fieldid = "fieldCodeDisp", height = "8vh"))
+
+datos.dispersiones <- column(width = 4, DT::dataTableOutput('mostrar.disp.zoom'), hr(), plotOutput('plot.disp.zoom'))
 
 opciones.dispersion <- fluidRow(column(width = 9, tags$div(class="select-var-ind",
                                                             selectizeInput("select.var", NULL, multiple = T, choices = c(""),
@@ -231,12 +227,15 @@ opciones.dispersion <- fluidRow(column(width = 9, tags$div(class="select-var-ind
                                                                  tooltip = tooltipOptions(title = "Clic para ver opciones"), right = T)))
 
 
-grafico.dispersion <- tabPanel(title = "Dispersión", value = "tabDisp", plotOutput('plot.disp', height = "65vh"))
+grafico.dispersion <- tabPanel(title = "Dispersión", value = "tabDisp", plotOutput('plot.disp', height = "65vh",
+                                                                                   brush = brushOpts(id = "zoom.disp",
+                                                                                                     resetOnNew = TRUE)))
 
 pagina.dispersion<- tabItem(tabName = "dispersion",
-                            column(width = 12, tabBox(id = "BoxDisp", width = NULL,
+                            column(width = 8, tabBox(id = "BoxDisp", width = NULL,
                                                       title = opciones.dispersion,
                                                       grafico.dispersion)),
+                            datos.dispersiones,
                             codigo.dispersion )
 
 # PAGINA DE CORRELACIONES -------------------------------------------------------------------------------------------------
@@ -457,19 +456,22 @@ panel.matriz.confucion.dt <- tabPanel(title = "Matriz de Confusión",
                                                  value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
 panel.indices.generales.dt <- tabPanel(title = "Índices Generales",
-                                        fluidRow(column(width = 6, gaugeOutput("dtPrecGlob", width = "100%")),
+                                       fluidRow(column(width = 6, gaugeOutput("dtPrecGlob", width = "100%")),
                                                  column(width = 6, gaugeOutput("dtErrorGlob", width = "100%"))),
                                        fluidRow(column(width = 12, shiny::tableOutput("dtIndPrecTable"))),
                                        fluidRow(column(width = 12, shiny::tableOutput("dtIndErrTable"))),
                                         aceEditor("fieldCodeDtIG", mode = "r", theme = "monokai",
                                                   value = "", height = "37vh", readOnly = F, autoComplete = "enabled"))
 
+panel.reglas.dt <- tabPanel(title = "Reglas",verbatimTextOutput("rulesDt"))
+
+
 opciones.dt <- fluidRow(column(width = 6, actionButton("runDt", label = "Ejecutar", icon = icon("play"))),
                         column(width = 6,
                                dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
                                              tooltip = tooltipOptions(title = "Clic para ver opciones"),
                                              numericInput("minsplit.dt", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1),
-                                             numericInput("cp.dt", "Complejidad:", 0.01, width = "100%",min = 0,max = 1, step = 0.01))
+                                             numericInput("maxdepth.dt", "Profundidad Máxima:", 15, width = "100%",min = 0, max = 30, step = 1))
                                ))
 
 
@@ -482,7 +484,8 @@ pagina.dt <- tabItem(tabName = "dt",
                                     plot.dt,
                                     panel.prediccion.dt,
                                     panel.matriz.confucion.dt,
-                                    panel.indices.generales.dt)))
+                                    panel.indices.generales.dt,
+                                    panel.reglas.dt)))
 
 # PAGINA DE RF ------------------------------------------------------------------------------------------------------------
 
@@ -620,31 +623,48 @@ pagina.comparacion <- tabItem(tabName = "comparar",
                                          plot.comparacion.roc )),
                            column(width =12, selector.modelos))
 
+# PAGINA DE PREDICCIONEs NUEVAS ---------------------------------------------------------------------------------------
+
+panel.cargar.datos.pred <- tabPanel(title = "Cargar", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
+                               checkboxInput('headerNPred', 'Encabezado (Header)', TRUE),
+                               checkboxInput('rownameNPred', 'Incluir nombre de filas', TRUE),
+                               radioButtons('sep.nPred', 'Separador', c(Coma=',', 'Punto y Coma'=';', Tab='\t'), selected = 'Coma'),
+                               radioButtons('dec.nPred', 'Separador Decimal', c('Punto'='.', 'Coma'=","), selected = 'Punto'),
+                               switchInput(inputId = "deleteNAnPred", onStatus = "success", offStatus = "danger", value = T, width = "100%",
+                                           label = "Eliminar NA", onLabel = "SI", offLabel = "NO", labelWidth = "100%"),
+                               fileInput('file2', label = 'Cargar Archivo', placeholder = "", buttonLabel = "Subir", width = "100%",
+                                         accept = c('text/csv', 'text/comma-separated-values, text/plain', '.csv')),
+                               actionButton("loadButtonNPred", "Cargar", width = "100%"))
+
+muestra.datos.pred <- box(title = "Datos", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
+                      DT::DTOutput('contentsPred'), type = 7, color = "#CBB051")
+
+pagina.predicciones.nuevas <- tabItem(tabName = "predNuevos",
+                                      fluidRow(column(width = 5,
+                                                      tabBox(id ="tabsPred", title = NULL, width = 12, panel.cargar.datos.pred)),
+                                               column(width = 7, muestra.datos.pred)))
+
 # PAGINA DE REPORTE -------------------------------------------------------------------------------------------------------
 
-panel.reporte.codigo <- column(width = 5,
-                               tabBox(width = 12, id = "tabReporte",
-                                      tabPanel(title = "Reporte", width = 12,
-                                               textInput("textTitulo", value = "Sin Titulo", width = "100%", label = "Digite el Titulo:"),
-                                               textInput("textNombre", value = "PROMiDAT", width = "100%", label = "Digite su Nombre:")),
-                                      tabPanel(title = "Código", width = 12, aceEditor("fieldCodeReport", mode="markdown", value=''))),
-                               column(width = 8, actionButton("btnReporte", "Actualizar Reporte")),
-                               column(width = 4, downloadButton("descargar", "Descargar")))
+panel.reporte.encabezado <- column(width = 5, box(title = "Reporte", width = 12,
+                                              textInput("textTitulo", value = "Sin Titulo", width = "100%", label = "Digite el Titulo:"),
+                                              textInput("textNombre", value = "PROMiDAT", width = "100%", label = "Digite su Nombre:"),
+                                              downloadButton("descargar", "Descargar", class = "center-button")))
 
-vista.previa.reporte <- column(width = 7,
-                               box(title = "Vista Previa", width = 12, height = "90vh", status = "primary", solidHeader = TRUE,
-                                   collapsible = TRUE, div(style = 'overflow-x: scroll; overflow-y: scroll; height: 80vh;',
-                                                           withSpinner(htmlOutput("knitDoc"), type = 7, color = "#CBB051"))))
+panel.reporte.codigo <- column(width = 7,box(title = "Código Reporte", width = 12, height = "50vh",status = "primary", solidHeader = TRUE,
+                                             collapsible = TRUE, aceEditor("fieldCodeReport", mode="markdown", value='', height = "43vh")))
+
+panel.reporte.salida <- fluidRow(column(width = 12, box(title = "Salida R", width = 12, height = "35vh", verbatimTextOutput("txtreport"))))
 
 
-pagina.generar.reporte <- tabItem(tabName = "reporte", panel.reporte.codigo , vista.previa.reporte )
+pagina.generar.reporte <- tabItem(tabName = "reporte", panel.reporte.encabezado , panel.reporte.codigo, panel.reporte.salida)
 
 # PAGINA DE INFORMACION ---------------------------------------------------------------------------------------------------
 
 pagina.info <- tabItem(tabName = "acercaDe",
                        img(src="Logo.png", style="padding-bottom:20px;margin-left: auto;margin-right: auto;display: block;width: 50%;"),
                        infoBoxPROMiDAT("Todos los derechos reservados a", "PROMiDAT S.A.", icono = icon("copyright")),
-                       infoBoxPROMiDAT("Versión del Sistema", "1.0.0", icono = icon("file-code-o")))
+                       infoBoxPROMiDAT("Versión del Sistema", "1.0.1", icono = icon("file-code-o")))
 
 # PAGINA COMPLETA ---------------------------------------------------------------------------------------------------------
 
@@ -668,5 +688,6 @@ shinyUI(dashboardPage(title="PROMiDAT - PredictoR",
                                               pagina.rf,
                                               pagina.boosting,
                                               pagina.comparacion,
+                                              pagina.predicciones.nuevas,
                                               pagina.generar.reporte,
                                               pagina.info))) )

@@ -129,6 +129,11 @@ plot.MC <<- function(cm) {
 }")
 }
 
+as.string.c <- function(vect){
+  return(paste0("c('",paste0(vect, collapse = "','"),"')"))
+}
+
+
 # Pagina de Cargar y Transformar Datos --------------------------------------------------------------------------------------
 
 #Transforma las variables a disyuntivas
@@ -180,7 +185,7 @@ code.trans <- function(variable, nuevo.tipo){
   if(nuevo.tipo == "categorico"){
     return(paste0("datos[, '", variable, "'] <<- as.factor(datos[, '", variable, "'])"))
   } else if(nuevo.tipo == "numerico") {
-    return(paste0("datos[, '", variable, "'] <<- as.numeric(datos[, '", variable, "'])"))
+    return(paste0("datos[, '", variable, "'] <<- as.numeric(sub(',', '.', datos[, '", variable, "'], fixed = TRUE))"))
   } else {
     es.factor <- ifelse(class(datos.originales[, variable]) %in% c('numeric', 'integer'),
                         paste0("datos[, '", variable, "'] <<- as.factor(datos[, '", variable, "']) \n"), "")
@@ -482,15 +487,11 @@ svm.plot <- function(variables, resto, kernel = "linear"){
 # Pagina de DT --------------------------------------------------------------------------------------------------------------
 
 #Crea el modelo DT
-dt.modelo <- function(variable.pr = NULL, minsplit =  20, cp = 0.01){
-  if(is.na(minsplit)){
-    minsplit <- 1
-  }
-  if(!is.numeric(cp)){
-    cp <- 0.01
-  }
+dt.modelo <- function(variable.pr = NULL, minsplit =  20, maxdepth = 15){
+  minsplit <- ifelse(!is.numeric(minsplit), 1, minsplit )
+  maxdepth <- ifelse(!is.numeric(maxdepth) || maxdepth > 30, 15, maxdepth)
   codigo <- paste0("modelo.dt <<- rpart(",variable.pr,"~., data = datos.aprendizaje,
-                   control = rpart.control(minsplit = ",minsplit,", cp = ",cp,"))")
+                   control = rpart.control(minsplit = ",minsplit,", maxdepth = ", maxdepth,"))")
   return(codigo)
 }
 
@@ -507,7 +508,7 @@ dt.MC <- function(variable.p){
 #Codigo del grafico de dt
 dt.plot <- function(){
   num <- length(levels(datos[,variable.predecir]))
-  return(paste0("prp(modelo.dt, type = 2, extra = 108, nn = T, varlen = 0, faclen = 0,
+  return(paste0("prp(modelo.dt, type = 2, extra = 104, nn = T, varlen = 0, faclen = 0,
 fallen.leaves = TRUE, branch.lty = 6, shadow.col = 'gray82',
 box.col = gg_color_hue(",num,")[modelo.dt$frame$yval])"))
 }
@@ -661,7 +662,7 @@ ordenar.reporte <- function(lista){
              nombres[grepl("svm.plot.sigmoid", nombres)],
              "pred.svm.sigmoid","mc.svm.sigmoid","ind.svm.sigmoid",
              "modelo.dt","modelo.dt.graf","pred.dt",
-             "mc.dt","ind.dt","modelo.rf","modelo.rf.graf",
+             "mc.dt","ind.dt","modelo.dt.rules","modelo.rf","modelo.rf.graf",
              "pred.rf","mc.rf","ind.rf",
              combinar.nombres(c("modelo.b","modelo.b.error","modelo.b.imp","pred.b","mc.b","ind.b"),
                               c("discrete", "real", "gentle")),
@@ -753,6 +754,63 @@ return(data)
 \n", codigo.usuario, ""))
 }
 
+recover.cat <- function(){
+  unlockBinding("cat", .BaseNamespaceEnv)
+
+  .BaseNamespaceEnv$cat <- function (..., file = "", sep = " ", fill = FALSE, labels = NULL, append = FALSE){
+    if (is.character(file))
+      if (file == "")
+        file <- stdout()
+      else if (substring(file, 1L, 1L) == "|") {
+        file <- pipe(substring(file, 2L), "w")
+        on.exit(close(file))
+      }
+      else {
+        file <- file(file, ifelse(append, "a", "w"))
+        on.exit(close(file))
+      }
+      .Internal(cat(list(...), file, sep, fill, labels, append))
+  }
+
+  lockBinding("cat",.BaseNamespaceEnv)
+}
+
+overwrite.cat <- function(){
+  unlockBinding("cat", .BaseNamespaceEnv)
+
+  .BaseNamespaceEnv$cat <- function(..., file = "", sep = " ", fill = FALSE, labels = NULL, append = FALSE){
+    file <- stderr()
+    sep <- ""
+
+    msg <- .makeMessage(..., domain = NULL, appendLF = TRUE)
+    call <- sys.call()
+    cond <- simpleMessage(msg, call)
+
+    if (is.character(file))
+      if (file == "")
+        file <- stdout()
+    else if (substring(file, 1L, 1L) == "|") {
+      file <- pipe(substring(file, 2L), "w")
+      on.exit(close(file))
+    }
+    else {
+      file <- file(file, ifelse(append, "a", "w"))
+      on.exit(close(file))
+    }
+    defaultHandler <- function(c) {
+      base:::.Internal(cat(as.list(conditionMessage(c)), file, sep, fill, labels, append))
+    }
+    withRestarts({
+      signalCondition(cond)
+      defaultHandler(cond)
+    }, muffleMessage = function() NULL)
+    invisible()
+  }
+
+  lockBinding("cat",.BaseNamespaceEnv)
+}
+
+
 # VARIABLES GLOBALES --------------------------------------------------------------------------------------------------------
 
 # -------------------  Datos
@@ -775,9 +833,6 @@ cod.dya.num <- def.code.num()
 
 cod.poder.cat <- NULL
 cod.poder.num <- NULL
-
-env.report <<- new.env()
-env.report$codigo.reporte <- list()
 
 # -------------------  Modelos
 
@@ -824,4 +879,5 @@ cod.b.ind <<- NULL
 
 # -------------------  Reporte
 
-
+env.report <<- new.env()
+env.report$codigo.reporte <- list()
