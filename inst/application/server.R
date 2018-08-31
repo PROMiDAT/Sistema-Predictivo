@@ -145,7 +145,6 @@ shinyServer(function(input, output, session) {
 
   source("global.R", local = T)
   options(shiny.maxRequestSize = 200 * 1024^2, DT.options = list(aLengthMenu = c(10, 30, 50), iDisplayLength = 10, scrollX = TRUE))
-  #load.page(F)
   shinyjs::disable(selector = 'a[href^="#shiny-tab-parte1"]')
   shinyjs::disable(selector = 'a[href^="#shiny-tab-parte2"]')
   shinyjs::disable(selector = 'a[href^="#shiny-tab-comparar"]')

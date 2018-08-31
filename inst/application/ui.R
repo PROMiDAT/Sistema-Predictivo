@@ -31,6 +31,7 @@ library(xtable)
 library(raster)
 library(rattle)
 
+
 # FUNCIONES --------------------------------------------------------------------------------------------------------------
 
 # Crea un campo de codigo con boton de ejecutar y cargar
@@ -583,8 +584,7 @@ opciones.boosting <- fluidRow(column(width = 6, actionButton("runBoosting",label
                                                                numericInput("minsplit.boosting", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1),
                                                                numericInput("cp.boosting", "Complejidad:", 0.01, width = "100%",min = 0,max = 1, step = 0.01),
                                                                selectInput(inputId = "tipo.boosting", label = "Seleccionar algoritmo",selected = 1,
-                                                                           choices =  c("discrete", "real", "gentle")))
-                                     ))
+                                                                           choices =  c("discrete", "real", "gentle")))))
 
 titulo.boosting <- fluidRow(column(width = 12,opciones.boosting))
 
@@ -623,9 +623,13 @@ pagina.comparacion <- tabItem(tabName = "comparar",
                                          plot.comparacion.roc )),
                            column(width =12, selector.modelos))
 
-# PAGINA DE PREDICCIONEs NUEVAS ---------------------------------------------------------------------------------------
+# PAGINA DE PREDICCIONES NUEVAS ---------------------------------------------------------------------------------------
+
+muestra.datos.pred <- box(title = "Datos", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
+                          DT::DTOutput('contentsPred'), type = 7, color = "#CBB051")
 
 panel.cargar.datos.pred <- tabPanel(title = "Cargar", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
+                               fluidRow(column(width = 5,
                                checkboxInput('headerNPred', 'Encabezado (Header)', TRUE),
                                checkboxInput('rownameNPred', 'Incluir nombre de filas', TRUE),
                                radioButtons('sep.nPred', 'Separador', c(Coma=',', 'Punto y Coma'=';', Tab='\t'), selected = 'Coma'),
@@ -634,15 +638,62 @@ panel.cargar.datos.pred <- tabPanel(title = "Cargar", width = 12, solidHeader = 
                                            label = "Eliminar NA", onLabel = "SI", offLabel = "NO", labelWidth = "100%"),
                                fileInput('file2', label = 'Cargar Archivo', placeholder = "", buttonLabel = "Subir", width = "100%",
                                          accept = c('text/csv', 'text/comma-separated-values, text/plain', '.csv')),
-                               actionButton("loadButtonNPred", "Cargar", width = "100%"))
+                               actionButton("loadButtonNPred", "Cargar", width = "100%")),
+                               column(width = 7, muestra.datos.pred)))
 
-muestra.datos.pred <- box(title = "Datos", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
-                      DT::DTOutput('contentsPred'), type = 7, color = "#CBB051")
+opciones.knn.pred <- fluidRow(column(width = 4, br(), switchInput(inputId = "switch.scale.knn.pred", onStatus = "success", offStatus = "danger", value = T,
+                                                              label = "Escalar datos", onLabel = "SI", offLabel = "NO", labelWidth = "100%", width = "100%")),
+                              column(width = 4, numericInput("kmax.knn.pred", "K Máximo: ", min = 1,step = 1, value = 7,width="100%")),
+                              column(width = 4, selectInput(inputId = "kernel.knn.pred", label = "Seleccionar un Kernel",selected = 1, width="100%",
+                                                                      choices =  c("optimal", "rectangular", "triangular", "epanechnikov", "biweight",
+                                                                                   "triweight", "cos","inv","gaussian"))))
+
+opciones.svm.pred <- fluidRow(column(width = 6, br(), switchInput(inputId = "switch.scale.svm.pred", onStatus = "success", offStatus = "danger", value = T,
+                                                           label = "Escalar datos", onLabel = "SI", offLabel = "NO", labelWidth = "100%", width = "100%")),
+                         column(width = 6, selectInput(inputId = "kernel.svm.pred", label = "Seleccionar un Kernel", selected = "radial", width="100%",
+                                                           choices =  c("linear", "polynomial", "radial", "sigmoid"))))
+
+opciones.dt.pred <- fluidRow(column(width = 6, numericInput("minsplit.dt.pred", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1)),
+                             column(width = 6, numericInput("maxdepth.dt.pred", "Profundidad Máxima:", 15, width = "100%",min = 0, max = 30, step = 1)))
+
+opciones.rf.pred <- fluidRow(column(width = 6, numericInput("ntree.rf.pred", "Número de Áboles:", 20, width = "100%", min = 0)))
+
+opciones.boosting.pred <- list(fluidRow(column(width = 3, numericInput("iter.boosting", "Número de áboles:", 50, width = "100%",min = 1)),
+                                   column(width = 3, numericInput("nu.boosting", "Valor de nu:", 1, width = "100%",min = 0, max = 1)),
+                                   column(width = 3, numericInput("minsplit.boosting", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1)),
+                                   column(width = 3, numericInput("cp.boosting", "Complejidad:", 0.01, width = "100%",min = 0,max = 1, step = 0.01))),
+                               fluidRow(column(width = 12, selectInput(inputId = "tipo.boosting", label = "Seleccionar algoritmo",selected = 1, width = "100%",
+                                                                           choices =  c("discrete", "real", "gentle")))))
+
+panel.crear.modelo.pred <- tabPanel(title = "Selección y Creación del Modelo",solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
+                                    radioGroupButtons("selectModelsPred", "", list("K Vecinos Más Cercanos" = "knn",
+                                                                                        "Árboles de Decisión" = "dt",
+                                                                                        "Bosques Aleatorios" = "rf",
+                                                                                        "ADA-Boosting" = "ada",
+                                                                                        "Soporte Vectorial" = "svm"),
+                                                         size = "sm", status = "primary",individual = FALSE, justified = TRUE, selected = "knn",
+                                                         checkIcon = list(yes = icon("ok", lib = "glyphicon"),
+                                                                          no = icon("remove", lib = "glyphicon"))),
+                                    hr(),
+                                    conditionalPanel(condition =  "input.selectModelsPred == 'knn'",
+                                                     opciones.knn.pred),
+                                    conditionalPanel(condition =  "input.selectModelsPred == 'dt'",
+                                                     opciones.dt.pred),
+                                    conditionalPanel(condition =  "input.selectModelsPred == 'rf'",
+                                                     opciones.rf.pred),
+                                    conditionalPanel(condition =  "input.selectModelsPred == 'ada'",
+                                                     opciones.boosting.pred),
+                                    conditionalPanel(condition =  "input.selectModelsPred == 'svm'",
+                                                     opciones.svm.pred),
+                                    aceEditor("fieldPredNuevos", mode = "r", theme = "monokai", value = "", height = "5vh", readOnly = F),
+                                    verbatimTextOutput("txtPredNuevos"))
+
+
 
 pagina.predicciones.nuevas <- tabItem(tabName = "predNuevos",
-                                      fluidRow(column(width = 5,
-                                                      tabBox(id ="tabsPred", title = NULL, width = 12, panel.cargar.datos.pred)),
-                                               column(width = 7, muestra.datos.pred)))
+                                      tabBox(width = 12,
+                                             panel.cargar.datos.pred,
+                                             panel.crear.modelo.pred))
 
 # PAGINA DE REPORTE -------------------------------------------------------------------------------------------------------
 
