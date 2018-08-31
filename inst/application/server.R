@@ -1916,14 +1916,14 @@ shinyServer(function(input, output, session) {
   }
 
   # Calcula las areas de la curva roc de todos los modelos
-  calcular.areas <- function() {
+  calcular.areas <- function(sel) {
     clase <- datos.prueba[, variable.predecir]
     if (length(unique(clase)) == 2) {
       for (nombre in names(scores)) {
         if (is.factor(scores[[nombre]])) {
-          areas[[nombre]] <<- areaROC(attributes(scores[[nombre]])$probabilities[, input$roc.sel], clase)
+          areas[[nombre]] <<- areaROC(attributes(scores[[nombre]])$probabilities[, sel], clase)
         }else{
-          areas[[nombre]] <<- areaROC(scores[[nombre]][, which(levels(clase) == input$roc.sel)], clase)
+          areas[[nombre]] <<- areaROC(scores[[nombre]][, which(levels(clase) == sel)], clase)
         }
       }
     }
@@ -1933,8 +1933,8 @@ shinyServer(function(input, output, session) {
   output$plot.roc <- renderPlot({
     graficar <- updatePlot$roc
     if(!is.null(datos.prueba) & length(levels(datos[,variable.predecir])) == 2) {
-      calcular.areas()
-      insert.report("roc",paste0("## Curva ROC \n```{r}\nplotROC( ",as.string.c(input$select.models)," )\n```"))
+      calcular.areas(input$roc.sel)
+      insert.report("roc",paste0("## Curva ROC \n```{r}\ncalcular.areas('",input$roc.sel,"')\nplotROC( ",as.string.c(input$select.models)," )\n```"))
       plotROC(input$select.models)
     } else {
       insert.report("roc", NULL)
@@ -1947,8 +1947,9 @@ shinyServer(function(input, output, session) {
   output$TablaComp <- DT::renderDataTable({
     graficar <- updatePlot$roc
     if (!is.null(datos.aprendizaje)) {
-      calcular.areas()
-      insert.report("tabla.comparativa",paste0("## Tabla Comparativa \n```{r}\ncalcular.areas()\ntabla.comparativa( ",as.string.c(input$select.models)," )\n```"))
+      calcular.areas(input$roc.sel)
+      insert.report("tabla.comparativa",paste0("## Tabla Comparativa \n```{r}\ncalcular.areas('",input$roc.sel,"')\ntabla.comparativa( ",
+                                               as.string.c(input$select.models)," )\n```"))
       DT::datatable(tabla.comparativa(input$select.models),
                     selection = "none", editable = FALSE, extensions = c("Responsive"),
                     options = list(dom = "frtip", pageLength = 10, buttons = NULL))
