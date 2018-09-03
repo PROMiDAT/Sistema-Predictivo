@@ -516,12 +516,10 @@ box.col = gg_color_hue(",num,")[modelo.dt$frame$yval])"))
 # Pagina de RF --------------------------------------------------------------------------------------------------------------
 
 #Crea el modelo RF
-rf.modelo <- function(variable.pr = NULL, predictoras = ".", ntree = 500){
-  if(all(predictoras == ""))
-    predictoras <- "."
-  predictoras <- paste0(predictoras, collapse = "+")
+rf.modelo <- function(variable.pr = NULL, ntree = 500, mtry = 1){
   ntree <- ifelse(!is.numeric(ntree), 500, ntree)
-  codigo <- paste0("modelo.rf <<- randomForest(",variable.pr,"~",predictoras,", data = datos.aprendizaje,importance = TRUE, ntree =",ntree,")")
+  codigo <- paste0("modelo.rf <<- randomForest(",variable.pr,"~., data = datos.aprendizaje,importance = TRUE,",
+                   " ntree =",ntree,",mtry =",mtry,")")
   return(codigo)
 }
 
@@ -537,7 +535,13 @@ rf.MC <- function(variable.p){
 
 #Codigo del grafico de rf
 rf.plot <- function(){
-  return(paste0("varImpPlot(modelo.rf)"))
+  return("ggVarImp(modelo.rf)")
+}
+
+plot.rf.error <- function(){
+  return(paste0("plot(modelo.rf, main='')\n",
+         "legend('topright', c('OOB','",
+         paste0(unique(datos[,variable.predecir]), collapse = "','"), "'), text.col=1:6, lty=1:5, col=1:6)"))
 }
 
 # Pagina de BOOSTING --------------------------------------------------------------------------------------------------------
@@ -662,8 +666,8 @@ ordenar.reporte <- function(lista){
              nombres[grepl("svm.plot.sigmoid", nombres)],
              "pred.svm.sigmoid","mc.svm.sigmoid","ind.svm.sigmoid",
              "modelo.dt","modelo.dt.graf","pred.dt",
-             "mc.dt","ind.dt","modelo.dt.rules","modelo.rf","modelo.rf.graf",
-             "pred.rf","mc.rf","ind.rf",
+             "mc.dt","ind.dt","modelo.dt.rules","modelo.rf","modelo.rf.error.","modelo.rf.graf",
+             "pred.rf","mc.rf","ind.rf","modelo.rf.rules",
              combinar.nombres(c("modelo.b","modelo.b.error","modelo.b.imp","pred.b","mc.b","ind.b"),
                               c("discrete", "real", "gentle")),
              "tabla.comparativa", "roc")

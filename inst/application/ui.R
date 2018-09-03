@@ -436,7 +436,7 @@ pagina.svm <- tabItem(tabName = "svm",
 panel.generar.dt <- tabPanel(title = "Generación del Modelo",
                               verbatimTextOutput("txtDt"),
                               aceEditor("fieldCodeDt", mode = "r", theme = "monokai",
-                                        value = "", height = "4vh", readOnly = F, autoComplete = "enabled"))
+                                        value = "", height = "5vh", readOnly = F, autoComplete = "enabled"))
 
 plot.dt <- tabPanel(title = "Gráfico Árbol",
                      plotOutput('plot.dt', height = "55vh"),
@@ -495,6 +495,12 @@ panel.generar.rf <- tabPanel(title = "Generación del Modelo",
                              aceEditor("fieldCodeRf", mode = "r", theme = "monokai",
                                        value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
 
+plor.error.ft <- tabPanel(title = "Evolución del Error",
+                          plotOutput('plot.error.rf', height = "55vh"),
+                          hr(),
+                          aceEditor("fieldCodeRfPlotError", mode = "r", theme = "monokai",
+                                    value = "", height = "5vh", readOnly = F, autoComplete = "enabled"))
+
 plot.rf <- tabPanel(title = "Importancia de Variables",
                      plotOutput('plot.rf', height = "55vh"),
                      hr(),
@@ -521,10 +527,16 @@ panel.indices.generales.rf <- tabPanel(title = "Índices Generales",
                                        aceEditor("fieldCodeRfIG", mode = "r", theme = "monokai",
                                                  value = "", height = "37vh", readOnly = F, autoComplete = "enabled"))
 
+
+reglas.rf <- tabPanel(title = "Reglas",
+                      verbatimTextOutput("rulesRf"),
+                      numericInput("rules.rf.n","Reglas del árbol:",1, width = "100%", min = 1))
+
 opciones.rf <- fluidRow(column(width = 6,actionButton("runRf",label = "Ejecutar", icon = icon("play"))),
                         column(width = 6, dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
                                                         tooltip = tooltipOptions(title = "Clic para ver opciones"),
-                                                        numericInput("ntree.rf", "Número de Áboles:", 20, width = "100%", min = 0))))
+                                                        numericInput("ntree.rf", "Número de Áboles:", 20, width = "100%", min = 0),
+                                                        numericInput("mtry.rf","Número de variables:",1, width = "100%", min = 1) )))
 
 titulo.rf <- fluidRow(column(width = 12, opciones.rf))
 
@@ -532,10 +544,12 @@ pagina.rf <- tabItem(tabName = "rf",
                      column(width = 12,
                             tabBox(width = 12, title = titulo.rf,
                                    panel.generar.rf,
+                                   plor.error.ft,
                                    plot.rf,
                                    panel.prediccion.rf,
                                    panel.matriz.confucion.rf,
-                                   panel.indices.generales.rf)))
+                                   panel.indices.generales.rf,
+                                   reglas.rf)))
 
 # PAGINA DE BOOSTING ------------------------------------------------------------------------------------------------------
 

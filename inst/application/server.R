@@ -430,15 +430,10 @@ shinyServer(function(input, output, session) {
 
       # Cambia los codigos de los modelos
       default.codigo.knn(k.def = TRUE)
-      #knn.full()
       default.codigo.svm()
-      #svm.full()
       default.codigo.dt()
-      #dt.full()
-      deafult.codigo.rf()
-      #rf.full()
+      deafult.codigo.rf(rf.def = TRUE)
       deault.codigo.boosting()
-      #boosting.full()
     } else {
       showNotification("Tiene que seleccionar una variable a predecir", duration = 15, type = "error")
     }
@@ -1482,23 +1477,40 @@ shinyServer(function(input, output, session) {
   })
 
   # Si las opciones cambian
-  observeEvent(input$ntree.rf, {
+  observeEvent(c(input$ntree.rf,input$mtry.rf), {
     if (validar.datos(print = FALSE)) {
       deafult.codigo.rf()
       rf.full()
     }
   })
 
+  observeEvent(input$rules.rf.n,{
+    if(is.data.frame(datos)){
+        mostrar.reglas.rf(input$rules.rf.n)
+    }
+  })
+
   # Acualiza el codigo a la version por defecto
-  deafult.codigo.rf <- function() {
+  deafult.codigo.rf <- function(rf.def = FALSE) {
+
+    if(!is.null(datos.aprendizaje) & rf.def){
+      mtry.value <- ifelse(rf.def, round(sqrt(ncol(datos.aprendizaje))), input$mtry.rf)
+      updateNumericInput(session,"mtry.rf",value = mtry.value)
+    }else{
+      mtry.value <- input$mtry.rf
+    }
 
     # Se acualiza el codigo del modelo
     codigo <- rf.modelo(
       variable.pr = variable.predecir,
-      ntree = input$ntree.rf
-    )
+      ntree = input$ntree.rf,
+      mtry = mtry.value)
+
+
     updateAceEditor(session, "fieldCodeRf", value = codigo)
     cod.rf.modelo <<- codigo
+
+    updateAceEditor(session, "fieldCodeRfPlotError", value = plot.rf.error())
 
     # Se genera el codigo de la prediccion
     codigo <- rf.prediccion(variable.predecir)
@@ -1556,6 +1568,25 @@ shinyServer(function(input, output, session) {
     })
   }
 
+  plotear.rf.error <- function(){
+    tryCatch({
+      output$plot.error.rf <- renderPlot(isolate(eval(parse(text = input$fieldCodeRfPlotError))))
+      cod <- ifelse(input$fieldCodeRfPlotError == "", plot.rf.error(),input$fieldCodeRfPlotError)
+      insert.report("modelo.rf.error.",
+                    paste0("## Evolución del Error del Modelo Bosques Aleatorios\n```{r}\n", cod, "\n```"))
+    }, error = function(e) {
+      limpia.rf(1)
+    })
+  }
+
+  #Mostrar Reglas
+  mostrar.reglas.rf <- function(n){
+    output$rulesRf <- renderPrint({
+      tryCatch({printRandomForests(modelo.rf, n)},
+                error = function(e)stop("No se puede mostrar las reglas para el árbol seleccionado"))})
+    insert.report("modelo.rf.rules", paste0("\n```{r}\nprintRandomForests(modelo.rf, ",n,")\n```"))
+  }
+
   # Ejecuta el modelo, prediccion, mc e indices de rf
   rf.full <- function() {
     ejecutar.rf()
@@ -1571,6 +1602,8 @@ shinyServer(function(input, output, session) {
       output$txtRf <- renderPrint(print(modelo.rf))
       insert.report("modelo.rf",paste0("## Generación del Modelo Bosques Aleatorios\n```{r}\n", cod.rf.modelo, "\nmodelo.rf\n```"))
       plotear.rf.imp()
+      plotear.rf.error()
+      mostrar.reglas.rf(input$rules.rf.n)
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.rf(1)
