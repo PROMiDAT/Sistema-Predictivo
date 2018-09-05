@@ -487,11 +487,11 @@ svm.plot <- function(variables, resto, kernel = "linear"){
 # Pagina de DT --------------------------------------------------------------------------------------------------------------
 
 #Crea el modelo DT
-dt.modelo <- function(variable.pr = NULL, minsplit =  20, maxdepth = 15){
+dt.modelo <- function(variable.pr = NULL, minsplit =  20, maxdepth = 15, split = "gini"){
   minsplit <- ifelse(!is.numeric(minsplit), 1, minsplit )
   maxdepth <- ifelse(!is.numeric(maxdepth) || maxdepth > 30, 15, maxdepth)
   codigo <- paste0("modelo.dt <<- rpart(",variable.pr,"~., data = datos.aprendizaje,
-                   control = rpart.control(minsplit = ",minsplit,", maxdepth = ", maxdepth,"))")
+                   control = rpart.control(minsplit = ",minsplit,", maxdepth = ", maxdepth,"),parms = list(split = '",split,"'))")
   return(codigo)
 }
 
@@ -547,13 +547,13 @@ plot.rf.error <- function(){
 # Pagina de BOOSTING --------------------------------------------------------------------------------------------------------
 
 #Crea el modelo BOOSTING
-boosting.modelo <- function(variable.pr = NULL, iter = 50, nu = 1, type = "discrete", minsplit = 1,cp = 0.01){
+boosting.modelo <- function(variable.pr = NULL, iter = 50, maxdepth = 1, type = "discrete", minsplit = 1,cp = 0.01){
   iter <- ifelse(!is.numeric(iter), 50, iter)
-  nu <- ifelse(!is.numeric(nu), 1, nu)
+  nu <- ifelse(!is.numeric(maxdepth) && maxdepth > 30, 15, maxdepth)
   minsplit <- ifelse(!is.numeric(minsplit), 1, minsplit)
   cp <- ifelse(!is.numeric(cp), 0.01, cp)
-  codigo <- paste0("modelo.boosting.",type," <<- ada(",variable.pr,"~., data = datos.aprendizaje, iter = ",iter,", nu = ",nu,", type = '",type,"',
-                   control = rpart.control(minsplit = ",minsplit,", cp = ",cp,"))")
+  codigo <- paste0("modelo.boosting.",type," <<- ada(",variable.pr,"~., data = datos.aprendizaje, iter = ",iter,", type = '",type,"',
+                   control = rpart.control(minsplit = ",minsplit,", cp = ",cp,", maxdepth = ",maxdepth,"))")
   return(codigo)
 }
 
@@ -569,12 +569,64 @@ boosting.MC <- function(variable.p, type = "discrete"){
 
 #Codigo del grafico de boosting
 boosting.plot <- function(type = "discrete"){
-  return(paste0("plot(modelo.boosting.",type,",FALSE,TRUE)"))
+  return(paste0("plot(modelo.boosting.",type,")"))
 }
 
 #Codigo del grafico de boosting
 boosting.plot.import <- function(type = "discrete"){
-  return(paste0("varplot(modelo.boosting.",type,")"))
+  return(paste0("varP(modelo.boosting.",type,")"))
+}
+
+rules.boosting <- function(type = "discrete", i){
+  return(paste0("asRules(modelo.boosting.",type,"$model$trees[[",i,"]])"))
+}
+
+varP <- function (x, plot.it = TRUE, type = c("none", "scores"), max.var.show = 30, ...)
+{
+  if (class(x) != "ada") {
+    stop("Object must be of type 'ada'")
+  }
+  if (missing(type)) {
+    type = "none"
+  }
+  iter <- x$iter
+  nm <- x$names
+  vec <- rep(0, length(nm))
+  p = x$dim[2]
+  g1 <- function(i, obj) {
+    if (dim(obj[[i]]$frame)[1] < 2) {
+      return(rep(0, p))
+    }
+    imp <- obj[[i]]$splits[, 3]^2
+    vals <- match(row.names(obj[[i]]$splits), nm)
+    vec = rep(0, p)
+    vec[vals] <- imp
+    vec
+  }
+  vec <- 1/iter * sqrt(apply(sapply(1:iter, function(i) g1(i,
+                                                           x$model$trees)), 1, sum))
+  vars <- order(vec, decreasing = TRUE)
+  n <- length(vec)
+  max.v = max.var.show
+  if (p < max.v)
+    max.v = p
+  if (plot.it == TRUE) {
+    print(data.frame( val = vec[vars[max.v:1]], label = nm[vars[max.v:1]]) %>%
+            dplyr::arrange(desc(val)) %>%
+            ggplot(ggplot2::aes(x = label, y = val, fill = label)) +
+            geom_bar(stat = "identity", position = "identity", width = 0.1) +
+            labs(title = "Variable Importance Plot",  y = "", x = "") +
+            scale_y_continuous(labels = scales::comma) +
+            coord_flip() +
+            theme(axis.text.x = element_text(angle = 45, hjust = 1),
+                  legend.position = "none"))
+  }
+  if (type == "scores") {
+    vars = vars[1:max.v]
+    t1 <- vec[vars]
+    attr(t1, "names") <- nm[vars]
+    return(t1)
+  }
 }
 
 # Pagina de TABLA COMPARATIVA -----------------------------------------------------------------------------------------------
@@ -667,7 +719,8 @@ ordenar.reporte <- function(lista){
              "pred.svm.sigmoid","mc.svm.sigmoid","ind.svm.sigmoid",
              "modelo.dt","modelo.dt.graf","pred.dt",
              "mc.dt","ind.dt","modelo.dt.rules","modelo.rf","modelo.rf.error.","modelo.rf.graf",
-             "pred.rf","mc.rf","ind.rf","modelo.rf.rules",
+             "pred.rf","mc.rf","ind.rf",
+             nombres[grepl("modelo.rf.rules.", nombres)],
              combinar.nombres(c("modelo.b","modelo.b.error","modelo.b.imp","pred.b","mc.b","ind.b"),
                               c("discrete", "real", "gentle")),
              "tabla.comparativa", "roc")
@@ -873,6 +926,8 @@ cod.rf.modelo <<-  NULL
 cod.rf.pred <<-  NULL
 cod.rf.mc <<- NULL
 cod.rf.ind <<- NULL
+
+rf.stop.excu <<- FALSE
 
 # -------------------  BOOSTING
 

@@ -417,11 +417,13 @@ shinyServer(function(input, output, session) {
       semilla <<- input$permitir.semilla
 
       knn.stop.excu <<- FALSE
+      rf.stop.excu <<- FALSE
 
       segmentar.datos(codigo)
 
       new.secction.report()
-      insert.report("segmentar.datos",paste0("\n# Datos de Aprendizaje\n```{r}\n",codigo,"\nhead(datos.aprendizaje)\n```\n\n# Datos de Prueba\n```{r}\nhead(datos.prueba)\n```\n"))
+      insert.report("segmentar.datos",paste0("\n# Datos de Aprendizaje\n```{r}\n",codigo,
+                                             "\nhead(datos.aprendizaje)\n```\n\n# Datos de Prueba\n```{r}\nhead(datos.prueba)\n```\n"))
 
       acualizar.selecctores.seg()
 
@@ -1284,7 +1286,7 @@ shinyServer(function(input, output, session) {
   })
 
   # Si las opciones cambian
-  observeEvent(c(input$minsplit.dt, input$maxdepth.dt), {
+  observeEvent(c(input$minsplit.dt, input$maxdepth.dt, input$split.dt), {
     if (validar.datos(print = FALSE)) {
       default.codigo.dt()
       dt.full()
@@ -1297,7 +1299,8 @@ shinyServer(function(input, output, session) {
     # Se acualiza el codigo del modelo
     codigo <- dt.modelo(variable.pr = variable.predecir,
                         minsplit = input$minsplit.dt,
-                        maxdepth = input$maxdepth.dt)
+                        maxdepth = input$maxdepth.dt,
+                        split = input$split.dt)
 
     updateAceEditor(session, "fieldCodeDt", value = codigo)
     cod.dt.modelo <<- codigo
@@ -1335,7 +1338,7 @@ shinyServer(function(input, output, session) {
   }
 
   #Mostrar Reglas
-  mostrar.reglas <- function(){
+  mostrar.reglas.dt <- function(){
     output$rulesDt <- renderPrint(rattle::asRules(modelo.dt))
     insert.report("modelo.dt.rules", paste0("\n```{r}\nrattle::asRules(modelo.dt)\n```"))
   }
@@ -1382,7 +1385,7 @@ shinyServer(function(input, output, session) {
       insert.report("modelo.dt",
                     paste0("## Generación del modelo Árboles de Decisión\n```{r}\n", cod.dt.modelo, "\nmodelo.dt\n```"))
       plotear.arbol()
-      mostrar.reglas()
+      mostrar.reglas.dt()
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
       limpia.dt(1)
@@ -1478,14 +1481,16 @@ shinyServer(function(input, output, session) {
 
   # Si las opciones cambian
   observeEvent(c(input$ntree.rf,input$mtry.rf), {
-    if (validar.datos(print = FALSE)) {
+    if (validar.datos(print = FALSE) & rf.stop.excu) {
       deafult.codigo.rf()
       rf.full()
+    }else{
+      rf.stop.excu <<- TRUE
     }
   })
 
   observeEvent(input$rules.rf.n,{
-    if(is.data.frame(datos)){
+    if(validar.datos(print = FALSE)){
         mostrar.reglas.rf(input$rules.rf.n)
     }
   })
@@ -1584,7 +1589,7 @@ shinyServer(function(input, output, session) {
     output$rulesRf <- renderPrint({
       tryCatch({printRandomForests(modelo.rf, n)},
                 error = function(e)stop("No se puede mostrar las reglas para el árbol seleccionado"))})
-    insert.report("modelo.rf.rules", paste0("\n```{r}\nprintRandomForests(modelo.rf, ",n,")\n```"))
+    insert.report(paste0("modelo.rf.rules.", n), paste0("\n## Reglas del árbol #",n," \n```{r}\nprintRandomForests(modelo.rf, ",n,")\n```"))
   }
 
   # Ejecuta el modelo, prediccion, mc e indices de rf
@@ -1703,6 +1708,12 @@ shinyServer(function(input, output, session) {
     }
   })
 
+  observeEvent(input$rules.b.n,{
+    if(validar.datos(print = FALSE)){
+      mostrar.reglas.boosting(input$rules.b.n)
+    }
+  })
+
   # Si las opciones cambian o actualizar el codigo
   observeEvent(c(input$iter.boosting, input$nu.boosting, input$tipo.boosting, input$cp.boosting, input$minsplit.boosting), {
     if (validar.datos(print = FALSE) & length(levels(datos[, variable.predecir])) == 2) {
@@ -1717,7 +1728,7 @@ shinyServer(function(input, output, session) {
     codigo <- boosting.modelo(
       variable.pr = variable.predecir,
       iter = input$iter.boosting,
-      nu = input$nu.boosting,
+      maxdepth = input$maxdepth.boosting,
       type = input$tipo.boosting,
       minsplit = input$minsplit.boosting,
       cp = input$cp.boosting
@@ -1808,6 +1819,15 @@ shinyServer(function(input, output, session) {
     })
   }
 
+  #Mostrar Reglas
+  mostrar.reglas.boosting <- function(n){
+    output$rulesB <- renderPrint({
+      tryCatch({exe(rules.boosting(type = input$tipo.boosting, input$rules.b.n))},
+               error = function(e)stop("No se puede mostrar las reglas para el árbol seleccionado"))})
+    insert.report(paste0("modelo.b.rules.", n), paste0("\n## Reglas del árbol #",n," \n```{r}\n",
+                                                       rules.boosting(type = input$tipo.boosting, input$rules.b.n),"\n```"))
+  }
+
   # Genera el modelo
   ejecutar.boosting <- function() {
     tryCatch({ # Se corren los codigo
@@ -1815,6 +1835,7 @@ shinyServer(function(input, output, session) {
       output$txtBoosting <- renderPrint(exe("print(modelo.boosting.",input$tipo.boosting,")"))
       plotear.boosting()
       plotear.boosting.imp()
+      mostrar.reglas.boosting(input$rules.b.n)
       insert.report(paste0("modelo.b.",input$tipo.boosting),
                     paste0("## Generación del Modelo ADA-BOOSTING - ",input$tipo.boosting,"\n```{r}\n",
                            cod.b.modelo, "\nmodelo.boosting.",input$tipo.boosting,"\n```"))
@@ -1934,9 +1955,9 @@ shinyServer(function(input, output, session) {
         if (is.null(matrices[[i]])) {
           df <- rbind(df, c(names(matrices)[i], NA, rep(NA, cant.class), NA))
         } else {
-          df <- rbind(df, c(NA,round((sum(diag(matrices[[i]])) / sum(matrices[[i]])) * 100, 3),
-                            round(diag(matrices[[i]]) / rowSums(matrices[[i]]) * 100, 3),
-                            ifelse(cant.class == 2,round(areas[[names(matrices)[i]]], 3), NA)))
+          df <- rbind(df, c(NA,round((sum(diag(matrices[[i]])) / sum(matrices[[i]])) * 100, 4),
+                            round(diag(matrices[[i]]) / rowSums(matrices[[i]]) * 100, 4),
+                            ifelse(cant.class == 2,round(areas[[names(matrices)[i]]], 4), NA)))
           df[nrow(df),1] <- names(matrices)[i]
           names.class <- colnames(matrices[[i]])
         }

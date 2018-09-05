@@ -113,7 +113,7 @@ mi.titulo <- tags$script(HTML(
 load.page <- conditionalPanel(condition="($('html').hasClass('shiny-busy'))",
                               div(id = "loaderWrapper", div(id="loader")) )
 
-# PAGINA DE CARGA Y  TRANSFORMACION DE DATOS -----------------------------------------------------------------------------
+# PAGINA DE CARGA Y TRANSFORMACION DE DATOS -----------------------------------------------------------------------------
 
 panel.cargar.datos <- tabPanel(title = "Cargar", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
                                checkboxInput('header', 'Encabezado (Header)', TRUE),
@@ -472,7 +472,10 @@ opciones.dt <- fluidRow(column(width = 6, actionButton("runDt", label = "Ejecuta
                                dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
                                              tooltip = tooltipOptions(title = "Clic para ver opciones"),
                                              numericInput("minsplit.dt", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1),
-                                             numericInput("maxdepth.dt", "Profundidad Máxima:", 15, width = "100%",min = 0, max = 30, step = 1))
+                                             numericInput("maxdepth.dt", "Profundidad Máxima:", 15, width = "100%",min = 0, max = 30, step = 1),
+                                             selectInput(inputId = "split.dt", label = "Índice de división:",selected = 1,
+                                                         choices =  c("gini", "information")))
+
                                ))
 
 
@@ -530,12 +533,12 @@ panel.indices.generales.rf <- tabPanel(title = "Índices Generales",
 
 reglas.rf <- tabPanel(title = "Reglas",
                       verbatimTextOutput("rulesRf"),
-                      numericInput("rules.rf.n","Reglas del árbol:",1, width = "100%", min = 1))
+                      numericInput("rules.rf.n","Reglas del árbol número:",1, width = "100%", min = 1))
 
 opciones.rf <- fluidRow(column(width = 6,actionButton("runRf",label = "Ejecutar", icon = icon("play"))),
                         column(width = 6, dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
                                                         tooltip = tooltipOptions(title = "Clic para ver opciones"),
-                                                        numericInput("ntree.rf", "Número de Áboles:", 20, width = "100%", min = 0),
+                                                        numericInput("ntree.rf", "Número de Árboles:", 20, width = "100%", min = 0),
                                                         numericInput("mtry.rf","Número de variables:",1, width = "100%", min = 1) )))
 
 titulo.rf <- fluidRow(column(width = 12, opciones.rf))
@@ -590,15 +593,19 @@ panel.indices.generales.boosting <- tabPanel(title = "Índices Generales",
                                         aceEditor("fieldCodeBoostingIG", mode = "r", theme = "monokai",
                                                   value = "", height = "37vh", readOnly = F, autoComplete = "enabled"))
 
+reglas.boosting <- tabPanel(title = "Reglas",
+                      verbatimTextOutput("rulesB"),
+                      numericInput("rules.b.n","Reglas del árbol número:",1, width = "100%", min = 1))
+
 opciones.boosting <- fluidRow(column(width = 6, actionButton("runBoosting",label = "Ejecutar", icon = icon("play"))),
                               column(width = 6, dropdownButton(h4("Opciones"),circle = F, status = "danger", icon = icon("gear"), width = "300px", right = T,
                                                                tooltip = tooltipOptions(title = "Clic para ver opciones"),
-                                                               numericInput("iter.boosting", "Número de áboles:", 50, width = "100%",min = 1),
-                                                               numericInput("nu.boosting", "Valor de nu:", 1, width = "100%",min = 0, max = 1),
-                                                               numericInput("minsplit.boosting", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1),
-                                                               numericInput("cp.boosting", "Complejidad:", 0.01, width = "100%",min = 0,max = 1, step = 0.01),
+                                                               numericInput("iter.boosting", "Número de iteraciones:", 50, width = "100%",min = 1),
                                                                selectInput(inputId = "tipo.boosting", label = "Seleccionar algoritmo",selected = 1,
-                                                                           choices =  c("discrete", "real", "gentle")))))
+                                                                           choices =  c("discrete", "real", "gentle")),
+                                                               numericInput("maxdepth.boosting", "Profundidad Máxima:", 15, width = "100%",min = 1),
+                                                               numericInput("minsplit.boosting", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1),
+                                                               numericInput("cp.boosting", "Complejidad:", 0.01, width = "100%",min = 0,max = 1, step = 0.01))))
 
 titulo.boosting <- fluidRow(column(width = 12,opciones.boosting))
 
@@ -610,7 +617,8 @@ pagina.boosting <- tabItem(tabName = "boosting",
                                     plot.boosting.import,
                                     panel.prediccion.boosting,
                                     panel.matriz.confucion.boosting,
-                                    panel.indices.generales.boosting)))
+                                    panel.indices.generales.boosting,
+                                    reglas.boosting)))
 
 # PAGINA DE COMPARACION DE MODELOS ---------------------------------------------------------------------------------------
 
