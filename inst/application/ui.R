@@ -474,7 +474,7 @@ opciones.dt <- fluidRow(column(width = 6, actionButton("runDt", label = "Ejecuta
                                              numericInput("minsplit.dt", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1),
                                              numericInput("maxdepth.dt", "Profundidad Máxima:", 15, width = "100%",min = 0, max = 30, step = 1),
                                              selectInput(inputId = "split.dt", label = "Índice de división:",selected = 1,
-                                                         choices =  c("gini", "information")))
+                                                         choices =  list("gini" = "gini", "Entropía" = "information")))
 
                                ))
 
