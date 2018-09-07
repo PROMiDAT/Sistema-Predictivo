@@ -547,13 +547,12 @@ plot.rf.error <- function(){
 # Pagina de BOOSTING --------------------------------------------------------------------------------------------------------
 
 #Crea el modelo BOOSTING
-boosting.modelo <- function(variable.pr = NULL, iter = 50, maxdepth = 1, type = "discrete", minsplit = 1,cp = 0.01){
+boosting.modelo <- function(variable.pr = NULL, iter = 50, maxdepth = 1, type = "discrete", minsplit = 1){
   iter <- ifelse(!is.numeric(iter), 50, iter)
   nu <- ifelse(!is.numeric(maxdepth) && maxdepth > 30, 15, maxdepth)
   minsplit <- ifelse(!is.numeric(minsplit), 1, minsplit)
-  cp <- ifelse(!is.numeric(cp), 0.01, cp)
   codigo <- paste0("modelo.boosting.",type," <<- ada(",variable.pr,"~., data = datos.aprendizaje, iter = ",iter,", type = '",type,"',
-                   control = rpart.control(minsplit = ",minsplit,", cp = ",cp,", maxdepth = ",maxdepth,"))")
+                   control = rpart.control(minsplit = ",minsplit,", maxdepth = ",maxdepth,"))")
   return(codigo)
 }
 
@@ -581,8 +580,7 @@ rules.boosting <- function(type = "discrete", i){
   return(paste0("asRules(modelo.boosting.",type,"$model$trees[[",i,"]])"))
 }
 
-varP <- function (x, plot.it = TRUE, type = c("none", "scores"), max.var.show = 30, ...)
-{
+varP <- function (x, plot.it = TRUE, type = c("none", "scores"), max.var.show = 30, ...){
   if (class(x) != "ada") {
     stop("Object must be of type 'ada'")
   }
@@ -611,11 +609,12 @@ varP <- function (x, plot.it = TRUE, type = c("none", "scores"), max.var.show = 
   if (p < max.v)
     max.v = p
   if (plot.it == TRUE) {
-    print(data.frame( val = vec[vars[max.v:1]], label = nm[vars[max.v:1]]) %>%
-            dplyr::arrange(desc(val)) %>%
-            ggplot(ggplot2::aes(x = label, y = val, fill = label)) +
+    df <- data.frame( val = vec[vars[max.v:1]], label = nm[vars[max.v:1]]) %>%
+      dplyr::mutate(label = forcats::fct_reorder(label, val, .desc = FALSE))
+
+    print(ggplot(df, ggplot2::aes(x = label, y = val, fill = label)) +
             geom_bar(stat = "identity", position = "identity", width = 0.1) +
-            labs(title = "Variable Importance Plot",  y = "", x = "") +
+            labs(title = "Gráfico de importancia de variables",  y = "", x = "") +
             scale_y_continuous(labels = scales::comma) +
             coord_flip() +
             theme(axis.text.x = element_text(angle = 45, hjust = 1),

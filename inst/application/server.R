@@ -4,7 +4,7 @@ shinyServer(function(input, output, session) {
   # Funciones Utilitarias ---------------------------------------------------------------------------------------------------
 
   # Crea una tabla dependiendo de los datos ingresados
-  renderizar.tabla.datos <- function(data, editable = TRUE, extensions = c("Buttons"), dom = "Bfrtip", pageLength = 5, buttons = T, filename = NA) {
+  renderizar.tabla.datos <- function(data, editable = TRUE, extensions = c("Buttons"), dom = "Bfrtip", pageLength = 5, buttons = T, filename = NA, scrollY = "33vh") {
     if (buttons) {
       buttons <- list(list(extend = "csv", filename = filename, text = "Descargar"))
     } else {
@@ -23,7 +23,7 @@ shinyServer(function(input, output, session) {
 
     return(DT::datatable(data,
                          selection = "none", editable = editable, container = sketch, extensions = extensions,
-                         options = list(dom = dom, pageLength = pageLength, buttons = buttons)
+                         options = list(dom = dom, pageLength = pageLength, buttons = buttons, scrollY = scrollY)
     ))
   }
 
@@ -32,10 +32,9 @@ shinyServer(function(input, output, session) {
     if (any("datos" %in% x)) { # Cambia la tabla de datos
       output$contents <- DT::renderDT(renderizar.tabla.datos(datos,
                                                              editable = T,
-                                                             pageLength = 8,
+                                                             pageLength = 10,
                                                              buttons = T,
                                                              filename = "datos"),
-                                      options = list(scrollY = T),
                                       server = F)
     }
 
@@ -44,8 +43,8 @@ shinyServer(function(input, output, session) {
                                                                    editable = T,
                                                                    pageLength = 5,
                                                                    buttons = T,
-                                                                   filename = "datos.aprendizaje"),
-                                            options = list(scrollY = T),
+                                                                   filename = "datos.aprendizaje",
+                                                                   scrollY = "15vh"),
                                             server = F)
     }
 
@@ -54,8 +53,8 @@ shinyServer(function(input, output, session) {
                                                                    editable = T,
                                                                    pageLength = 5,
                                                                    buttons = T,
-                                                                   filename = "datos.prueba"),
-                                            options = list(scrollY = T),
+                                                                   filename = "datos.prueba",
+                                                                   scrollY = "15vh"),
                                             server = F)
     }
   }
@@ -157,7 +156,7 @@ shinyServer(function(input, output, session) {
   updateAceEditor(session, "fieldModelCor", value = modelo.cor())
   updateAceEditor(session, "fieldFuncNum", value = default.func.num())
   updateAceEditor(session, "fieldFuncCat", value = def.code.cat())
-  close.menu("predNuevos", TRUE)
+  close.menu("predNuevos",T)
 
   # Valores Reactivos -------------------------------------------------------------------------------------------------------
 
@@ -1715,7 +1714,7 @@ shinyServer(function(input, output, session) {
   })
 
   # Si las opciones cambian o actualizar el codigo
-  observeEvent(c(input$iter.boosting, input$nu.boosting, input$tipo.boosting, input$cp.boosting, input$minsplit.boosting), {
+  observeEvent(c(input$iter.boosting, input$nu.boosting, input$tipo.boosting, input$minsplit.boosting), {
     if (validar.datos(print = FALSE) & length(levels(datos[, variable.predecir])) == 2) {
       deault.codigo.boosting()
       boosting.full()
@@ -1730,8 +1729,7 @@ shinyServer(function(input, output, session) {
       iter = input$iter.boosting,
       maxdepth = input$maxdepth.boosting,
       type = input$tipo.boosting,
-      minsplit = input$minsplit.boosting,
-      cp = input$cp.boosting
+      minsplit = input$minsplit.boosting
     )
     updateAceEditor(session, "fieldCodeBoosting", value = codigo)
     cod.b.modelo <<- codigo

@@ -604,8 +604,7 @@ opciones.boosting <- fluidRow(column(width = 6, actionButton("runBoosting",label
                                                                selectInput(inputId = "tipo.boosting", label = "Seleccionar algoritmo",selected = 1,
                                                                            choices =  c("discrete", "real", "gentle")),
                                                                numericInput("maxdepth.boosting", "Profundidad Máxima:", 15, width = "100%",min = 1),
-                                                               numericInput("minsplit.boosting", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1),
-                                                               numericInput("cp.boosting", "Complejidad:", 0.01, width = "100%",min = 0,max = 1, step = 0.01))))
+                                                               numericInput("minsplit.boosting", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1))))
 
 titulo.boosting <- fluidRow(column(width = 12,opciones.boosting))
 
@@ -626,7 +625,7 @@ panel.comparacion.tabla <- tabPanel(title = "Tabla Comparativa",
                                     DT::dataTableOutput("TablaComp"))
 
 plot.comparacion.roc <- tabPanel(title = "Curva ROC",
-                          plotOutput('plot.roc', height = "65vh"),
+                          plotOutput('plot.roc', height = "45vh"),
                           fluidRow(column(width = 12, selectInput(inputId = "roc.sel",
                                                                   label = h4("Seleccionar la Categoría:"),
                                                                   choices =  "", width = "100%"))))
@@ -675,17 +674,18 @@ opciones.svm.pred <- fluidRow(column(width = 6, br(), switchInput(inputId = "swi
                          column(width = 6, selectInput(inputId = "kernel.svm.pred", label = "Seleccionar un Kernel", selected = "radial", width="100%",
                                                            choices =  c("linear", "polynomial", "radial", "sigmoid"))))
 
-opciones.dt.pred <- fluidRow(column(width = 6, numericInput("minsplit.dt.pred", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1)),
-                             column(width = 6, numericInput("maxdepth.dt.pred", "Profundidad Máxima:", 15, width = "100%",min = 0, max = 30, step = 1)))
+opciones.dt.pred <- fluidRow(column(width = 4, numericInput("minsplit.dt.pred", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1)),
+                             column(width = 4, numericInput("maxdepth.dt.pred", "Profundidad Máxima:", 15, width = "100%",min = 0, max = 30, step = 1)),
+                             column(width = 4,selectInput(inputId = "split.dt.pred", label = "Índice de división:",selected = 1,width = "100%",choices =  c("gini", "information"))))
 
-opciones.rf.pred <- fluidRow(column(width = 6, numericInput("ntree.rf.pred", "Número de Áboles:", 20, width = "100%", min = 0)))
+opciones.rf.pred <- fluidRow(column(width = 6, numericInput("ntree.rf.pred", "Número de Árboles:", 20, width = "100%", min = 0)),
+                             column(width = 6, numericInput("mtry.rf.pred","Número de variables:",1, width = "100%", min = 1)))
 
-opciones.boosting.pred <- list(fluidRow(column(width = 3, numericInput("iter.boosting", "Número de áboles:", 50, width = "100%",min = 1)),
-                                   column(width = 3, numericInput("nu.boosting", "Valor de nu:", 1, width = "100%",min = 0, max = 1)),
-                                   column(width = 3, numericInput("minsplit.boosting", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1)),
-                                   column(width = 3, numericInput("cp.boosting", "Complejidad:", 0.01, width = "100%",min = 0,max = 1, step = 0.01))),
-                               fluidRow(column(width = 12, selectInput(inputId = "tipo.boosting", label = "Seleccionar algoritmo",selected = 1, width = "100%",
-                                                                           choices =  c("discrete", "real", "gentle")))))
+opciones.boosting.pred <- list(fluidRow(column(width = 3, numericInput("iter.boosting.pred", "Número de iteraciones:", 50, width = "100%",min = 1)),
+                                   column(width = 3, numericInput("maxdepth.boosting", "Profundidad Máxima:", 15, width = "100%",min = 1)),
+                                   column(width = 3, numericInput("minsplit.boosting.pred", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1)),
+                                   column(width = 3, selectInput(inputId = "tipo.boosting.pred", label = "Seleccionar algoritmo",selected = 1, width = "100%",
+                                                                 choices =  c("discrete", "real", "gentle")))))
 
 panel.crear.modelo.pred <- tabPanel(title = "Selección y Creación del Modelo",solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
                                     radioGroupButtons("selectModelsPred", "", list("K Vecinos Más Cercanos" = "knn",
@@ -708,9 +708,8 @@ panel.crear.modelo.pred <- tabPanel(title = "Selección y Creación del Modelo",
                                     conditionalPanel(condition =  "input.selectModelsPred == 'svm'",
                                                      opciones.svm.pred),
                                     aceEditor("fieldPredNuevos", mode = "r", theme = "monokai", value = "", height = "5vh", readOnly = F),
-                                    verbatimTextOutput("txtPredNuevos"))
-
-
+                                    verbatimTextOutput("txtPredNuevos"),
+                                    actionBttn("PredNuevosBttn","Generar Predicción",color = "warning",icon = icon("cogs",class = "fas fa-cogs"),block =TRUE ))
 
 pagina.predicciones.nuevas <- tabItem(tabName = "predNuevos",
                                       tabBox(width = 12,
