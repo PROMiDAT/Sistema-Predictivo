@@ -877,6 +877,8 @@ datos.aprendizaje <<- NULL
 variable.predecir <<- NULL
 contador <<- 0
 semilla <<- FALSE
+.clear.random.seed <- .Random.seed
+
 
 # -------------------  Estadisticas Basicas
 
