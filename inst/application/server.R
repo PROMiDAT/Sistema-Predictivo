@@ -156,7 +156,7 @@ shinyServer(function(input, output, session) {
   updateAceEditor(session, "fieldModelCor", value = modelo.cor())
   updateAceEditor(session, "fieldFuncNum", value = default.func.num())
   updateAceEditor(session, "fieldFuncCat", value = def.code.cat())
-  close.menu("predNuevos",T)
+  close.menu("predNuevos",F)
 
   # Valores Reactivos -------------------------------------------------------------------------------------------------------
 
@@ -247,7 +247,7 @@ shinyServer(function(input, output, session) {
     updateSelectInput(session, "sel.distribucion.num", choices = colnames.empty(var.numericas(datos)))
     updateSelectInput(session, "sel.distribucion.cat", choices = colnames.empty(var.categoricas(datos)))
     updateSelectInput(session, "sel.resumen", choices = colnames.empty(datos))
-    updateSelectInput(session, "sel.predic.var", choices = colnames.empty(var.categoricas(datos)))
+    updateSelectInput(session, "sel.predic.var", choices = rev(colnames.empty(var.categoricas(datos))))
   }
 
   # Crea las correlaciones
@@ -971,7 +971,7 @@ shinyServer(function(input, output, session) {
       scores[[paste0("KNN - ",input$kernel.knn)]] <<- predict(exe("modelo.knn.",input$kernel.knn), datos.prueba, type = "prob")
 
       # Cambia la tabla con la prediccion de knn
-      output$knnPrediTable <- DT::renderDataTable(obj.predic(exe("prediccion.knn.",input$kernel.knn)))
+      output$knnPrediTable <- DT::renderDataTable(obj.predic(exe("prediccion.knn.",input$kernel.knn)),server = FALSE)
       insert.report(paste0("pred.knn.",input$kernel.knn),
                     paste0("## Predicción del Modelo KNN - ",input$kernel.knn,"\n```{r}\n", cod.knn.pred,
                            "\nhead(dt.to.data.frame.predict(obj.predic(prediccion.knn.",input$kernel.knn,")))\n",
@@ -1072,8 +1072,8 @@ shinyServer(function(input, output, session) {
     codigo <- svm.modelo(
       variable.pr = variable.predecir,
       scale = input$switch.scale.svm,
-      kernel = input$kernel.svm
-    )
+      kernel = input$kernel.svm)
+
     updateAceEditor(session, "fieldCodeSvm", value = codigo)
     cod.svm.modelo <<- codigo
 
@@ -1161,7 +1161,7 @@ shinyServer(function(input, output, session) {
       scores[[paste0("SVM -",input$kernel.svm)]] <<- predict(modelo.svm.roc, datos.prueba, probability = T)
 
       # Cambia la tabla con la prediccion de knn
-      output$svmPrediTable <- DT::renderDataTable(exe("obj.predic(prediccion.svm.",input$kernel.svm,")"))
+      output$svmPrediTable <- DT::renderDataTable(exe("obj.predic(prediccion.svm.",input$kernel.svm,")"),server = FALSE)
       insert.report(paste0("pred.svm.",input$kernel.svm),
                     paste0("## Predicción del Modelo SVM - ",input$kernel.svm,"\n```{r}\n", cod.svm.pred,
                            "\nhead(dt.to.data.frame.predict(obj.predic(prediccion.svm.",input$kernel.svm,")))\n",
@@ -1399,7 +1399,7 @@ shinyServer(function(input, output, session) {
       isolate(eval(parse(text = cod.dt.pred)))
       scores[["Árboles de Decisión"]] <<- predict(modelo.dt, datos.prueba, type = "prob")
       # Cambia la tabla con la prediccion de dt
-      output$dtPrediTable <- DT::renderDataTable(obj.predic(prediccion.dt))
+      output$dtPrediTable <- DT::renderDataTable(obj.predic(prediccion.dt),server = FALSE)
       insert.report("pred.dt",
                     paste0("## Predicción del Modelo Árboles de Decisión\n```{r}\n", cod.dt.pred,
                            "\nhead(dt.to.data.frame.predict(obj.predic(prediccion.dt)))\n",
@@ -1622,7 +1622,7 @@ shinyServer(function(input, output, session) {
       isolate(eval(parse(text = cod.rf.pred)))
       scores[["Bosques Aleatorios"]] <<- predict(modelo.rf, datos.prueba[, -which(colnames(datos.prueba) == variable.predecir)], type = "prob")
       # Cambia la tabla con la prediccion de rf
-      output$rfPrediTable <- DT::renderDataTable(obj.predic(prediccion.rf))
+      output$rfPrediTable <- DT::renderDataTable(obj.predic(prediccion.rf),server = FALSE)
       insert.report("pred.rf",
                     paste0("## Predicción del Modelo Bosques Aleatorios\n```{r}\n", cod.rf.pred,
                            "\nhead(dt.to.data.frame.predict(obj.predic(prediccion.rf)))\n",
@@ -1729,8 +1729,8 @@ shinyServer(function(input, output, session) {
       iter = input$iter.boosting,
       maxdepth = input$maxdepth.boosting,
       type = input$tipo.boosting,
-      minsplit = input$minsplit.boosting
-    )
+      minsplit = input$minsplit.boosting)
+
     updateAceEditor(session, "fieldCodeBoosting", value = codigo)
     cod.b.modelo <<- codigo
 
@@ -1852,7 +1852,7 @@ shinyServer(function(input, output, session) {
       scores[[paste0("ADA-BOOSTING - ",input$tipo.boosting)]] <<- predict(exe("modelo.boosting.",input$tipo.boosting), datos.prueba[, -which(colnames(datos.prueba) == variable.predecir)], type = "prob")
 
       # Cambia la tabla con la prediccion de boosting
-      output$boostingPrediTable <- DT::renderDataTable(obj.predic(exe("prediccion.boosting.",input$tipo.boosting)))
+      output$boostingPrediTable <- DT::renderDataTable(obj.predic(exe("prediccion.boosting.",input$tipo.boosting)),server = FALSE)
       insert.report(paste0("pred.b.",input$tipo.boosting),
                     paste0("## Predicción del Modelo ADA-BOOSTING - ",input$tipo.boosting,"\n```{r}\n",
                     cod.b.pred,"\nhead(dt.to.data.frame.predict(obj.predic(prediccion.boosting.",input$tipo.boosting,")))\n",
@@ -2006,7 +2006,7 @@ shinyServer(function(input, output, session) {
                     selection = "none", editable = FALSE, extensions = c("Responsive"),
                     options = list(dom = "frtip", pageLength = 10, buttons = NULL))
     }
-  })
+  },server = FALSE)
 
   #Si cambian los parametros
   observeEvent(c(input$select.models, input$roc.sel), {
@@ -2015,21 +2015,91 @@ shinyServer(function(input, output, session) {
 
   # PAGINA DE PREDICCIONES NUEVAS -------------------------------------------------------------------------------------------
 
-  actualizar.tabla.pn <- function(){
+  varificar.datos.pn <- function(){
+    if(any(!(colnames(datos.originales.completos) %in% c(colnames(datos.prueba.completos),variable.predecir.pn))))
+      stop("Los datos no poseen las mismas columnas")
+  }
+
+  unificar.factores <- function(){
+    for(nombre in colnames(datos.prueba.completos)){
+      if(class(datos.prueba.completos[,nombre]) == "factor"){
+        levels(datos.prueba.completos[,nombre]) <<- unique(c(levels(datos.prueba.completos[,nombre]),
+                                                            levels(datos.aprendizaje.completos[,nombre])))
+      }
+    }
+  }
+
+  actualizar.tabla.pn <- function(tablas = c("contentsPred", "contentsPred2")){
+    if("contentsPred2" %in% tablas){
     output$contentsPred <- DT::renderDT(renderizar.tabla.datos(datos.aprendizaje.completos,
                                                                editable = F,
                                                                pageLength = 10,
                                                                buttons = F,
                                                                extensions = list(), dom = "frtip",
-                                                               scrollY = "25vh"), server = F)
-
+                                                               scrollY = "25vh"),
+                                        server = F)
+    }
+    if("contentsPred2" %in% tablas){
     output$contentsPred2 <- DT::renderDT(renderizar.tabla.datos(datos.aprendizaje.completos,
                                                                 editable = F,
                                                                 pageLength = 10,
                                                                 buttons = F,
                                                                 extensions = list(), dom = "frtip",
-                                                                scrollY = "25vh"), server = F)
+                                                                scrollY = "25vh"),
+                                         server = F)
+    }
+    if("contentsPred3" %in% tablas){
+      output$contentsPred3 <- DT::renderDT(renderizar.tabla.datos(datos.prueba.completos,
+                                                                  editable = F,
+                                                                  pageLength = 10,
+                                                                  buttons = F,
+                                                                  extensions = list(), dom = "frtip",
+                                                                  scrollY = "25vh"),
+                                           server = T)
+    }
   }
+
+  actualizar.texto.modelo.pn <- function(codigo){
+    updateAceEditor(session, "fieldPredNuevos", value = codigo)
+    if(is.null(modelo.nuevos)){
+      output$txtPredNuevos <- renderPrint(invisible(NULL))
+    }else{
+      output$txtPredNuevos <- renderPrint(print(modelo.nuevos))
+    }
+  }
+
+  crear.datos.np <- function(){
+    datos.aux.prueba <- datos.prueba.completos
+    datos.aux.prueba[,variable.predecir.pn] <- predic.nuevos
+    return(datos.aux.prueba)
+  }
+
+  actualizar.pred.pn <- function(codigo){
+    updateAceEditor(session, "fieldCodePredPN", value = codigo)
+    if(!is.null(predic.nuevos)){
+      datos.aux.prueba <- crear.datos.np()
+      output$PrediTablePN <- DT::renderDT(renderizar.tabla.datos(datos.aux.prueba,
+                                                                  editable = F,
+                                                                  pageLength = 10,
+                                                                  buttons = F,
+                                                                  dom = "frtip",
+                                                                  scrollY = "25vh"),
+                                           server = T)
+    }else{
+      output$PrediTablePN <- DT::renderDT(DT::datatable(data.frame()))
+    }
+  }
+
+  output$downloaDatosPred <- downloadHandler(
+    filename = function() {
+      input$file3$name
+    },
+    content = function(file) {
+      if(!is.null(predic.nuevos)){
+        write.csv(crear.datos.np(), file, row.names = input$rownameNPred2)
+      }
+    }
+  )
 
   observeEvent(input$loadButtonNPred,{
     codigo.carga <- code.carga( nombre.filas = input$rownameNPred,
@@ -2057,16 +2127,16 @@ shinyServer(function(input, output, session) {
       return(NULL)
     })
 
-    updateSelectInput(session, "sel.predic.var.nuevos", choices = colnames.empty(var.categoricas(datos.aprendizaje.completos)))
+    updateSelectInput(session, "sel.predic.var.nuevos", choices = rev(colnames.empty(var.categoricas(datos.aprendizaje.completos))))
 
     modelo.nuevos <<- NULL
     predic.nuevos <<- NULL
+    actualizar.pred.pn("")
 
+    actualizar.texto.modelo.pn("")
     actualizar.tabla.pn()
-
   })
 
-  # Crea los select box del panel de trasnformar datos
   update.trans.pn <- eventReactive(c(input$loadButtonNPred), {
     contadorPN <<- contadorPN + 1
     if (!is.null(datos.aprendizaje.completos) && ncol(datos.aprendizaje.completos) > 0) {
@@ -2088,7 +2158,6 @@ shinyServer(function(input, output, session) {
     return(res)
   })
 
-  # Cambia la tabla de con las opciones del panel de transformar PN
   output$transDataPredN <- DT::renderDataTable(update.trans.pn(),
                                           escape = FALSE, selection = "none", server = FALSE,
                                           options = list(dom = "t", paging = FALSE, ordering = FALSE, scrollY = "35vh"), rownames = F,
@@ -2099,11 +2168,8 @@ shinyServer(function(input, output, session) {
                                                         Shiny.unbindAll(table.table().node());
                                                         Shiny.bindAll(table.table().node());"))
 
-
-  # Transforma los datos
   transformar.datos.pn <- function() {
     var.noactivas <- c()
-    browser()
     code.res <- "datos.aprendizaje.completos <<- datos.originales.completos \n"
     for (var in colnames(datos.originales.completos)) {
       if (input[[paste0("Predbox", var, contadorPN)]]) {
@@ -2124,32 +2190,118 @@ shinyServer(function(input, output, session) {
 
     isolate(eval(parse(text = code.res)))
     if (length(var.noactivas) > 0) {
-      isolate(eval(parse(text = code.desactivar(var.noactivas,"datos.aprendizaje.completos"))))
+      des <- code.desactivar(var.noactivas,"datos.aprendizaje.completos")
+      isolate(eval(parse(text = des)))
+      code.res <- paste0(code.res, "\n", des)
     }
-
-    code.res <- paste0(code.res, "\n", code.desactivar(var.noactivas,"datos.aprendizaje.completos"))
+    code.res <- paste0(code.res, "\n")
     return(code.res)
   }
 
-  # Cunado es precionado el boton de transformar datos
+  predecir.pn <-function(){
+    codigo <- switch(modelo.seleccionado.pn,
+                     knn =  kkn.prediccion.pn(),
+                     dt  = dt.prediccion.np(),
+                     rf  = rf.prediccion.np(),
+                     ada = boosting.prediccion.np(),
+                     svm = svm.prediccion.np())
+    tryCatch({
+      eval(parse(text = codigo))
+      actualizar.pred.pn(codigo)
+    },
+    error =  function(e){
+      showNotification(paste0("Error en el modelo: ", e), duration = 10, type = "error")
+    })
+  }
+
   observeEvent(input$transButtonPredN, {
     # transforma los datos
-    code.res <- transformar.datos.pn()
+    code.trans.pn <<- transformar.datos.pn()
 
     # Actualiza los selectores que dependen de los datos
     updateSelectInput(session, "sel.predic.var.nuevos", choices = colnames.empty(var.categoricas(datos.aprendizaje.completos)))
 
     modelo.nuevos <<- NULL
     predic.nuevos <<- NULL
+    actualizar.pred.pn("")
 
+    actualizar.texto.modelo.pn("")
     actualizar.tabla.pn()
   })
 
   observeEvent(input$PredNuevosBttnModelo,{
-      # switch(inout$selectModelsPred,
-      #        CASE )
+    codigo <- switch(input$selectModelsPred,
+                     knn =  kkn.modelo.np(variable.pr = input$sel.predic.var.nuevos,
+                                          scale = input$switch.scale.knn.pred,
+                                          kmax = input$kmax.knn.pred,
+                                          kernel = input$kernel.knn.pred),
+                     dt  = dt.modelo.np(variable.pr = input$sel.predic.var.nuevos,
+                                        minsplit = input$minsplit.dt.pred,
+                                        maxdepth = input$maxdepth.dt.pred,
+                                        split = input$split.dt.pred),
+                     rf  = rf.modelo.np(variable.pr = input$sel.predic.var.nuevos,
+                                        ntree = input$ntree.rf.pred,
+                                        mtry = input$mtry.rf.pred),
+                     ada = boosting.modelo.np(variable.pr = input$sel.predic.var.nuevos,
+                                              iter = input$iter.boosting.pred,
+                                              maxdepth = input$maxdepth.boosting.pred,
+                                              type = input$tipo.boosting.pred,
+                                              minsplit = input$minsplit.boosting.pred),
+                     svm = svm.modelo.np(variable.pr =input$sel.predic.var.nuevos,
+                                         scale = input$switch.scale.svm.pred,
+                                         kernel = input$kernel.svm.pred))
+      variable.predecir.pn <<- input$sel.predic.var.nuevos
+      modelo.seleccionado.pn  <<- input$selectModelsPred
+      modelo.nuevos <<- NULL
+      predic.nuevos <<- NULL
+      actualizar.pred.pn("")
+
+      tryCatch({
+        eval(parse(text = codigo))
+        actualizar.texto.modelo.pn(codigo)
+      },
+      error =  function(e){
+        showNotification(paste0("Error en el modelo: ", e), duration = 10, type = "error")
+      })
   })
 
+  observeEvent(input$loadButtonNPred2,{
+    codigo.carga <- code.carga( nombre.filas = input$rownameNPred2,
+                                ruta = input$file3$datapath,
+                                separador = input$sep.nPred2,
+                                sep.decimal = input$dec.nPred2,
+                                encabezado = input$headerNPred2,
+                                d.o = "datos.prueba.completos",
+                                d = "datos.prueba.completos")
+
+    tryCatch({
+      isolate(eval(parse(text = codigo.carga)))
+      varificar.datos.pn()
+      if(ncol(datos.prueba.completos) <= 1) {
+        showNotification(paste0("Error al cargar los Datos: Revisar separadores"), duration = 10, type = "error")
+        return(NULL)
+      }
+      codigo.na <- ""
+      codigo.na <- paste0(code.NA(deleteNA = input$deleteNAnPred2,
+                                  d.o = paste0("datos.prueba.completos[,-which(colnames(datos.prueba.completos) == '",variable.predecir.pn,"')]")))
+      isolate(eval(parse(text = codigo.na)))
+
+      datos.prueba.completos[,variable.predecir.pn] <<- NULL
+      datos.prueba.completos[,variable.predecir.pn] <<- NA
+      code.trans.pn <<- gsub("datos.originales.completos", "datos.prueba.completos", code.trans.pn)
+      code.trans.pn <<- gsub("datos.aprendizaje.completos", "datos.prueba.completos", code.trans.pn)
+      exe(code.trans.pn)
+      unificar.factores()
+      actualizar.tabla.pn("contentsPred3")
+      predecir.pn()
+    },
+    error = function(e) {
+      showNotification(paste0("Error al cargar los Datos: ", e), duration = 10, type = "error")
+      datos.prueba.completos <<- NULL
+      predic.nuevos <<- NULL
+      return(NULL)
+    })
+  })
 
   # PAGINA DE REPORTE -------------------------------------------------------------------------------------------------------
 

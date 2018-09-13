@@ -267,3 +267,7 @@ input[type="checkbox"]:hover:before {
   background-color: #CBB051 !important;
   border-color: #202020 !important;
 }
+
+#downloaDatosPred{
+  width: 100%;
+}

@@ -157,11 +157,11 @@ code.carga <- function(nombre.filas = T, ruta = NULL, separador = ";", sep.decim
     ruta <-  gsub("\\", "/", ruta, fixed=TRUE)
   }
   if(nombre.filas){
-    return(paste0(d.o ," <<- read.table('", ruta, "', header=",
-                  encabezado, ", sep='", separador, "', dec = '", sep.decimal, "', row.names = 1) \n",d," <<- datos.originales"))
+    return(paste0( d.o ," <<- read.table('", ruta, "', header=",
+                  encabezado, ", sep='", separador, "', dec = '", sep.decimal, "', row.names = 1) \n",d," <<- ",d.o))
   } else {
     return(paste0(d.o, "<<- read.table('", ruta, "', header=", encabezado, ", sep='", separador, "', dec = '", sep.decimal,
-                  "') \n",d," <<- datos.originales"))
+                  "') \n",d," <<- ",d.o))
   }
 }
 
@@ -444,9 +444,18 @@ kkn.modelo <- function(variable.pr = NULL, scale = TRUE,kmax = 7, kernel = "opti
   return(paste0("modelo.knn.",kernel," <<- train.kknn(",variable.pr,"~., data = datos.aprendizaje, scale =",scale,", kmax=",kmax,", kernel = '",kernel,"')"))
 }
 
+kkn.modelo.np <- function(variable.pr = NULL, scale = TRUE,kmax = 7, kernel = "optimal"){
+  kmax <- ifelse(!is.numeric(kmax), round(sqrt(nrow(datos.aprendizaje))), kmax)
+  return(paste0("modelo.nuevos <<- train.kknn(",variable.pr,"~., data = datos.aprendizaje.completos, scale =",scale,", kmax=",kmax,", kernel = '",kernel,"')"))
+}
+
 #Codigo de la prediccion de knn
 kkn.prediccion <- function(kernel = "optimal") {
   return(paste0("prediccion.knn.",kernel," <<- predict(modelo.knn.",kernel,", datos.prueba[,-which(colnames(datos.prueba) == '",variable.predecir,"')])"))
+}
+
+kkn.prediccion.pn <- function() {
+  return(paste0("predic.nuevos <<- predict(modelo.nuevos, datos.prueba.completos[,-which(colnames(datos.prueba.completos) == '",variable.predecir.pn,"')])"))
 }
 
 #Codigo de la matriz de confucion de knn
@@ -461,9 +470,17 @@ svm.modelo <- function(variable.pr = NULL, scale = TRUE, kernel = "linear"){
   return(paste0("modelo.svm.",kernel," <<- svm(",variable.pr,"~., data = datos.aprendizaje, scale =",scale,", kernel = '",kernel,"')"))
 }
 
+svm.modelo.np <- function(variable.pr = NULL, scale = TRUE, kernel = "linear"){
+  return(paste0("modelo.nuevos <<- svm(",variable.pr,"~., data = datos.aprendizaje.completos, scale =",scale,", kernel = '",kernel,"')"))
+}
+
 #Codigo de la prediccion de svm
 svm.prediccion <- function(kernel = "linear") {
-  return(paste0("prediccion.svm.",kernel," <<- predict(modelo.svm.",kernel," , datos.prueba)"))
+  return(paste0("prediccion.svm.",kernel," <<- predict(modelo.svm.",kernel," , datos.prueba[,-which(colnames(datos.prueba) == '",variable.predecir,"')])"))
+}
+
+svm.prediccion.np <- function() {
+  return(paste0("predic.nuevos <<- predict(modelo.nuevos , datos.prueba.completos[,-which(colnames(datos.prueba.completos) == '",variable.predecir.pn,"')])"))
 }
 
 #Codigo de la matriz de confucion de svm
@@ -496,9 +513,21 @@ dt.modelo <- function(variable.pr = NULL, minsplit =  20, maxdepth = 15, split =
   return(codigo)
 }
 
+dt.modelo.np <- function(variable.pr = NULL, minsplit =  20, maxdepth = 15, split = "gini"){
+  minsplit <- ifelse(!is.numeric(minsplit), 1, minsplit )
+  maxdepth <- ifelse(!is.numeric(maxdepth) || maxdepth > 30, 15, maxdepth)
+  codigo <- paste0("modelo.nuevos <<- rpart(",variable.pr,"~., data = datos.aprendizaje.completos,
+                   control = rpart.control(minsplit = ",minsplit,", maxdepth = ", maxdepth,"),parms = list(split = '",split,"'))")
+  return(codigo)
+}
+
 #Codigo de la prediccion de DT
 dt.prediccion <- function() {
   return(paste0("prediccion.dt <<- predict(modelo.dt, datos.prueba, type='class')"))
+}
+
+dt.prediccion.np <- function() {
+  return(paste0("predic.nuevos <<- predict(modelo.nuevos, datos.prueba.completos, type='class')"))
 }
 
 #Codigo de la matriz de confucion de dt
@@ -524,9 +553,20 @@ rf.modelo <- function(variable.pr = NULL, ntree = 500, mtry = 1){
   return(codigo)
 }
 
+rf.modelo.np <- function(variable.pr = NULL, ntree = 500, mtry = 1){
+  ntree <- ifelse(!is.numeric(ntree), 500, ntree)
+  codigo <- paste0("modelo.nuevos <<- randomForest(",variable.pr,"~., data = datos.aprendizaje.completos,importance = TRUE,",
+                   " ntree =",ntree,",mtry =",mtry,")")
+  return(codigo)
+}
+
 #Codigo de la prediccion de rf
 rf.prediccion <- function(variable.pr = NULL) {
   return(paste0("prediccion.rf <<- predict(modelo.rf,datos.prueba[,-which(colnames(datos.prueba) == '",variable.pr,"')])"))
+}
+
+rf.prediccion.np <- function() {
+  return(paste0("predic.nuevos <<- predict(modelo.nuevos, datos.prueba.completos[,-which(colnames(datos.prueba.completos) == '",variable.predecir.pn,"')])"))
 }
 
 #Codigo de la matriz de confucion de rf
@@ -557,9 +597,22 @@ boosting.modelo <- function(variable.pr = NULL, iter = 50, maxdepth = 1, type = 
   return(codigo)
 }
 
+boosting.modelo.np <- function(variable.pr = NULL, iter = 50, maxdepth = 1, type = "discrete", minsplit = 1){
+  iter <- ifelse(!is.numeric(iter), 50, iter)
+  nu <- ifelse(!is.numeric(maxdepth) && maxdepth > 30, 15, maxdepth)
+  minsplit <- ifelse(!is.numeric(minsplit), 1, minsplit)
+  codigo <- paste0("modelo.nuevos <<- ada(",variable.pr,"~., data = datos.aprendizaje.completos, iter = ",iter,", type = '",type,"',
+                   control = rpart.control(minsplit = ",minsplit,", maxdepth = ",maxdepth,"))")
+  return(codigo)
+}
+
 #Codigo de la prediccion de boosting
 boosting.prediccion <- function(variable.pr = NULL, type = "discrete") {
   return(paste0("prediccion.boosting.",type," <<- predict(modelo.boosting.",type,", datos.prueba[,-which(colnames(datos.prueba) == '",variable.pr,"')])"))
+}
+
+boosting.prediccion.np <- function() {
+  return(paste0("predic.nuevos <<- predict(modelo.nuevos, datos.prueba.completos[,-which(colnames(datos.prueba.completos) == '",variable.predecir.pn,"')])"))
 }
 
 #Codigo de la matriz de confucion de boosting
@@ -678,9 +731,6 @@ areaROC <- function(prediccion,real) {
   auc <- ROCR::performance(pred,"auc")
   return(attributes(auc)$y.values[[1]])
 }
-
-# Pagina de PREDICCION NUEVOS -----------------------------------------------------------------------------------------------
-
 
 # Pagina de REPORTE ---------------------------------------------------------------------------------------------------------
 
@@ -944,7 +994,11 @@ cod.b.ind <<- NULL
 datos.originales.completos <<- NULL
 datos.aprendizaje.completos <<- NULL
 datos.prueba.completos <<- NULL
+
+variable.predecir.pn <<- NULL
+modelo.seleccionado.pn <<- NULL
 contadorPN <<- 0
+code.trans.pn <<- ""
 
 modelo.nuevos <<- NULL
 predic.nuevos <<- NULL

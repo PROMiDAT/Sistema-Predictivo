@@ -169,17 +169,17 @@ pagina.cargar.datos <- tabItem(tabName = "cargar",
 
 # PAGINA DE RESUMEN NUMERICO ----------------------------------------------------------------------------------------------
 
-cuadro.resumen.completo <- box(title = "Resumen Numérico", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
+cuadro.resumen.completo <- box(title = "Resumen Numérico", status = "primary", width = 7, solidHeader = TRUE, collapsible = TRUE,
                                DT::dataTableOutput("resumen.completo"), hr(),
                                aceEditor("fieldCodeResum", mode = "r", theme = "monokai", value = "", height = "8vh",  readOnly = T))
 
-cuadro.resumen.variable <- box(title = "Resumen Numérico por Variable", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
+cuadro.resumen.variable <- box(title = "Resumen Numérico por Variable", status = "primary", width = 5, solidHeader = TRUE, collapsible = TRUE,
                                selectInput(inputId = "sel.resumen", label = h4("Seleccionar Variable:"), choices =  ""),
                                fluidRow(uiOutput("resumen")))
 
 pagina.resumen.numerico <- tabItem(tabName = "resumen",
-                                   column(width = 7, cuadro.resumen.completo ),
-                                   column(width = 5, cuadro.resumen.variable ))
+                                   fluidRow(cuadro.resumen.completo,
+                                   cuadro.resumen.variable ))
 
 # PAGINA DEL TEST DE NORMALIDAD -------------------------------------------------------------------------------------------
 
@@ -204,13 +204,12 @@ codigo.normalidad.dos <- conditionalPanel("input.BoxNormal == 'tabNormalCalc'",
                                           column(width = 12, campo.codigo(runid = "run.calc.normal", fieldid = "fieldCalcNormal", height = "8vh")))
 
 pagina.test.normalidad <- tabItem(tabName = "normalidad",
-                                  column(width = 12,  tabBox(id = "BoxNormal",
-                                                             width = NULL,
-                                                             title = opciones.normalidad,
-                                                             panel.grafico.normalidad.num,
-                                                             panel.grafico.normalidad.cat)),
-                                  codigo.normalidad.uno,
-                                  codigo.normalidad.dos)
+                                  tabBox(id = "BoxNormal",
+                                         width = 12, title = opciones.normalidad,
+                                         panel.grafico.normalidad.num,
+                                         panel.grafico.normalidad.cat),
+                                  fluidRow(codigo.normalidad.uno,
+                                  codigo.normalidad.dos))
 
 # PAGINA DE DISPERSION -----------------------------------------------------------------------------------------------------
 
@@ -228,16 +227,15 @@ opciones.dispersion <- fluidRow(column(width = 9, tags$div(class="select-var-ind
                                                                  tooltip = tooltipOptions(title = "Clic para ver opciones"), right = T)))
 
 
-grafico.dispersion <- tabPanel(title = "Dispersión", value = "tabDisp", plotOutput('plot.disp', height = "65vh",
-                                                                                   brush = brushOpts(id = "zoom.disp",
-                                                                                                     resetOnNew = TRUE)))
+grafico.dispersion <- tabPanel(title = "Dispersión", value = "tabDisp",
+                               plotOutput('plot.disp', height = "65vh", brush = brushOpts(id = "zoom.disp", resetOnNew = TRUE)))
 
 pagina.dispersion<- tabItem(tabName = "dispersion",
-                            column(width = 8, tabBox(id = "BoxDisp", width = NULL,
-                                                      title = opciones.dispersion,
-                                                      grafico.dispersion)),
-                            datos.dispersiones,
-                            codigo.dispersion )
+                            fluidRow(tabBox(id = "BoxDisp", width = 8,
+                                            title = opciones.dispersion,
+                                            grafico.dispersion),
+                                     datos.dispersiones),
+                            fluidRow(codigo.dispersion))
 
 # PAGINA DE CORRELACIONES -------------------------------------------------------------------------------------------------
 
@@ -257,7 +255,7 @@ tab.correlacion <- tabPanel(title = 'Correlación', value = "correlacion",
 tab.codigo.correlaciones <- tabPanel(title = 'Resultados Numéricos', value = "cor.salida", verbatimTextOutput("txtcor"))
 
 pagina.correlaciones <- tabItem(tabName = "correlacion",
-                                column(width = 12, tabBox(id = "tabCor", width = NULL,
+                                fluidRow(tabBox(id = "tabCor", width = 12,
                                                           title = opciones.correlaciones,
                                                           tab.correlacion,
                                                           tab.codigo.correlaciones)))
@@ -291,14 +289,13 @@ resultados.distribucion.categoricas <- tabPanel(title = 'Categóricas', value = 
                                                 campo.codigo(runid = "run.dya.cat", fieldid = "fieldCodeCat", height = "6vh"))
 
 pagina.distribuciones <- tabItem(tabName = "distribucion",
-                                 column(width = 12,
-                                        tabBox(id = "tabDyA",
+                                 fluidRow(tabBox(id = "tabDyA", width = 12,
                                                title = fluidRow(
                                                  selector.variables.distribucion,
                                                  column(width = 2, boton.codigo.distribuciones),
-                                                 column(width = 2, boton.opciones.distribuciones)), width = 12,
+                                                 column(width = 2, boton.opciones.distribuciones)),
                                                resultados.distribucion.numericas,
-                                               resultados.distribucion.categoricas )) )
+                                               resultados.distribucion.categoricas )))
 
 
 # PAGINA DE PODER PREDICTIVO ----------------------------------------------------------------------------------------------
@@ -322,11 +319,12 @@ plot.dens.poder <- tabPanel(title = 'Densidad Variables Numéricas Según Variab
                              campo.codigo(runid = "run.code.poder.dens", fieldid = "fieldCodePoderDens", height = "16vh"))
 
 
-pagina.poder <- tabItem(tabName = "poderPred", column(width = 12, tabBox(width = 12,
-                                                                         plot.pred.poder,
-                                                                         plot.pairs.poder,
-                                                                         plot.dist.poder,
-                                                                         plot.dens.poder)) )
+pagina.poder <- tabItem(tabName = "poderPred",
+                        fluidRow(tabBox(width = 12,
+                               plot.pred.poder,
+                               plot.pairs.poder,
+                               plot.dist.poder,
+                               plot.dens.poder)))
 
 # PAGINA DE KNN -----------------------------------------------------------------------------------------------------------
 
@@ -368,12 +366,11 @@ opciones.knn <- fluidRow(column(width = 6, actionButton("runKnn", label = "Ejecu
 titulo.knn <- fluidRow(column(width = 12, opciones.knn))
 
 pagina.knn <- tabItem(tabName = "knn",
-                      column(width = 12,
-                             tabBox(width = 12, title = titulo.knn,
-                                    panel.generar.knn,
-                                    panel.prediccion.knn,
-                                    panel.matriz.confucion.knn,
-                                    panel.indices.generales.knn)))
+                      fluidRow(tabBox(width = 12, title = titulo.knn,
+                             panel.generar.knn,
+                             panel.prediccion.knn,
+                             panel.matriz.confucion.knn,
+                             panel.indices.generales.knn)))
 
 
 # PAGINA DE SVM -----------------------------------------------------------------------------------------------------------
@@ -423,13 +420,12 @@ opciones.svm <- fluidRow(column(width = 6, actionButton("runSvm", label = "Ejecu
 titulo.svm <- fluidRow(column(width = 12, opciones.svm))
 
 pagina.svm <- tabItem(tabName = "svm",
-                      column(width = 12,
-                             tabBox(width = 12, title = titulo.svm,
-                                    panel.generar.svm,
-                                    plot.svm,
-                                    panel.prediccion.svm,
-                                    panel.matriz.confucion.svm,
-                                    panel.indices.generales.svm)))
+                      fluidRow(tabBox(width = 12, title = titulo.svm,
+                             panel.generar.svm,
+                             plot.svm,
+                             panel.prediccion.svm,
+                             panel.matriz.confucion.svm,
+                             panel.indices.generales.svm)))
 
 # PAGINA DE DT ------------------------------------------------------------------------------------------------------------
 
@@ -482,14 +478,13 @@ opciones.dt <- fluidRow(column(width = 6, actionButton("runDt", label = "Ejecuta
 titulo.dt <- fluidRow(column(width = 12, opciones.dt))
 
 pagina.dt <- tabItem(tabName = "dt",
-                      column(width = 12,
-                             tabBox(width = 12, title = titulo.dt,
-                                    panel.generar.dt,
-                                    plot.dt,
-                                    panel.prediccion.dt,
-                                    panel.matriz.confucion.dt,
-                                    panel.indices.generales.dt,
-                                    panel.reglas.dt)))
+                     fluidRow(tabBox(width = 12, title = titulo.dt,
+                            panel.generar.dt,
+                            plot.dt,
+                            panel.prediccion.dt,
+                            panel.matriz.confucion.dt,
+                            panel.indices.generales.dt,
+                            panel.reglas.dt)))
 
 # PAGINA DE RF ------------------------------------------------------------------------------------------------------------
 
@@ -544,15 +539,14 @@ opciones.rf <- fluidRow(column(width = 6,actionButton("runRf",label = "Ejecutar"
 titulo.rf <- fluidRow(column(width = 12, opciones.rf))
 
 pagina.rf <- tabItem(tabName = "rf",
-                     column(width = 12,
-                            tabBox(width = 12, title = titulo.rf,
-                                   panel.generar.rf,
-                                   plor.error.ft,
-                                   plot.rf,
-                                   panel.prediccion.rf,
-                                   panel.matriz.confucion.rf,
-                                   panel.indices.generales.rf,
-                                   reglas.rf)))
+                     fluidRow(tabBox(width = 12, title = titulo.rf,
+                            panel.generar.rf,
+                            plor.error.ft,
+                            plot.rf,
+                            panel.prediccion.rf,
+                            panel.matriz.confucion.rf,
+                            panel.indices.generales.rf,
+                            reglas.rf)))
 
 # PAGINA DE BOOSTING ------------------------------------------------------------------------------------------------------
 
@@ -609,15 +603,14 @@ opciones.boosting <- fluidRow(column(width = 6, actionButton("runBoosting",label
 titulo.boosting <- fluidRow(column(width = 12,opciones.boosting))
 
 pagina.boosting <- tabItem(tabName = "boosting",
-                      column(width = 12,
-                             tabBox(width = 12, title = titulo.boosting,
-                                    panel.generar.boosting,
-                                    plot.boosting,
-                                    plot.boosting.import,
-                                    panel.prediccion.boosting,
-                                    panel.matriz.confucion.boosting,
-                                    panel.indices.generales.boosting,
-                                    reglas.boosting)))
+                           fluidRow(tabBox(width = 12, title = titulo.boosting,
+                                  panel.generar.boosting,
+                                  plot.boosting,
+                                  plot.boosting.import,
+                                  panel.prediccion.boosting,
+                                  panel.matriz.confucion.boosting,
+                                  panel.indices.generales.boosting,
+                                  reglas.boosting)))
 
 # PAGINA DE COMPARACION DE MODELOS ---------------------------------------------------------------------------------------
 
@@ -638,11 +631,10 @@ selector.modelos <- fluidRow(box(title = "Mostrar Modelos:", status = "primary",
                                                           no = icon("remove", lib = "glyphicon")))))
 
 pagina.comparacion <- tabItem(tabName = "comparar",
-                           column(width = 12,
-                                  tabBox(width = 12,
-                                         panel.comparacion.tabla,
-                                         plot.comparacion.roc )),
-                           column(width =12, selector.modelos))
+                              fluidRow(tabBox(width = 12,
+                                       panel.comparacion.tabla,
+                                       plot.comparacion.roc )),
+                              fluidRow(column(width = 12,selector.modelos)))
 
 # PAGINA DE PREDICCIONES NUEVAS ---------------------------------------------------------------------------------------
 
@@ -709,7 +701,7 @@ opciones.rf.pred <- fluidRow(column(width = 6, numericInput("ntree.rf.pred", "N�
                              column(width = 6, numericInput("mtry.rf.pred","Número de variables:",1, width = "100%", min = 1)))
 
 opciones.boosting.pred <- list(fluidRow(column(width = 3, numericInput("iter.boosting.pred", "Número de iteraciones:", 50, width = "100%",min = 1)),
-                                   column(width = 3, numericInput("maxdepth.boosting", "Profundidad Máxima:", 15, width = "100%",min = 1)),
+                                   column(width = 3, numericInput("maxdepth.boosting.pred", "Profundidad Máxima:", 15, width = "100%",min = 1)),
                                    column(width = 3, numericInput("minsplit.boosting.pred", "Mínimo para dividir un nodo:", 20, width = "100%",min = 1)),
                                    column(width = 3, selectInput(inputId = "tipo.boosting.pred", label = "Seleccionar algoritmo",selected = 1, width = "100%",
                                                                  choices =  c("discrete", "real", "gentle")))))
@@ -740,12 +732,22 @@ panel.crear.modelo.pred <- tabPanel(title = "Selección y Parametrización del M
                                     verbatimTextOutput("txtPredNuevos"),
                                     actionButton("PredNuevosBttnModelo","Generar Modelo", width  = "100%" ))
 
+
+panel.prediccion.knn <- tabPanel(title = "Predicción de Nuevos Individuos",
+                                 DT::dataTableOutput("PrediTablePN"),
+                                 hr(),
+                                 downloadButton("downloaDatosPred", "Descargar Datos", width = "100%"),
+                                 hr(),
+                                 aceEditor("fieldCodePredPN", mode = "r", theme = "monokai",
+                                           value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
+
 pagina.predicciones.nuevas <- tabItem(tabName = "predNuevos",
-                                      tabBox(width = 12,
-                                             panel.cargar.datos.pred,
-                                             panel.tansformar.datos,
-                                             panel.crear.modelo.pred,
-                                             panel.cargar.datos.pred2))
+                                      fluidRow(tabBox(width = 12,
+                                               panel.cargar.datos.pred,
+                                               panel.tansformar.datos,
+                                               panel.crear.modelo.pred,
+                                               panel.cargar.datos.pred2,
+                                               panel.prediccion.knn)))
 
 # PAGINA DE REPORTE -------------------------------------------------------------------------------------------------------
 
