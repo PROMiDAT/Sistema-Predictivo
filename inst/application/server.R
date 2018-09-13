@@ -2013,6 +2013,144 @@ shinyServer(function(input, output, session) {
     updatePlot$roc <- !updatePlot$roc
   })
 
+  # PAGINA DE PREDICCIONES NUEVAS -------------------------------------------------------------------------------------------
+
+  actualizar.tabla.pn <- function(){
+    output$contentsPred <- DT::renderDT(renderizar.tabla.datos(datos.aprendizaje.completos,
+                                                               editable = F,
+                                                               pageLength = 10,
+                                                               buttons = F,
+                                                               extensions = list(), dom = "frtip",
+                                                               scrollY = "25vh"), server = F)
+
+    output$contentsPred2 <- DT::renderDT(renderizar.tabla.datos(datos.aprendizaje.completos,
+                                                                editable = F,
+                                                                pageLength = 10,
+                                                                buttons = F,
+                                                                extensions = list(), dom = "frtip",
+                                                                scrollY = "25vh"), server = F)
+  }
+
+  observeEvent(input$loadButtonNPred,{
+    codigo.carga <- code.carga( nombre.filas = input$rownameNPred,
+                                ruta = input$file2$datapath,
+                                separador = input$sepNPred,
+                                sep.decimal = input$decNPred,
+                                encabezado = input$headerNPred,
+                                d.o = "datos.originales.completos",
+                                d = "datos.aprendizaje.completos")
+
+    tryCatch({
+      isolate(eval(parse(text = codigo.carga)))
+      if(ncol(datos.originales.completos) <= 1) {
+        showNotification(paste0("Error al cargar los Datos: Revisar separadores"), duration = 10, type = "error")
+        return(NULL)
+      }
+      codigo.na <- ""
+      codigo.na <- paste0(code.NA(deleteNA = input$deleteNAnPred, d.o = "datos.originales.completos"), "\n", "datos.aprendizaje.completos <<- datos.originales.completos")
+      isolate(eval(parse(text = codigo.na)))
+    },
+    error = function(e) {
+      showNotification(paste0("Error al cargar los Datos: ", e), duration = 10, type = "error")
+      datos.aprendizaje.completos <<- NULL
+      datos.originales.completos <<- NULL
+      return(NULL)
+    })
+
+    updateSelectInput(session, "sel.predic.var.nuevos", choices = colnames.empty(var.categoricas(datos.aprendizaje.completos)))
+
+    modelo.nuevos <<- NULL
+    predic.nuevos <<- NULL
+
+    actualizar.tabla.pn()
+
+  })
+
+  # Crea los select box del panel de trasnformar datos
+  update.trans.pn <- eventReactive(c(input$loadButtonNPred), {
+    contadorPN <<- contadorPN + 1
+    if (!is.null(datos.aprendizaje.completos) && ncol(datos.aprendizaje.completos) > 0) {
+      res <- data.frame(Variables = colnames(datos.aprendizaje.completos),
+                        Tipo = c(1:ncol(datos.aprendizaje.completos)),
+                        Activa = c(1:ncol(datos.aprendizaje.completos)))
+      res$Tipo <- sapply(colnames(datos.aprendizaje.completos), function(i) paste0(
+        '<select id="Predsel', i, contadorPN, '"> <option value="categorico">Categórico</option>
+        <option value="numerico" ', ifelse(class(datos.aprendizaje.completos[, i]) %in% c("numeric", "integer"),
+                                           ' selected="selected"', ""
+      ),
+      '>Numérico</option> <option value="disyuntivo">Disyuntivo</option> </select>'
+      ))
+      res$Activa <- sapply(colnames(datos.aprendizaje.completos), function(i) paste0('<input type="checkbox" id="Predbox', i, contadorPN, '" checked/>'))
+    } else {
+      res <- as.data.frame(NULL)
+      showNotification("Tiene que cargar los datos", duration = 10, type = "error")
+    }
+    return(res)
+  })
+
+  # Cambia la tabla de con las opciones del panel de transformar PN
+  output$transDataPredN <- DT::renderDataTable(update.trans.pn(),
+                                          escape = FALSE, selection = "none", server = FALSE,
+                                          options = list(dom = "t", paging = FALSE, ordering = FALSE, scrollY = "35vh"), rownames = F,
+                                          callback = JS("table.rows().every(function(i, tab, row) {
+                                                        var $this = $(this.node());
+                                                        $this.attr('id', this.data()[0]);
+                                                        $this.addClass('shiny-input-checkbox');});
+                                                        Shiny.unbindAll(table.table().node());
+                                                        Shiny.bindAll(table.table().node());"))
+
+
+  # Transforma los datos
+  transformar.datos.pn <- function() {
+    var.noactivas <- c()
+    browser()
+    code.res <- "datos.aprendizaje.completos <<- datos.originales.completos \n"
+    for (var in colnames(datos.originales.completos)) {
+      if (input[[paste0("Predbox", var, contadorPN)]]) {
+        if (input[[paste0("Predsel", var, contadorPN)]] == "categorico" & class(datos.originales.completos[, var]) %in% c("numeric", "integer")) {
+          code.res <- paste0(code.res, code.trans(var, "categorico", d.o = "datos.originales.completos", d = "datos.aprendizaje.completos" ), "\n")
+        }
+        if (input[[paste0("Predsel", var, contadorPN)]] == "numerico" & !(class(datos.originales.completos[, var]) %in% c("numeric", "integer"))) {
+          code.res <- paste0(code.res, code.trans(var, "numerico",  d.o = "datos.originales.completos", d = "datos.aprendizaje.completos" ), "\n")
+        }
+        if (input[[paste0("Predsel", var, contadorPN)]] == "disyuntivo") {
+          code.res <- paste0(code.res, code.trans(var, "disyuntivo", d.o = "datos.originales.completos", d = "datos.aprendizaje.completos" ), "\n")
+        }
+      } else {
+        var.noactivas <- c(var.noactivas, var)
+      }
+    }
+
+
+    isolate(eval(parse(text = code.res)))
+    if (length(var.noactivas) > 0) {
+      isolate(eval(parse(text = code.desactivar(var.noactivas,"datos.aprendizaje.completos"))))
+    }
+
+    code.res <- paste0(code.res, "\n", code.desactivar(var.noactivas,"datos.aprendizaje.completos"))
+    return(code.res)
+  }
+
+  # Cunado es precionado el boton de transformar datos
+  observeEvent(input$transButtonPredN, {
+    # transforma los datos
+    code.res <- transformar.datos.pn()
+
+    # Actualiza los selectores que dependen de los datos
+    updateSelectInput(session, "sel.predic.var.nuevos", choices = colnames.empty(var.categoricas(datos.aprendizaje.completos)))
+
+    modelo.nuevos <<- NULL
+    predic.nuevos <<- NULL
+
+    actualizar.tabla.pn()
+  })
+
+  observeEvent(input$PredNuevosBttnModelo,{
+      # switch(inout$selectModelsPred,
+      #        CASE )
+  })
+
+
   # PAGINA DE REPORTE -------------------------------------------------------------------------------------------------------
 
   len.report <- function(){

@@ -227,3 +227,43 @@ input[type="checkbox"]:hover:before {
 #rulesDt{
   height: 24vh;
 }
+
+.btn-primary{
+  background-color: #777777;
+  border-color: #202020;
+}
+
+.btn-primary:hover{
+  background-color: #444;
+  border-color: #202020;
+}
+
+.btn-primary.active{
+  background-color: #CBB051;
+  border-color: #202020;
+}
+
+.btn-primary.active:hover{
+  background-color: #CBB051;
+  border-color: #202020;
+}
+
+.btn-primary.active:active{
+  background-color: #CBB051;
+  border-color: #202020;
+}
+
+.btn-primary.active:focus{
+  background-color: #CBB051;
+  border-color: #202020;
+}
+
+.btn-primary.active:focus-wthin{
+  background-color: #CBB051;
+  border-color: #202020;
+}
+
+.btn-primary.focus, .btn-primary:focus{
+  background-color: #CBB051 !important;
+  border-color: #202020 !important;
+}

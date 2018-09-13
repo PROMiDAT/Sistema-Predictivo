@@ -74,7 +74,7 @@ menu.aprendizaje.supervisado <- menuItem("Aprendizaje Supervisado", tabName = "p
                                          menuSubItem("K Vecinos Más Cercanos",tabName = "knn",icon = icon("dot-circle-o")),
                                          menuSubItem("Árboles de Decisión",tabName = "dt",icon = icon("tree")),
                                          menuSubItem("Bosques Aleatorios",tabName = "rf",icon = icon("sitemap")),
-                                         menuSubItem("ADA - Boosting",tabName = "boosting",icon = icon("superscript")),
+                                         menuSubItem("Potenciación",tabName = "boosting",icon = icon("superscript")),
                                          menuSubItem("Soporte Vectorial",tabName = "svm",icon = icon("line-chart")))
 
 menu.reporte <- menuItem("Generar Reporte", tabName = "reporte", icon = icon("save-file",lib = "glyphicon"))
@@ -649,12 +649,18 @@ pagina.comparacion <- tabItem(tabName = "comparar",
 muestra.datos.pred <- box(title = "Datos", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
                           DT::DTOutput('contentsPred'), type = 7, color = "#CBB051")
 
-panel.cargar.datos.pred <- tabPanel(title = "Cargar", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
+muestra.datos.pred2 <- box(title = "Datos", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
+                           DT::DTOutput('contentsPred2'), type = 7, color = "#CBB051")
+
+muestra.datos.pred3 <- box(title = "Datos", status = "primary", width = 12, solidHeader = TRUE, collapsible = TRUE,
+                           DT::DTOutput('contentsPred3'), type = 7, color = "#CBB051")
+
+panel.cargar.datos.pred <- tabPanel(title = "Cargar Datos", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
                                fluidRow(column(width = 5,
                                checkboxInput('headerNPred', 'Encabezado (Header)', TRUE),
                                checkboxInput('rownameNPred', 'Incluir nombre de filas', TRUE),
-                               radioButtons('sep.nPred', 'Separador', c(Coma=',', 'Punto y Coma'=';', Tab='\t'), selected = 'Coma'),
-                               radioButtons('dec.nPred', 'Separador Decimal', c('Punto'='.', 'Coma'=","), selected = 'Punto'),
+                               radioButtons('sepNPred', 'Separador', c(Coma=',', 'Punto y Coma'=';', Tab='\t'), selected = 'Coma'),
+                               radioButtons('decNPred', 'Separador Decimal', c('Punto'='.', 'Coma'=","), selected = 'Punto'),
                                switchInput(inputId = "deleteNAnPred", onStatus = "success", offStatus = "danger", value = T, width = "100%",
                                            label = "Eliminar NA", onLabel = "SI", offLabel = "NO", labelWidth = "100%"),
                                fileInput('file2', label = 'Cargar Archivo', placeholder = "", buttonLabel = "Subir", width = "100%",
@@ -662,7 +668,28 @@ panel.cargar.datos.pred <- tabPanel(title = "Cargar", width = 12, solidHeader = 
                                actionButton("loadButtonNPred", "Cargar", width = "100%")),
                                column(width = 7, muestra.datos.pred)))
 
-opciones.knn.pred <- fluidRow(column(width = 4, br(), switchInput(inputId = "switch.scale.knn.pred", onStatus = "success", offStatus = "danger", value = T,
+
+panel.tansformar.datos <- tabPanel(title = "Transformar Datos", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
+                                   fluidRow(column(width = 5,
+                                                   DT::dataTableOutput('transDataPredN'),
+                                                   br(),br(),
+                                                   actionButton("transButtonPredN", "Aplicar", width = "100%")),
+                                   column(width = 7, muestra.datos.pred2)))
+
+panel.cargar.datos.pred2 <- tabPanel(title = "Cargar Individuos Nuevos", width = 12, solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
+                                    fluidRow(column(width = 5,
+                                                    checkboxInput('headerNPred2', 'Encabezado (Header)', TRUE),
+                                                    checkboxInput('rownameNPred2', 'Incluir nombre de filas', TRUE),
+                                                    radioButtons('sep.nPred2', 'Separador', c(Coma=',', 'Punto y Coma'=';', Tab='\t'), selected = 'Coma'),
+                                                    radioButtons('dec.nPred2', 'Separador Decimal', c('Punto'='.', 'Coma'=","), selected = 'Punto'),
+                                                    switchInput(inputId = "deleteNAnPred2", onStatus = "success", offStatus = "danger", value = T, width = "100%",
+                                                                label = "Eliminar NA", onLabel = "SI", offLabel = "NO", labelWidth = "100%"),
+                                                    fileInput('file3', label = 'Cargar Archivo', placeholder = "", buttonLabel = "Subir", width = "100%",
+                                                              accept = c('text/csv', 'text/comma-separated-values, text/plain', '.csv')),
+                                                    actionButton("loadButtonNPred2", "Cargar", width = "100%")),
+                                             column(width = 7, muestra.datos.pred3)))
+
+opciones.knn.pred <- fluidRow(column(width = 4, br() , switchInput(inputId = "switch.scale.knn.pred", onStatus = "success", offStatus = "danger", value = T,
                                                               label = "Escalar datos", onLabel = "SI", offLabel = "NO", labelWidth = "100%", width = "100%")),
                               column(width = 4, numericInput("kmax.knn.pred", "K Máximo: ", min = 1,step = 1, value = 7,width="100%")),
                               column(width = 4, selectInput(inputId = "kernel.knn.pred", label = "Seleccionar un Kernel",selected = 1, width="100%",
@@ -687,7 +714,9 @@ opciones.boosting.pred <- list(fluidRow(column(width = 3, numericInput("iter.boo
                                    column(width = 3, selectInput(inputId = "tipo.boosting.pred", label = "Seleccionar algoritmo",selected = 1, width = "100%",
                                                                  choices =  c("discrete", "real", "gentle")))))
 
-panel.crear.modelo.pred <- tabPanel(title = "Selección y Creación del Modelo",solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
+panel.crear.modelo.pred <- tabPanel(title = "Selección y Parametrización del Modelo",solidHeader = FALSE, collapsible = FALSE, collapsed = FALSE,
+                                    selectInput(inputId = "sel.predic.var.nuevos", label = h4("Seleccionar Variable a Predecir:"), choices =  "", width = "100%"),
+                                    hr(),
                                     radioGroupButtons("selectModelsPred", "", list("K Vecinos Más Cercanos" = "knn",
                                                                                         "Árboles de Decisión" = "dt",
                                                                                         "Bosques Aleatorios" = "rf",
@@ -709,12 +738,14 @@ panel.crear.modelo.pred <- tabPanel(title = "Selección y Creación del Modelo",
                                                      opciones.svm.pred),
                                     aceEditor("fieldPredNuevos", mode = "r", theme = "monokai", value = "", height = "5vh", readOnly = F),
                                     verbatimTextOutput("txtPredNuevos"),
-                                    actionBttn("PredNuevosBttn","Generar Predicción",color = "warning",icon = icon("cogs",class = "fas fa-cogs"),block =TRUE ))
+                                    actionButton("PredNuevosBttnModelo","Generar Modelo", width  = "100%" ))
 
 pagina.predicciones.nuevas <- tabItem(tabName = "predNuevos",
                                       tabBox(width = 12,
                                              panel.cargar.datos.pred,
-                                             panel.crear.modelo.pred))
+                                             panel.tansformar.datos,
+                                             panel.crear.modelo.pred,
+                                             panel.cargar.datos.pred2))
 
 # PAGINA DE REPORTE -------------------------------------------------------------------------------------------------------
 

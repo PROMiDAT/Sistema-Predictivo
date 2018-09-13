@@ -152,50 +152,51 @@ datos.disyuntivos <- function(data, vars){
 }
 
 #Genera el codigo para cargar datos
-code.carga <- function(nombre.filas = T, ruta = NULL, separador = ";", sep.decimal = ",", encabezado = T){
+code.carga <- function(nombre.filas = T, ruta = NULL, separador = ";", sep.decimal = ",", encabezado = T, d.o = "datos.originales", d = "datos" ){
   if(!is.null(ruta)){
     ruta <-  gsub("\\", "/", ruta, fixed=TRUE)
   }
   if(nombre.filas){
-    return(paste0("datos.originales <<- read.table('", ruta, "', header=",
-                  encabezado, ", sep='", separador, "', dec = '", sep.decimal, "', row.names = 1) \ndatos <<- datos.originales"))
+    return(paste0(d.o ," <<- read.table('", ruta, "', header=",
+                  encabezado, ", sep='", separador, "', dec = '", sep.decimal, "', row.names = 1) \n",d," <<- datos.originales"))
   } else {
-    return(paste0("datos.originales <<- read.table('", ruta, "', header=", encabezado, ", sep='", separador, "', dec = '", sep.decimal,
-                  "') \ndatos <<- datos.originales"))
+    return(paste0(d.o, "<<- read.table('", ruta, "', header=", encabezado, ", sep='", separador, "', dec = '", sep.decimal,
+                  "') \n",d," <<- datos.originales"))
   }
 }
 
+
 #Eliminar NAs
-code.NA <- function(deleteNA = T) {
-  res <- ifelse(deleteNA, "datos.originales <<- na.omit(datos.originales)\n",
+code.NA <- function(deleteNA = T, d.o = "datos.originales") {
+  res <- ifelse(deleteNA, paste0(d.o, "<<- na.omit(",d.o,")\n"),
                 paste0("Mode <- function(x) {\n  x[which.max(summary(x))]\n}\n",
-                       "for (variable in colnames(datos.originales)) {\n",
-                       "  if(any(is.na(datos.originales[, variable]))){\n",
-                       "    ifelse(class(datos.originales[, variable]) %in% c('numeric', 'integer'),\n",
-                       "           datos.originales[, variable][is.na(datos.originales[, variable])] <<- \n",
-                       "                                              mean(datos.originales[, variable], na.rm = T),\n",
-                       "           datos.originales[, variable][is.na(datos.originales[, variable])] <<- \n",
-                       "                                     Mode(datos.originales[, variable]))",
+                       "for (variable in colnames(",d.o,")) {\n",
+                       "  if(any(is.na(",d.o,"[, variable]))){\n",
+                       "    ifelse(class(",d.o,"[, variable]) %in% c('numeric', 'integer'),\n",
+                       "           ",d.o,"[, variable][is.na(",d.o,"[, variable])] <<- \n",
+                       "                                              mean(",d.o,"[, variable], na.rm = T),\n",
+                       "           ",d.o,"[, variable][is.na(",d.o,"[, variable])] <<- \n",
+                       "                                     Mode(",d.o,"[, variable]))",
                        "\n   }\n}"))
   return(res)
 }
 
 #Genera el codigo para transformar datos
-code.trans <- function(variable, nuevo.tipo){
+code.trans <- function(variable, nuevo.tipo, d.o = "datos.originales",d="datos"){
   if(nuevo.tipo == "categorico"){
-    return(paste0("datos[, '", variable, "'] <<- as.factor(datos[, '", variable, "'])"))
+    return(paste0(d,"[, '", variable, "'] <<- as.factor(",d,"[, '", variable, "'])"))
   } else if(nuevo.tipo == "numerico") {
-    return(paste0("datos[, '", variable, "'] <<- as.numeric(sub(',', '.', datos[, '", variable, "'], fixed = TRUE))"))
+    return(paste0(d,"[, '", variable, "'] <<- as.numeric(sub(',', '.', ",d,"[, '", variable, "'], fixed = TRUE))"))
   } else {
-    es.factor <- ifelse(class(datos.originales[, variable]) %in% c('numeric', 'integer'),
-                        paste0("datos[, '", variable, "'] <<- as.factor(datos[, '", variable, "']) \n"), "")
-    return(paste0(es.factor, "datos <<- datos.disyuntivos(datos, '", variable,"')"))
+    es.factor <- ifelse( eval(parse(text = "class(",d.o,"[, variable]) %in% c('numeric', 'integer')")),
+                        paste0(d,"[, '", variable, "'] <<- as.factor(",d,"[, '", variable, "']) \n"), "")
+    return(paste0(es.factor, d, " <<- datos.disyuntivos(",d,", '", variable,"')"))
   }
 }
 
 #Desactiva las variables seleccionadas de los datos
-code.desactivar <- function(variables){
-  return(paste0("datos <<- subset(datos, select = -c(", paste(variables, collapse = ","), "))"))
+code.desactivar <- function(variables, d = "datos"){
+  return(paste0(d, " <<- subset(",d,", select = -c(", paste(variables, collapse = ","), "))"))
 }
 
 # Pagina de Segmentar Datos -------------------------------------------------------------------------------------------------
@@ -678,6 +679,9 @@ areaROC <- function(prediccion,real) {
   return(attributes(auc)$y.values[[1]])
 }
 
+# Pagina de PREDICCION NUEVOS -----------------------------------------------------------------------------------------------
+
+
 # Pagina de REPORTE ---------------------------------------------------------------------------------------------------------
 
 combinar.nombres <- function(n.modelos, n.modos){
@@ -877,8 +881,6 @@ datos.aprendizaje <<- NULL
 variable.predecir <<- NULL
 contador <<- 0
 semilla <<- FALSE
-.clear.random.seed <- .Random.seed
-
 
 # -------------------  Estadisticas Basicas
 
@@ -936,6 +938,16 @@ cod.b.modelo <<-  NULL
 cod.b.pred <<-  NULL
 cod.b.mc <<- NULL
 cod.b.ind <<- NULL
+
+# -------------------  Prediccion Nuevos
+
+datos.originales.completos <<- NULL
+datos.aprendizaje.completos <<- NULL
+datos.prueba.completos <<- NULL
+contadorPN <<- 0
+
+modelo.nuevos <<- NULL
+predic.nuevos <<- NULL
 
 # -------------------  Reporte
 
