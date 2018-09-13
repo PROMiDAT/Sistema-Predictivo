@@ -495,7 +495,7 @@ svm.plot <- function(variables, resto, kernel = "linear"){
   }
   l <- c()
   for(i in 1:length(resto)){
-    l <- c(l , paste0(resto[i]," = 0"))
+    l <- c(l , paste0(resto[i]," = ", i))
   }
   l <- paste0("list(",paste0(l,collapse = ","),")")
   return(paste0("plot(modelo.svm.",kernel,", datos, ",variables[1],"~",variables[2],", slice = ",l,")"))

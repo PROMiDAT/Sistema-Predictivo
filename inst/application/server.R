@@ -2128,6 +2128,9 @@ shinyServer(function(input, output, session) {
     })
 
     updateSelectInput(session, "sel.predic.var.nuevos", choices = rev(colnames.empty(var.categoricas(datos.aprendizaje.completos))))
+    updateNumericInput(session, "kmax.knn.pred", value = round(sqrt(nrow(datos.aprendizaje.completos))))
+    updateNumericInput(session, "mtry.rf.pred", value = round(sqrt(ncol(datos.aprendizaje.completos) -1)))
+
 
     modelo.nuevos <<- NULL
     predic.nuevos <<- NULL
@@ -2220,6 +2223,7 @@ shinyServer(function(input, output, session) {
 
     # Actualiza los selectores que dependen de los datos
     updateSelectInput(session, "sel.predic.var.nuevos", choices = colnames.empty(var.categoricas(datos.aprendizaje.completos)))
+    updateNumericInput(session, "mtry.rf.pred", value = round(sqrt(ncol(datos.aprendizaje.completos) -1)))
 
     modelo.nuevos <<- NULL
     predic.nuevos <<- NULL
