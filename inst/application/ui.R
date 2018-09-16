@@ -386,7 +386,7 @@ plot.svm <- tabPanel(title = "Gráfico Clasificación",
                      selectizeInput("select.var.svm.plot",NULL,label = "Variables Predictoras:", multiple = T, choices = c(""),
                                     options = list(maxItems = 2, placeholder = "Seleccione la(s) variable(s) predictoras"), width = "100%"),
                      aceEditor("fieldCodeSvmPlot", mode = "r", theme = "monokai",
-                               value = "", height = "3vh", readOnly = F, autoComplete = "enabled"))
+                               value = "", height = "5vh", readOnly = F, autoComplete = "enabled"))
 
 panel.prediccion.svm <- tabPanel(title = "Predicción del Modelo",
                                  DT::dataTableOutput("svmPrediTable"),

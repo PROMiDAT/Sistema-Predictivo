@@ -498,7 +498,8 @@ svm.plot <- function(variables, resto, kernel = "linear"){
     l <- c(l , paste0(resto[i]," = ", i))
   }
   l <- paste0("list(",paste0(l,collapse = ","),")")
-  return(paste0("plot(modelo.svm.",kernel,", datos, ",variables[1],"~",variables[2],", slice = ",l,")"))
+  s <- paste0("modelo.svm.temp <- svm(",variable.predecir,"~",variables[1],"+",variables[2],", data = datos.aprendizaje, kernel = '",kernel,"')")
+  return(paste0(s,"\nplot(modelo.svm.temp, datos, ",variables[1],"~",variables[2],", slice = ",l,")"))
 }
 
 
