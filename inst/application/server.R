@@ -283,7 +283,7 @@ shinyServer(function(input, output, session) {
     output$txtDt <- renderPrint(invisible(""))
     output$txtRf <- renderPrint(invisible(""))
     output$txtBoosting <- renderPrint(invisible(""))
-
+    updateSelectInput(session,"kernel.knn",selected = "optimal")
   }
 
   # Cunado es precionado el boton de cargar datos

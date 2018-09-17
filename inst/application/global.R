@@ -722,7 +722,7 @@ plotROC <- function(sel) {
     nombres <- c(nombres, nombre)
     index <- index + 1
   }
-  legend(x=0.85, y=0.45, legend = nombres, bty = "n", pch=19 ,
+  legend(x=0.85, y=0.55, legend = nombres, bty = "n", pch=19 ,
          col = colores , text.col = "black", cex=0.8, pt.cex=0.8)
 }
 
