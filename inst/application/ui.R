@@ -30,7 +30,6 @@ library(ROCR)
 library(xtable)
 library(raster)
 library(rattle)
-library(promises)
 
 # FUNCIONES --------------------------------------------------------------------------------------------------------------
 
