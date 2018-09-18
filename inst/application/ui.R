@@ -768,7 +768,7 @@ pagina.generar.reporte <- tabItem(tabName = "reporte", panel.reporte.encabezado 
 pagina.info <- tabItem(tabName = "acercaDe",
                        img(src="Logo.png", style="padding-bottom:20px;margin-left: auto;margin-right: auto;display: block;width: 50%;"),
                        infoBoxPROMiDAT("Todos los derechos reservados a", "PROMiDAT S.A.", icono = icon("copyright")),
-                       infoBoxPROMiDAT("Versión del Sistema", "1.0.3", icono = icon("file-code-o")))
+                       infoBoxPROMiDAT("Versión del Sistema", "1.0.4", icono = icon("file-code-o")))
 
 # PAGINA COMPLETA ---------------------------------------------------------------------------------------------------------
 

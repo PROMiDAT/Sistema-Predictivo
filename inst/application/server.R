@@ -2016,8 +2016,9 @@ shinyServer(function(input, output, session) {
   # PAGINA DE PREDICCIONES NUEVAS -------------------------------------------------------------------------------------------
 
   varificar.datos.pn <- function(){
-    if(any(!(colnames(datos.originales.completos) %in% c(colnames(datos.prueba.completos),variable.predecir.pn))))
+    if(any(!(c(colnames(datos.prueba.completos),variable.predecir.pn) %in% colnames(datos.originales.completos))))
       stop("Los datos no poseen las mismas columnas")
+
   }
 
   unificar.factores <- function(){
@@ -2119,6 +2120,10 @@ shinyServer(function(input, output, session) {
       codigo.na <- ""
       codigo.na <- paste0(code.NA(deleteNA = input$deleteNAnPred, d.o = "datos.originales.completos"), "\n", "datos.aprendizaje.completos <<- datos.originales.completos")
       isolate(eval(parse(text = codigo.na)))
+
+      updateSelectInput(session, "sel.predic.var.nuevos", choices = rev(colnames.empty(var.categoricas(datos.aprendizaje.completos))))
+      updateNumericInput(session, "kmax.knn.pred", value = round(sqrt(nrow(datos.aprendizaje.completos))))
+      updateNumericInput(session, "mtry.rf.pred", value = round(sqrt(ncol(datos.aprendizaje.completos) -1)))
     },
     error = function(e) {
       showNotification(paste0("Error al cargar los Datos: ", e), duration = 10, type = "error")
@@ -2126,11 +2131,6 @@ shinyServer(function(input, output, session) {
       datos.originales.completos <<- NULL
       return(NULL)
     })
-
-    updateSelectInput(session, "sel.predic.var.nuevos", choices = rev(colnames.empty(var.categoricas(datos.aprendizaje.completos))))
-    updateNumericInput(session, "kmax.knn.pred", value = round(sqrt(nrow(datos.aprendizaje.completos))))
-    updateNumericInput(session, "mtry.rf.pred", value = round(sqrt(ncol(datos.aprendizaje.completos) -1)))
-
 
     modelo.nuevos <<- NULL
     predic.nuevos <<- NULL
@@ -2213,7 +2213,7 @@ shinyServer(function(input, output, session) {
       actualizar.pred.pn(codigo)
     },
     error =  function(e){
-      showNotification(paste0("Error en el modelo: ", e), duration = 10, type = "error")
+      showNotification(paste0("Error en la predicción: ", e), duration = 10, type = "error")
     })
   }
 
@@ -2222,7 +2222,7 @@ shinyServer(function(input, output, session) {
     code.trans.pn <<- transformar.datos.pn()
 
     # Actualiza los selectores que dependen de los datos
-    updateSelectInput(session, "sel.predic.var.nuevos", choices = colnames.empty(var.categoricas(datos.aprendizaje.completos)))
+    updateSelectInput(session, "sel.predic.var.nuevos", choices = rev(colnames.empty(var.categoricas(datos.aprendizaje.completos))))
     updateNumericInput(session, "mtry.rf.pred", value = round(sqrt(ncol(datos.aprendizaje.completos) -1)))
 
     modelo.nuevos <<- NULL
@@ -2287,10 +2287,9 @@ shinyServer(function(input, output, session) {
       }
       codigo.na <- ""
       codigo.na <- paste0(code.NA(deleteNA = input$deleteNAnPred2,
-                                  d.o = paste0("datos.prueba.completos[,-which(colnames(datos.prueba.completos) == '",variable.predecir.pn,"')]")))
-      isolate(eval(parse(text = codigo.na)))
-
+                                  d.o = paste0("datos.prueba.completos")))
       datos.prueba.completos[,variable.predecir.pn] <<- NULL
+      isolate(eval(parse(text = codigo.na)))
       datos.prueba.completos[,variable.predecir.pn] <<- NA
       code.trans.pn <<- gsub("datos.originales.completos", "datos.prueba.completos", code.trans.pn)
       code.trans.pn <<- gsub("datos.aprendizaje.completos", "datos.prueba.completos", code.trans.pn)
