@@ -205,9 +205,11 @@ code.desactivar <- function(variables, d = "datos"){
 particion.code <- function(data = "datos", p = "0.5", variable = NULL, semilla = 5, perm.semilla = FALSE){
   variable.predecir <<- variable
   semilla <- ifelse(is.numeric(semilla), semilla, 5)
-  semilla <- ifelse(perm.semilla, paste0("set.seed(",semilla,")"), "rm(.Random.seed, envir = globalenv())")
-  return(paste0(semilla,"\nvariable.predecir <<- '",variable,"'\nparticion <- createDataPartition(datos$",variable,", p = ",p/100,", list = FALSE)\n
-datos.prueba <<- datos[-particion,]\ndatos.aprendizaje <<- datos[particion,]"))
+  codigo <- ifelse(perm.semilla, paste0("set.seed(",semilla,")"), "rm(.Random.seed, envir = globalenv())")
+  codigo <- paste0(codigo,"\nvariable.predecir <<- '",variable,"'\nparticion <- createDataPartition(datos$",variable,", p = ",p/100,", list = FALSE)\n
+datos.prueba <<- datos[-particion,]\ndatos.aprendizaje <<- datos[particion,]")
+  codigo <- ifelse(perm.semilla, paste0(codigo, "\nset.seed(",semilla,")"),codigo)
+  return(codigo)
 }
 
 # Pagina de Resumen ---------------------------------------------------------------------------------------------------------
