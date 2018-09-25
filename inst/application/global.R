@@ -509,7 +509,7 @@ svm.plot <- function(variables, resto, kernel = "linear"){
 dt.modelo <- function(variable.pr = NULL, minsplit =  20, maxdepth = 15, split = "gini"){
   minsplit <- ifelse(!is.numeric(minsplit), 1, minsplit )
   maxdepth <- ifelse(!is.numeric(maxdepth) || maxdepth > 30, 15, maxdepth)
-  codigo <- paste0("modelo.dt <<- rpart(",variable.pr,"~., data = datos.aprendizaje,
+  codigo <- paste0("modelo.dt.",split," <<- rpart(",variable.pr,"~., data = datos.aprendizaje,
                    control = rpart.control(minsplit = ",minsplit,", maxdepth = ", maxdepth,"),parms = list(split = '",split,"'))")
   return(codigo)
 }
@@ -524,7 +524,7 @@ dt.modelo.np <- function(variable.pr = NULL, minsplit =  20, maxdepth = 15, spli
 
 #Codigo de la prediccion de DT
 dt.prediccion <- function() {
-  return(paste0("prediccion.dt <<- predict(modelo.dt, datos.prueba, type='class')"))
+  return(paste0("prediccion.dt.",input$split.dt," <<- predict(modelo.dt.",input$split.dt,", datos.prueba, type='class')"))
 }
 
 dt.prediccion.np <- function() {
@@ -533,15 +533,15 @@ dt.prediccion.np <- function() {
 
 #Codigo de la matriz de confucion de dt
 dt.MC <- function(variable.p){
-  return(paste0("MC.dt <<- table(datos.prueba$",variable.p,", prediccion.dt)"))
+  return(paste0("MC.dt.",input$split.dt," <<- table(datos.prueba$",variable.p,", prediccion.dt.",input$split.dt,")"))
 }
 
 #Codigo del grafico de dt
 dt.plot <- function(){
   num <- length(levels(datos[,variable.predecir]))
-  return(paste0("prp(modelo.dt, type = 2, extra = 104, nn = T, varlen = 0, faclen = 0,
+  return(paste0("prp(modelo.dt.",input$split.dt,", type = 2, extra = 104, nn = T, varlen = 0, faclen = 0,
 fallen.leaves = TRUE, branch.lty = 6, shadow.col = 'gray82',
-box.col = gg_color_hue(",num,")[modelo.dt$frame$yval])"))
+box.col = gg_color_hue(",num,")[modelo.dt.",input$split.dt,"$frame$yval])"))
 }
 
 # Pagina de RF --------------------------------------------------------------------------------------------------------------
@@ -771,8 +771,11 @@ ordenar.reporte <- function(lista){
              "modelo.svm.sigmoid",
              nombres[grepl("svm.plot.sigmoid", nombres)],
              "pred.svm.sigmoid","mc.svm.sigmoid","ind.svm.sigmoid",
-             "modelo.dt","modelo.dt.graf","pred.dt",
-             "mc.dt","ind.dt","modelo.dt.rules","modelo.rf","modelo.rf.error.","modelo.rf.graf",
+             "modelo.dt.gini","modelo.dt.graf.gini","pred.dt.gini",
+             "mc.dt.gini","ind.dt.gini","modelo.dt.rules.gini",
+             "modelo.dt.information","modelo.dt.graf.information","pred.dt.information",
+             "mc.dt.information","ind.dt.information","modelo.dt.rules.information",
+             "modelo.rf","modelo.rf.error.","modelo.rf.graf",
              "pred.rf","mc.rf","ind.rf",
              nombres[grepl("modelo.rf.rules.", nombres)],
              combinar.nombres(c("modelo.b","modelo.b.error","modelo.b.imp","pred.b","mc.b","ind.b"),

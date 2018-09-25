@@ -1328,18 +1328,19 @@ shinyServer(function(input, output, session) {
     tryCatch({
       output$plot.dt <- renderPlot(isolate(eval(parse(text = input$fieldCodeDtPlot))))
       cod <- ifelse(input$fieldCodeDtPlot == "", dt.plot(), input$fieldCodeDtPlot)
-      insert.report("modelo.dt.graf", paste0("\n```{r}\n", cod, "\n```"))
+      insert.report(paste0("modelo.dt.graf.", input$split.dt), paste0("\n```{r}\n", cod, "\n```"))
     },
     error = function(e){
       output$plot.dt <- renderPlot(NULL)
-      insert.report("modelo.dt.graf",NULL)
+      insert.report(paste0("modelo.dt.graf.",input$split.dt),NULL)
     })
   }
 
   #Mostrar Reglas
   mostrar.reglas.dt <- function(){
-    output$rulesDt <- renderPrint(rattle::asRules(modelo.dt))
-    insert.report("modelo.dt.rules", paste0("\n```{r}\nrattle::asRules(modelo.dt)\n```"))
+    output$rulesDt <- renderPrint(rattle::asRules(exe("modelo.dt.",input$split.dt)))
+    insert.report(paste0("modelo.dt.rules.",input$split.dt),
+                  paste0("\n```{r}\nrattle::asRules(modelo.dt.",input$split.dt,")\n```"))
   }
 
   # Limpia los datos segun el proceso donde se genera el error
@@ -1349,21 +1350,21 @@ shinyServer(function(input, output, session) {
         modelo.dt <<- NULL
         output$txtDt <- renderPrint(invisible(""))
         output$plot.dt <- renderPlot(NULL)
-        insert.report("modelo.dt", NULL)
-        insert.report("modelo.dt.graf", NULL)
+        insert.report(paste0("modelo.dt.", input$split.dt), NULL)
+        insert.report(paste0("modelo.dt.graf.", input$split.dt), NULL)
       }, {
         prediccion.dt <<- NULL
-        insert.report("pred.dt",NULL)
+        insert.report(paste0("pred.dt.", input$split.dt), NULL)
         output$dtPrediTable <- DT::renderDataTable(NULL)
       }, {
         MC.dt <<- NULL
-        insert.report("mc.dt", NULL)
+        insert.report(paste0("mc.dt.", input$split.dt), NULL)
         output$plot.dt.mc <- renderPlot(NULL)
         output$txtDtMC <- renderPrint(invisible(NULL))
-        MCs[["Árboles de Decisión"]] <<- NULL
+        MCs[[paste0("Árboles de Decisión - ", input$split.dt)]] <<- NULL
       }, {
         indices.dt <<- rep(0, 10)
-        insert.report("ind.dt", NULL)
+        insert.report(paste0("ind.dt.",input$split.dt), NULL)
       })
     }
   }
@@ -1380,9 +1381,10 @@ shinyServer(function(input, output, session) {
   ejecutar.dt <- function() {
     tryCatch({ # Se corren los codigo
       isolate(eval(parse(text = cod.dt.modelo)))
-      output$txtDt <- renderPrint(print(modelo.dt))
-      insert.report("modelo.dt",
-                    paste0("## Generación del modelo Árboles de Decisión\n```{r}\n", cod.dt.modelo, "\nmodelo.dt\n```"))
+      output$txtDt <- renderPrint(print(exe("modelo.dt.", input$split.dt)))
+      insert.report(paste0("modelo.dt.", input$split.dt),
+                    paste0("## Generación del modelo Árboles de Decisión\n```{r}\n", cod.dt.modelo,
+                           "\nmodelo.dt.",input$split.dt,"\n```"))
       plotear.arbol()
       mostrar.reglas.dt()
     },
@@ -1397,13 +1399,13 @@ shinyServer(function(input, output, session) {
   ejecutar.dt.pred <- function() {
     tryCatch({ # Se corren los codigo
       isolate(eval(parse(text = cod.dt.pred)))
-      scores[["Árboles de Decisión"]] <<- predict(modelo.dt, datos.prueba, type = "prob")
+      scores[[paste0("Árboles de Decisión - ", input$split.dt)]] <<- exe("predict(modelo.dt.",input$split.dt,", datos.prueba, type = 'prob')")
       # Cambia la tabla con la prediccion de dt
-      output$dtPrediTable <- DT::renderDataTable(obj.predic(prediccion.dt),server = FALSE)
-      insert.report("pred.dt",
+      output$dtPrediTable <- DT::renderDataTable(obj.predic(exe("prediccion.dt.",input$split.dt)),server = FALSE)
+      insert.report(paste0("pred.dt.", input$split.dt),
                     paste0("## Predicción del Modelo Árboles de Decisión\n```{r}\n", cod.dt.pred,
-                           "\nhead(dt.to.data.frame.predict(obj.predic(prediccion.dt)))\n",
-                           "scores[['Árboles de Decisión']] <<- predict(modelo.dt, datos.prueba, type = 'prob')\n```"))
+                           "\nhead(dt.to.data.frame.predict(obj.predic(prediccion.dt.",input$split.dt,")))\n",
+                           "scores[['Árboles de Decisión - ",input$split.dt,"']] <<- predict(modelo.dt.",input$split.dt,", datos.prueba, type = 'prob')\n```"))
 
       updatePlot$roc <- !updatePlot$roc #graficar otra vez la curva roc
     },
@@ -1418,15 +1420,15 @@ shinyServer(function(input, output, session) {
   ejecutar.dt.mc <- function() {
     tryCatch({ # Se corren los codigo
       isolate(eval(parse(text = cod.dt.mc)))
-      output$txtDtMC <- renderPrint(print(MC.dt))
+      output$txtDtMC <- renderPrint(print(exe("MC.dt.",input$split.dt)))
       isolate(eval(parse(text = plot.MC.code())))
-      output$plot.dt.mc <- renderPlot(isolate(eval(parse(text = "plot.MC(MC.dt)"))))
-      insert.report("mc.dt",
+      output$plot.dt.mc <- renderPlot(isolate(exe("plot.MC(MC.dt.",input$split.dt,")")))
+      insert.report(paste0("mc.dt.",input$split.dt),
                     paste0("## Matriz de Confusión del Modelo Árboles de Decisión\n```{r}\n", cod.dt.mc,
-                           "\nMC.dt\n```\n```{r}\nplot.MC(MC.dt)\n",
-                           "MCs[['Árboles de Decisión']] <<- MC.dt\n```"))
+                           "\nMC.dt.",input$split.dt,"\n```\n```{r}\nplot.MC(MC.dt.",input$split.dt,")\n",
+                           "MCs[['Árboles de Decisión - ",input$split.dt,"']] <<- MC.dt.",input$split.dt,"\n```"))
 
-      MCs[["Árboles de Decisión"]] <<- MC.dt
+      MCs[[paste0("Árboles de Decisión - ",input$split.dt)]] <<- exe("MC.dt.",input$split.dt)
       actualizar.selector.comparativa()
     },
     error = function(e) { # Regresamos al estado inicial y mostramos un error
@@ -1440,10 +1442,10 @@ shinyServer(function(input, output, session) {
   ejecutar.dt.ind <- function() {
     tryCatch({ # Se corren los codigo
       isolate(eval(parse(text = cod.dt.ind)))
-      indices.dt <<- indices.generales(MC.dt)
-      indices.g("dt", MC.dt)
+      indices.dt <<- indices.generales(exe("MC.dt.",input$split.dt))
+      indices.g("dt", exe("MC.dt.",input$split.dt))
 
-      insert.report("ind.dt", paste0("## Índices Generales \n```{r}\n", cod.dt.ind, "\nindices.generales(MC.dt)\n```"))
+      insert.report(paste0("ind.dt.",input$split.dt), paste0("## Índices Generales \n```{r}\n", cod.dt.ind, "\nindices.generales(MC.dt.",input$split.dt,")\n```"))
 
       nombres <- c("dtPrecGlob", "dtErrorGlob")
       titulos <- c("Precisión Global", "Error Global")
@@ -1587,7 +1589,7 @@ shinyServer(function(input, output, session) {
   mostrar.reglas.rf <- function(n){
     output$rulesRf <- renderPrint({
       tryCatch({printRandomForests(modelo.rf, n)},
-                error = function(e)stop("No se puede mostrar las reglas para el árbol seleccionado"))})
+                error = function(e) stop("No se puede mostrar las reglas para el árbol seleccionado"))})
     insert.report(paste0("modelo.rf.rules.", n), paste0("\n## Reglas del árbol #",n," \n```{r}\nprintRandomForests(modelo.rf, ",n,")\n```"))
   }
 
