@@ -1717,7 +1717,7 @@ shinyServer(function(input, output, session) {
   })
 
   # Si las opciones cambian o actualizar el codigo
-  observeEvent(c(input$iter.boosting, input$nu.boosting, input$tipo.boosting, input$minsplit.boosting), {
+  observeEvent(c(input$iter.boosting, input$nu.boosting, input$tipo.boosting, input$minsplit.boosting, input$maxdepth.boosting), {
     if (validar.datos(print = FALSE) & length(levels(datos[, variable.predecir])) == 2) {
       deault.codigo.boosting()
       boosting.full()
