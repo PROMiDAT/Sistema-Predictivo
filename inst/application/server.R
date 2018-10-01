@@ -5,6 +5,7 @@ shinyServer(function(input, output, session) {
 
   # Crea una tabla dependiendo de los datos ingresados
   renderizar.tabla.datos <- function(data, editable = TRUE, extensions = c("Buttons"), dom = "Bfrtip", pageLength = 5, buttons = T, filename = NA, scrollY = "33vh") {
+    data <- head(data, n = 100)
     if (buttons) {
       buttons <- list(list(extend = "csv", filename = filename, text = "Descargar"))
     } else {
