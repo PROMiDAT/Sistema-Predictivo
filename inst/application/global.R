@@ -165,7 +165,6 @@ code.carga <- function(nombre.filas = T, ruta = NULL, separador = ";", sep.decim
   }
 }
 
-
 #Eliminar NAs
 code.NA <- function(deleteNA = T, d.o = "datos.originales") {
   res <- ifelse(deleteNA, paste0(d.o, "<<- na.omit(",d.o,")\n"),
