@@ -287,9 +287,24 @@ default.normal <- function(data = "datos", vars = NULL, color = "#00FF22AA"){
   }
 }
 
+fisher.calc <- function (x, na.rm = FALSE, ...) {
+  if (!is.numeric(x)) {
+    stop("argument 'x' is must be numeric")
+  }
+  if (na.rm)
+    x <- x[!is.na(x)]
+  nx <- length(x)
+
+  if (nx < 3)
+    sk <- NA
+  else sk <- ((sqrt(nx * (nx - 1))/(nx - 2)) * (sum(x^3)/nx))/((sum(x^2)/nx)^(3/2))
+
+  return(sk)
+}
+
 #Genera  la tabla de normalidad
 default.calc.normal <- function(data = "datos"){
-  return(paste0("calc <- lapply(var.numericas(datos), function(i) modeest::skewness(i)[1]) \n",
+  return(paste0("calc <- lapply(var.numericas(datos), function(i) fisher.calc(i)[1]) \n",
                 "calc <- as.data.frame(calc) \n",
                 "calc <- rbind(calc, lapply(calc, function(i) ifelse(i > 0, 'Positiva', \n",
                 "                                                           ifelse(i < 0, 'Negativa', 'Sin Asimetría')))) \n",
