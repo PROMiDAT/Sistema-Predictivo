@@ -295,9 +295,7 @@ fisher.calc <- function (x, na.rm = FALSE, ...) {
     x <- x[!is.na(x)]
   nx <- length(x)
 
-  if (nx < 3)
-    sk <- NA
-  else sk <- ((sqrt(nx * (nx - 1))/(nx - 2)) * (sum(x^3)/nx))/((sum(x^2)/nx)^(3/2))
+  sk <- sum((x - mean(x))^3/stats::sd(x)^3)/nx
 
   return(sk)
 }
